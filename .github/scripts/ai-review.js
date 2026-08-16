@@ -17,6 +17,11 @@ import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, resolve, join } from 'path'
 
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.log('ANTHROPIC_API_KEY not set — skipping AI accuracy review.')
+  process.exit(0)
+}
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const client = new Anthropic()
 
