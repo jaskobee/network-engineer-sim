@@ -1,0 +1,38 @@
+name: AI Networking Review
+
+# Runs on every PR that touches source code or docs.
+# Claude reads the diff + NETWORKING_ACCURACY.md and posts a review comment.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+
+jobs:
+  accuracy-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # needed to post the review comment
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # full history so git diff can compare branches
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: AI Networking Accuracy Review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: node .github/scripts/ai-review.js

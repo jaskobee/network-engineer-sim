@@ -1,0 +1,31 @@
+name: Mission QA
+
+# Runs automatically when code is pushed to main, plus a weekly health check.
+# Claude analyzes the test results and reports which missions are working.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+  schedule:
+    - cron: '0 8 * * 1'   # every Monday at 8am UTC
+  workflow_dispatch:        # can also be triggered manually from the GitHub UI
+
+jobs:
+  mission-qa:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run Mission QA Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node .github/scripts/mission-qa.js

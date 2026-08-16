@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # needed to post the failure explanation comment
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,8 +23,30 @@ jobs:
 
       - run: npm ci
 
+      # Run tests and save output to a file.
+      # set -o pipefail makes the pipe exit with npm test's exit code, not tee's.
+      # continue-on-error lets the job keep running so the next step can explain what broke.
       - name: Run tests
-        run: npm test
+        id: run-tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test-output.txt
+
+      # When tests fail, Claude reads the output and posts a plain-English explanation.
+      - name: Explain failures with AI
+        if: steps.run-tests.outcome == 'failure'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node .github/scripts/explain-failures.js test-output.txt
+
+      # Re-fail the job so the CI check still goes red.
+      - name: Fail if tests failed
+        if: steps.run-tests.outcome == 'failure'
+        run: exit 1
 
       - name: Check production build
         run: npx vite build
