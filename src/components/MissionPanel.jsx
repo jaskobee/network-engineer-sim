@@ -201,9 +201,11 @@ function BlueprintModal({ mission, onClose }) {
 }
 
 function Stars({ n }) {
+  const max = 5
+  const filled = Math.max(0, Math.min(n ?? 0, max))
   return (
     <span style={{ color: '#ffb86c', fontSize: 10 }}>
-      {'★'.repeat(n)}{'☆'.repeat(3 - n)}
+      {'★'.repeat(filled)}{'☆'.repeat(max - filled)}
     </span>
   )
 }
