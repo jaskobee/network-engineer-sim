@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { GameProvider, useGame } from './state/GameContext.jsx'
+import { useAuth } from './state/AuthContext.jsx'
+import LoginPage from './components/LoginPage.jsx'
 import Floorplan from './components/Floorplan.jsx'
 import Inventory from './components/Inventory.jsx'
 import Shop from './components/Shop.jsx'
@@ -13,6 +15,8 @@ import DevPanel from './components/DevPanel.jsx'
 import FirewallConsole from './components/FirewallConsole.jsx'
 
 export default function App() {
+  const { user } = useAuth()
+  if (!user) return <LoginPage />
   return (
     <GameProvider>
       <AppContent />
@@ -87,6 +91,7 @@ function SidebarTabs({ active, onChange }) {
 // ── Main app ──────────────────────────────────────────────────────────────────
 
 function AppContent() {
+  const { user, logout } = useAuth()
   const { devices, placements, placeDevice, movePlacedDevice, terminalFloating, saveStatus, newGame, difficulty, setDifficulty, mode, setMode, terminalSessions, fwConsoleDeviceId, closeFwConsole } = useGame()
   const [activeDragId,    setActiveDragId]    = useState(null)
   const [inspectorWidth,  setInspectorWidth]  = useState(260)
@@ -219,6 +224,26 @@ function AppContent() {
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             >
               NEW GAME
+            </button>
+            {/* Session info + logout */}
+            <span style={{
+              fontSize: 9, color: user?.role === 'admin' ? '#ffb86c' : '#4a90e2',
+              letterSpacing: 1, borderLeft: '1px solid #1a1a3e', paddingLeft: 8,
+            }}>
+              {user?.displayName?.toUpperCase()}
+            </span>
+            <button
+              onClick={logout}
+              style={{
+                padding: '3px 10px', fontSize: 10, fontWeight: 700,
+                background: 'transparent', color: '#555',
+                border: '1px solid #1a1a3e', borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.borderColor = '#333' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#555';    e.currentTarget.style.borderColor = '#1a1a3e' }}
+              title="Sign out"
+            >
+              SIGN OUT
             </button>
           </div>
         </header>
