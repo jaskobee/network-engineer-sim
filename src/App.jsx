@@ -88,7 +88,7 @@ function SidebarTabs({ active, onChange }) {
   )
 }
 
-// ── Main app ──────────────────────────────────────────────────────────────────
+// ── Main app  ──────────────────────────────────────────────────────────────────
 
 function AppContent() {
   const { user, logout } = useAuth()
