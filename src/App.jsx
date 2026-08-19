@@ -92,7 +92,8 @@ function SidebarTabs({ active, onChange }) {
 
 function AppContent() {
   const { user, logout } = useAuth()
-  const { devices, placements, placeDevice, movePlacedDevice, terminalFloating, saveStatus, newGame, difficulty, setDifficulty, mode, setMode, terminalSessions, fwConsoleDeviceId, closeFwConsole } = useGame()
+  const { devices, placements, placeDevice, movePlacedDevice, terminalFloating, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, terminalSessions, fwConsoleDeviceId, closeFwConsole } = useGame()
+  const importInputRef = useRef(null)
   const [activeDragId,    setActiveDragId]    = useState(null)
   const [inspectorWidth,  setInspectorWidth]  = useState(260)
   const [leftTab,         setLeftTab]         = useState('shop')
@@ -198,6 +199,50 @@ function AppContent() {
             {saveStatus === 'loaded' && (
               <span style={{ fontSize: 10, color: '#4a90e2', opacity: 0.7 }}>↺ Restored</span>
             )}
+            {/* Export / Import */}
+            <button
+              onClick={exportSave}
+              title="Download save as JSON"
+              style={{
+                padding: '3px 10px', fontSize: 10, fontWeight: 700,
+                background: 'transparent', color: '#4a90e2',
+                border: '1px solid #1a1a3e', borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5298' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a1a3e' }}
+            >
+              EXPORT
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = ev => {
+                  const result = importSave(ev.target.result)
+                  if (!result.ok) alert(`Import failed: ${result.error}`)
+                }
+                reader.readAsText(file)
+                e.target.value = ''
+              }}
+            />
+            <button
+              onClick={() => importInputRef.current?.click()}
+              title="Load save from JSON file"
+              style={{
+                padding: '3px 10px', fontSize: 10, fontWeight: 700,
+                background: 'transparent', color: '#4a90e2',
+                border: '1px solid #1a1a3e', borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5298' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a1a3e' }}
+            >
+              IMPORT
+            </button>
             {/* Difficulty selector */}
             <select
               value={difficulty}

@@ -3,7 +3,7 @@ import { Device, createIspDevice, deviceFromSave, setIdCounter } from '../models
 import { Topology } from '../models/Topology.js'
 import { CLIEngine } from '../models/CLIEngine.js'
 import { PCCLIEngine } from '../models/PCCLIEngine.js'
-import { serialize, saveToStorage, loadFromStorage, deserialize, deleteSave } from '../utils/saveLoad.js'
+import { serialize, saveToStorage, loadFromStorage, deserialize, deleteSave, exportToFile } from '../utils/saveLoad.js'
 import { playPurchase, playMissionComplete, playSave, playCableDisconnect, playCableConnect } from '../utils/sounds.js'
 import { deviceCatalog } from '../data/deviceCatalog.js'
 import { MISSIONS } from '../data/missions.js'
@@ -266,6 +266,48 @@ export function GameProvider({ children }) {
     window.location.reload()
   }
 
+  function exportSave() {
+    exportToFile(topologyRef.current, placements, inventory, budget, completedMissions, activeMissionId)
+  }
+
+  function importSave(json) {
+    try {
+      const data = JSON.parse(json)
+      if (data?.version !== 1) throw new Error('Unrecognized save format — was this made by a different version?')
+
+      // Rebuild topology in-place so CLIEngine keeps its reference
+      topologyRef.current.clearDevices()
+      let maxId = 0
+      for (const raw of (data.devices || [])) {
+        const num = parseInt(raw.id.replace('dev-', ''), 10)
+        if (!isNaN(num) && num > maxId) maxId = num
+        topologyRef.current.addDevice(deviceFromSave(raw))
+      }
+      setIdCounter(maxId)
+
+      // Restore mission state
+      setBudget(data.budget ?? 3000)
+      setInventory(data.inventory ?? [])
+      setPlacements(data.placements ?? {})
+      setCompletedMissions(data.completedMissions ?? [])
+      setActiveMissionId(data.activeMissionId ?? null)
+
+      // Clear transient UI state
+      setTerminalSessions([])
+      setActiveTerminalId(null)
+      setSelectedDeviceId(null)
+      setPingAnimations([])
+
+      // Persist and signal
+      saveToStorage(data)
+      setSaveStatus('loaded')
+      setTick(t => t + 1)
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
+  }
+
   // ── Sandbox actions ────────────────────────────────────────────────────────
 
   function addSandboxDevice(catalogEntry) {
@@ -480,7 +522,7 @@ export function GameProvider({ children }) {
     purchaseDevice, placeDevice,
     completedMissions, completeMission,
     activeMissionId, acceptMission,
-    saveStatus, newGame,
+    saveStatus, newGame, exportSave, importSave,
 
     // Firewall console — device-agnostic overlay (missions + sandbox)
     fwConsoleDeviceId,
