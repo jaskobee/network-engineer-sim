@@ -5,7 +5,7 @@ import '@xterm/xterm/css/xterm.css'
 import { useGame } from '../state/GameContext.jsx'
 import { isValidIp, resolveHostname } from '../models/ipUtils.js'
 
-const PC_TYPES = new Set(['pc', 'server', 'phone'])
+const PC_TYPES = new Set(['pc', 'server', 'phone', 'laptop'])
 
 // ── Main pane ─────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ export default function TerminalPane() {
 
   const [floatPos, setFloatPos]   = useState({ x: 140, y: 80 })
   const [floatSize, setFloatSize] = useState({ w: 720, h: 340 })
+  const [minimized, setMinimized] = useState(false)
 
   const dragRef   = useRef(null)
   const resizeRef = useRef(null)
@@ -97,6 +98,20 @@ export default function TerminalPane() {
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6, flexShrink: 0 }}
           onMouseDown={e => e.stopPropagation()}
         >
+          {!terminalFloating && (
+            <button
+              title={minimized ? 'Expand terminal' : 'Minimize terminal'}
+              onClick={() => setMinimized(m => !m)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#444', fontSize: 13, lineHeight: 1, padding: '2px 4px',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ffb86c' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#444' }}
+            >
+              {minimized ? '▲' : '▼'}
+            </button>
+          )}
           <button
             title={terminalFloating ? 'Dock terminal' : 'Pop out terminal'}
             onClick={() => setTerminalFloating(f => !f)}
@@ -114,7 +129,7 @@ export default function TerminalPane() {
 
       {/* Terminal windows — ALL sessions (both modes) stay mounted so xterm
           instances survive MISSIONS↔SANDBOX switches; only the active one is visible. */}
-      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+      <div style={{ flex: 1, position: 'relative', minHeight: 0, display: minimized ? 'none' : undefined }}>
         {allTerminalSessions.length === 0 ? (
           <div style={{
             height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -191,7 +206,7 @@ function TermTab({ session, isActive, onSelect, onClose }) {
 // ── Individual terminal session ───────────────────────────────────────────────
 
 function TermSession({ session, isActive }) {
-  const { getDevice, engine, pcEngine, topology, placements, addPingAnimation, refresh } = useGame()
+  const { getDevice, engine, pcEngine, winEngine, topology, placements, addPingAnimation, refresh, logExecutedCommand } = useGame()
 
   const containerRef    = useRef(null)
   const xtermRef        = useRef(null)
@@ -203,13 +218,15 @@ function TermSession({ session, isActive }) {
   const savedLineRef    = useRef('')       // preserved in-progress line during history nav
   const pingCancelRef   = useRef(null)
 
-  const placementsRef       = useRef(placements)
-  const addPingAnimationRef = useRef(addPingAnimation)
-  const refreshRef          = useRef(refresh)
+  const placementsRef           = useRef(placements)
+  const addPingAnimationRef     = useRef(addPingAnimation)
+  const refreshRef              = useRef(refresh)
+  const logExecutedCommandRef   = useRef(logExecutedCommand)
   useEffect(() => {
-    placementsRef.current       = placements
-    addPingAnimationRef.current = addPingAnimation
-    refreshRef.current          = refresh
+    placementsRef.current           = placements
+    addPingAnimationRef.current     = addPingAnimation
+    refreshRef.current              = refresh
+    logExecutedCommandRef.current   = logExecutedCommand
   })
 
   useEffect(() => {
@@ -226,8 +243,9 @@ function TermSession({ session, isActive }) {
     const device = getDevice(session.deviceId)
     if (!device) return
 
-    const isPC = PC_TYPES.has(device.type)
-    const eng  = isPC ? pcEngine : engine
+    const isPC      = PC_TYPES.has(device.type)
+    const isWindows = device.type === 'laptop' && device.os_type === 'windows'
+    const eng       = isWindows ? winEngine : (isPC ? pcEngine : engine)
 
     const term = new XTerm({
       cursorBlink: true,
@@ -250,9 +268,11 @@ function TermSession({ session, isActive }) {
     xtermRef.current = term
 
     term.writeln(`\r\n\x1b[36mConnected to ${device.hostname} (${device.model})\x1b[0m`)
-    term.writeln(`\x1b[90m${isPC
-      ? "Linux shell — 'help' for commands, Tab to complete"
-      : "IOS simulator — '?' for commands, Tab to complete"}\x1b[0m\r\n`)
+    term.writeln(`\x1b[90m${isWindows
+      ? "Windows CMD — 'help' for commands, Tab to complete"
+      : isPC
+        ? "Linux shell — 'help' for commands, Tab to complete"
+        : "IOS simulator — '?' for commands, Tab to complete"}\x1b[0m\r\n`)
     term.write(eng.getPrompt(device) + ' ')
 
     function prompt() { return eng.getPrompt(device) + ' ' }
@@ -295,6 +315,7 @@ function TermSession({ session, isActive }) {
         cursorRef.current = 0
         term.write('\r\n')
         if (!line) { writePrompt(); return }
+        logExecutedCommandRef.current(line.trim())
 
         const tokens     = line.trim().split(/\s+/)
         const isPingCmd  = tokens[0].toLowerCase() === 'ping' && tokens.length >= 2
@@ -317,7 +338,14 @@ function TermSession({ session, isActive }) {
             onStart: lines => lines.forEach(l => term.writeln(l)),
             onPacket: (i, reachable, _tgt, srcIp, failureReason, ttl, rtt) => {
               const pktSrcIp = srcIp ?? device.interfaces.find(f => f.status === 'up' && f.ip)?.ip
-              if (isPC) {
+              if (isWindows) {
+                if (reachable) {
+                  const ms = rtt != null ? `${Math.max(1, Math.round(rtt))}ms` : '<1ms'
+                  term.writeln(`\x1b[32mReply from ${resolvedPingTarget}: bytes=32 time=${ms} TTL=${ttl ?? 128}\x1b[0m`)
+                } else {
+                  term.writeln(`\x1b[31mRequest timed out.\x1b[0m`)
+                }
+              } else if (isPC) {
                 if (reachable) {
                   const fromLabel = resolvedPingTarget !== pingTarget
                     ? `${pingTarget} (${resolvedPingTarget})`

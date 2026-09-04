@@ -13,6 +13,8 @@ import SandboxPalette from './components/SandboxPalette.jsx'
 import WelcomeModal, { hasSeenTour } from './components/WelcomeModal.jsx'
 import DevPanel from './components/DevPanel.jsx'
 import FirewallConsole from './components/FirewallConsole.jsx'
+import AdminLaptop from './components/AdminLaptop.jsx'
+import ActiveJobPanel from './components/ActiveJobPanel.jsx'
 
 export default function App() {
   const { user } = useAuth()
@@ -24,7 +26,7 @@ export default function App() {
   )
 }
 
-// ── Resizable divider ─────────────────────────────────────────────────────────
+// ── Resizable dividers ────────────────────────────────────────────────────────
 
 function ResizeDivider({ onDelta }) {
   const dragRef   = useRef(null)
@@ -53,6 +55,40 @@ function ResizeDivider({ onDelta }) {
       onMouseDown={onMouseDown}
       style={{ width: 5, flexShrink: 0, cursor: 'col-resize', background: '#0d0d1a',
         borderLeft: '1px solid #1a1a3e', borderRight: '1px solid #1a1a3e' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#2a5298' }}
+      onMouseLeave={e => { e.currentTarget.style.background = '#0d0d1a' }}
+      title="Drag to resize"
+    />
+  )
+}
+
+function VerticalResizeDivider({ onDelta }) {
+  const dragRef = useRef(null)
+  const cbRef   = useRef(onDelta)
+  cbRef.current = onDelta
+
+  function onMouseDown(e) {
+    dragRef.current = e.clientY
+    function onMove(ev) {
+      if (dragRef.current === null) return
+      cbRef.current(ev.clientY - dragRef.current)
+      dragRef.current = ev.clientY
+    }
+    function onUp() {
+      dragRef.current = null
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    e.preventDefault()
+  }
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      style={{ height: 5, flexShrink: 0, cursor: 'row-resize', background: '#0d0d1a',
+        borderTop: '1px solid #1a1a3e', borderBottom: '1px solid #1a1a3e' }}
       onMouseEnter={e => { e.currentTarget.style.background = '#2a5298' }}
       onMouseLeave={e => { e.currentTarget.style.background = '#0d0d1a' }}
       title="Drag to resize"
@@ -90,15 +126,121 @@ function SidebarTabs({ active, onChange }) {
 
 // ── Main app  ──────────────────────────────────────────────────────────────────
 
+// ── Collision helpers (device tile: 108×90, 10px gap) ────────────────────────
+
+const DEV_W = 108
+const DEV_H = 90
+const DEV_GAP = 10
+
+function wouldOverlap(x, y, excludeId, placements) {
+  for (const [id, pos] of Object.entries(placements)) {
+    if (id === excludeId) continue
+    if (Math.abs(x - pos.x) < DEV_W + DEV_GAP && Math.abs(y - pos.y) < DEV_H + DEV_GAP) return true
+  }
+  return false
+}
+
+function findFreePosition(x, y, placements, excludeId) {
+  if (!wouldOverlap(x, y, excludeId, placements)) return { x, y }
+  const step = DEV_W + DEV_GAP
+  for (let ring = 1; ring <= 8; ring++) {
+    for (let dx = -ring; dx <= ring; dx++) {
+      for (let dy = -ring; dy <= ring; dy++) {
+        if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue
+        const nx = Math.max(10, x + dx * step)
+        const ny = Math.max(10, y + dy * step)
+        if (!wouldOverlap(nx, ny, excludeId, placements)) return { x: nx, y: ny }
+      }
+    }
+  }
+  return { x, y }
+}
+
+// ── One-time Admin Laptop intro modal ─────────────────────────────────────────
+
+function LaptopIntroModal({ onClose }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 2100,
+      background: 'rgba(0,0,0,0.82)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        background: '#080d1c', border: '1px solid #2a5298', borderRadius: 10,
+        padding: '28px 30px', maxWidth: 420, width: '90vw',
+        boxShadow: '0 8px 60px #00000090',
+      }}>
+        <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 12 }}>🖥</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#c8d4e8', textAlign: 'center', marginBottom: 12 }}>
+          You have an Admin Laptop
+        </div>
+        <p style={{ fontSize: 12, color: '#6a80a0', lineHeight: 1.75, marginBottom: 14 }}>
+          The <strong style={{ color: '#4a90e2' }}>Admin Laptop</strong> is a real device on your network.
+          It starts uncabled and unpowered — you need to plug it into your router and give it an IP address
+          before it can reach anything.
+        </p>
+        <div style={{
+          background: '#060c1a', borderRadius: 6, padding: '12px 14px',
+          border: '1px solid #1a2a4a', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 9, color: '#3a6090', fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>WHAT IT CAN DO</div>
+          {[
+            ['💻', 'CLI', 'Real Linux or Windows networking commands — ip addr, ping, netsh, route'],
+            ['🐟', 'WireFish', 'Inspect packets flowing through your network'],
+            ['🌐', 'Browser', 'Access device web UIs once management is configured'],
+          ].map(([icon, name, desc]) => (
+            <div key={name} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#8090b0' }}>{name}</div>
+                <div style={{ fontSize: 10, color: '#3a4a6a', lineHeight: 1.5 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 11, color: '#3a4a6a', lineHeight: 1.65, marginBottom: 20 }}>
+          Click <strong style={{ color: '#5a90c8' }}>🖥 ADMIN LAPTOP</strong> in the top bar to open it.
+          The <strong style={{ color: '#5a90c8' }}>GUIDE</strong> tab walks you through cabling, IP setup, and first steps.
+        </p>
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%', padding: '10px 0', fontSize: 13, fontWeight: 700,
+            background: '#1a3a5c', color: '#4a90e2',
+            border: '1px solid #2a5298', borderRadius: 6, cursor: 'pointer', letterSpacing: 0.5,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#2a5298'; e.currentTarget.style.color = '#e0e0e0' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#1a3a5c'; e.currentTarget.style.color = '#4a90e2' }}
+        >GOT IT — LET&apos;S START</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Main app  ──────────────────────────────────────────────────────────────────
+
 function AppContent() {
   const { user, logout } = useAuth()
-  const { devices, placements, placeDevice, movePlacedDevice, terminalFloating, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, terminalSessions, fwConsoleDeviceId, closeFwConsole } = useGame()
+  const { devices, placements, placeDevice, movePlacedDevice, terminalFloating, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, terminalSessions, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeJobPanelOpen } = useGame()
   const importInputRef = useRef(null)
-  const [activeDragId,    setActiveDragId]    = useState(null)
-  const [inspectorWidth,  setInspectorWidth]  = useState(260)
-  const [leftTab,         setLeftTab]         = useState('shop')
-  const [showTour,        setShowTour]        = useState(() => !hasSeenTour())
-  const [devPanelOpen,    setDevPanelOpen]    = useState(false)
+  const [activeDragId,     setActiveDragId]     = useState(null)
+  const [rightPanelWidth,  setRightPanelWidth]  = useState(380)
+  const [inspectorHeight,  setInspectorHeight]  = useState(220)
+  const [leftTab,          setLeftTab]          = useState('shop')
+  const [showTour,         setShowTour]         = useState(() => !hasSeenTour())
+  const [devPanelOpen,     setDevPanelOpen]     = useState(false)
+  const [laptopIntroOpen,  setLaptopIntroOpen]  = useState(false)
+  const prevMissionIdRef = useRef(null)
+
+  // Show the Admin Laptop intro once when the player accepts their first ever mission
+  useEffect(() => {
+    if (activeMissionId && !prevMissionIdRef.current) {
+      if (!localStorage.getItem('netsim_laptop_intro_seen')) {
+        setLaptopIntroOpen(true)
+      }
+    }
+    prevMissionIdRef.current = activeMissionId
+  }, [activeMissionId])
 
   // Ctrl+Shift+D toggles dev panel (only active in DEV builds)
   useEffect(() => {
@@ -113,15 +255,6 @@ function AppContent() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
-  // When the first terminal opens, widen the inspector enough to show full interface names
-  const prevSessionCountRef = useRef(0)
-  useEffect(() => {
-    if (prevSessionCountRef.current === 0 && terminalSessions.length > 0) {
-      setInspectorWidth(w => Math.max(w, 460))
-    }
-    prevSessionCountRef.current = terminalSessions.length
-  }, [terminalSessions.length])
-
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   function handleDragStart(event) { setActiveDragId(event.active.id) }
@@ -133,12 +266,20 @@ function AppContent() {
     const data = active.data.current
     if (data?.type === 'inventory' && over.id === 'floorplan') {
       const translated = active.rect.current?.translated
-      const x = translated ? Math.max(10, Math.round(translated.left - over.rect.left)) : 80
-      const y = translated ? Math.max(10, Math.round(translated.top  - over.rect.top))  : 80
+      const rawX = translated ? Math.max(10, Math.round(translated.left - over.rect.left)) : 80
+      const rawY = translated ? Math.max(10, Math.round(translated.top  - over.rect.top))  : 80
+      const { x, y } = findFreePosition(rawX, rawY, placements, null)
       placeDevice(data.deviceId, x, y)
     } else if (data?.type === 'placed') {
       const cur = placements[data.deviceId]
-      if (cur) movePlacedDevice(data.deviceId, Math.max(0, Math.round(cur.x + delta.x)), Math.max(0, Math.round(cur.y + delta.y)))
+      if (cur) {
+        const nx = Math.max(0, Math.round(cur.x + delta.x))
+        const ny = Math.max(0, Math.round(cur.y + delta.y))
+        if (!wouldOverlap(nx, ny, data.deviceId, placements)) {
+          movePlacedDevice(data.deviceId, nx, ny)
+        }
+        // else: no-op — device snaps back to its original position
+      }
     }
   }
 
@@ -190,6 +331,23 @@ function AppContent() {
               )}
             </div>
           )}
+
+          {/* Admin Laptop toggle */}
+          <button
+            onClick={() => setAdminLaptopOpen(o => !o)}
+            title="Admin Laptop — Wireshark + Browser"
+            style={{
+              marginLeft: 16,
+              padding: '3px 12px', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+              background: adminLaptopOpen ? '#1a3a5c' : 'transparent',
+              color: adminLaptopOpen ? '#4a90e2' : '#4a5568',
+              border: `1px solid ${adminLaptopOpen ? '#2a5298' : '#1a1a3e'}`,
+              borderRadius: 3, cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (!adminLaptopOpen) { e.currentTarget.style.color = '#4a90e2'; e.currentTarget.style.borderColor = '#2a3a5c' } }}
+            onMouseLeave={e => { if (!adminLaptopOpen) { e.currentTarget.style.color = '#4a5568'; e.currentTarget.style.borderColor = '#1a1a3e' } }}
+          >🖥 ADMIN LAPTOP</button>
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Save indicator */}
@@ -309,24 +467,37 @@ function AppContent() {
             )}
           </aside>
 
-          <main className="main-area">
-            <Floorplan />
-            <div className="bottom-panels">
+          <main className="main-area" style={{ flexDirection: 'row' }}>
+            {/* Floorplan — fills remaining width */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <Floorplan />
+            </div>
+
+            {/* Horizontal divider between floorplan and right panel */}
+            <ResizeDivider onDelta={d => setRightPanelWidth(w => Math.max(240, Math.min(720, w - d)))} />
+
+            {/* Right panel: terminal (top) + inspector (bottom) */}
+            <div style={{
+              width: rightPanelWidth, flexShrink: 0,
+              display: 'flex', flexDirection: 'column',
+              borderLeft: '1px solid #1a1a3e', overflow: 'hidden',
+            }}>
+              {/* Terminal — shown when sessions exist and not floating */}
+              {!noSessions && !terminalFloating && (
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                  <TerminalPane />
+                </div>
+              )}
+              {/* Vertical divider between terminal and inspector */}
+              {!noSessions && !terminalFloating && (
+                <VerticalResizeDivider onDelta={d => setInspectorHeight(h => Math.max(120, Math.min(500, h + d)))} />
+              )}
+              {/* Device inspector — fills full right panel when no terminal */}
               <div style={{
-                width: (terminalFloating || noSessions) ? '100%' : inspectorWidth,
+                height: (noSessions || terminalFloating) ? '100%' : inspectorHeight,
                 flexShrink: 0, overflowY: 'auto', overflowX: 'auto',
-                borderRight: (terminalFloating || noSessions) ? 'none' : '1px solid #1a1a3e',
               }}>
                 <DeviceInspector />
-              </div>
-              {!terminalFloating && !noSessions && (
-                <ResizeDivider onDelta={d => setInspectorWidth(w => Math.max(160, Math.min(520, w + d)))} />
-              )}
-              <div style={noSessions
-                ? { flex: '0 0 0px', overflow: 'hidden', minWidth: 0 }
-                : { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }
-              }>
-                <TerminalPane />
               </div>
             </div>
           </main>
@@ -365,8 +536,17 @@ function AppContent() {
       </DragOverlay>
     </DndContext>
 
+    {laptopIntroOpen && (
+      <LaptopIntroModal onClose={() => { localStorage.setItem('netsim_laptop_intro_seen', '1'); setLaptopIntroOpen(false) }} />
+    )}
     {fwConsoleDeviceId && (
       <FirewallConsole deviceId={fwConsoleDeviceId} onClose={closeFwConsole} />
+    )}
+    {adminLaptopOpen && (
+      <AdminLaptop onClose={() => setAdminLaptopOpen(false)} />
+    )}
+    {activeMissionId && activeJobPanelOpen && (
+      <ActiveJobPanel />
     )}
     {import.meta.env.DEV && (
       <DevPanel open={devPanelOpen} onClose={() => setDevPanelOpen(false)} />

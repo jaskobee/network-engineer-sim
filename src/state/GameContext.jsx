@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Device, createIspDevice, deviceFromSave, setIdCounter } from '../models/Device.js'
+import { Device, createIspDevice, createAdminLaptop, deviceFromSave, setIdCounter } from '../models/Device.js'
 import { Topology } from '../models/Topology.js'
 import { CLIEngine } from '../models/CLIEngine.js'
 import { PCCLIEngine } from '../models/PCCLIEngine.js'
+import { WindowsCLIEngine } from '../models/WindowsCLIEngine.js'
 import { serialize, saveToStorage, loadFromStorage, deserialize, deleteSave, exportToFile } from '../utils/saveLoad.js'
 import { playPurchase, playMissionComplete, playSave, playCableDisconnect, playCableConnect } from '../utils/sounds.js'
 import { deviceCatalog } from '../data/deviceCatalog.js'
@@ -36,18 +37,29 @@ export function GameProvider({ children }) {
 
   const [difficulty, setDifficultyState] = useState(_loadDifficulty)
 
-  const engineRef   = useRef(null)
-  const pcEngineRef = useRef(null)
-  if (!engineRef.current)   engineRef.current   = new CLIEngine(topologyRef.current, difficulty)
-  if (!pcEngineRef.current) pcEngineRef.current = new PCCLIEngine(topologyRef.current, difficulty)
+  const engineRef    = useRef(null)
+  const pcEngineRef  = useRef(null)
+  const winEngineRef = useRef(null)
+  if (!engineRef.current)    engineRef.current    = new CLIEngine(topologyRef.current, difficulty)
+  if (!pcEngineRef.current)  pcEngineRef.current  = new PCCLIEngine(topologyRef.current, difficulty)
+  if (!winEngineRef.current) winEngineRef.current = new WindowsCLIEngine(topologyRef.current, difficulty)
 
   // ── Sandbox topology & engines (fully independent of mission state) ────────
   const sbTopoRef    = useRef(null)
-  if (!sbTopoRef.current) sbTopoRef.current = new Topology()
-  const sbEngineRef   = useRef(null)
-  const sbPcEngineRef = useRef(null)
-  if (!sbEngineRef.current)   sbEngineRef.current   = new CLIEngine(sbTopoRef.current, difficulty)
-  if (!sbPcEngineRef.current) sbPcEngineRef.current = new PCCLIEngine(sbTopoRef.current, difficulty)
+  const sbLaptopIdRef = useRef(null)   // stable ref so we can read the sandbox laptop's ID
+  if (!sbTopoRef.current) {
+    sbTopoRef.current = new Topology()
+    // Add the admin laptop immediately so it's present from the first sandbox session.
+    const initLaptop = createAdminLaptop()
+    sbTopoRef.current.addDevice(initLaptop)
+    sbLaptopIdRef.current = initLaptop.id
+  }
+  const sbEngineRef    = useRef(null)
+  const sbPcEngineRef  = useRef(null)
+  const sbWinEngineRef = useRef(null)
+  if (!sbEngineRef.current)    sbEngineRef.current    = new CLIEngine(sbTopoRef.current, difficulty)
+  if (!sbPcEngineRef.current)  sbPcEngineRef.current  = new PCCLIEngine(sbTopoRef.current, difficulty)
+  if (!sbWinEngineRef.current) sbWinEngineRef.current = new WindowsCLIEngine(sbTopoRef.current, difficulty)
 
   // Counters for auto-naming (R1, R2 …); reset on clearSandbox
   const sbCountersRef = useRef({ router: 0, switch: 0, pc: 0, server: 0, isp: 0 })
@@ -70,7 +82,9 @@ export function GameProvider({ children }) {
 
   // ── Sandbox state (parallel to mission; never serialised) ──────────────────
   const [mode,               setMode]               = useState('missions')
-  const [sbPlacements,       setSbPlacements]       = useState({})
+  const [sbPlacements,       setSbPlacements]       = useState(() =>
+    sbLaptopIdRef.current ? { [sbLaptopIdRef.current]: { x: 20, y: 360 } } : {}
+  )
   const [sbSelectedDeviceId, setSbSelectedDeviceId] = useState(null)
   const [sbTerminalSessions, setSbTerminalSessions] = useState([])
   const [sbActiveTerminalId, setSbActiveTerminalId] = useState(null)
@@ -80,6 +94,18 @@ export function GameProvider({ children }) {
 
   // Firewall console — device-agnostic; works in both missions and sandbox modes
   const [fwConsoleDeviceId,  setFwConsoleDeviceId]  = useState(null)
+
+  // Admin Laptop — always-available management panel (WireFish + Browser)
+  const [adminLaptopOpen, setAdminLaptopOpen] = useState(false)
+
+  // Active Job Panel — floating task tracker (auto-opens on mission accept)
+  const [activeJobPanelOpen, setActiveJobPanelOpen] = useState(false)
+
+  // Beginner hint command log — tracks every command typed in any terminal
+  const executedCommandsRef = useRef(new Set())
+  function logExecutedCommand(cmd) {
+    if (cmd?.trim()) executedCommandsRef.current.add(cmd.trim())
+  }
 
   // ── Mode-derived helpers ───────────────────────────────────────────────────
   const isSandbox    = mode === 'sandbox'
@@ -96,8 +122,10 @@ export function GameProvider({ children }) {
     setDifficultyState(d)
     engineRef.current.difficulty     = d
     pcEngineRef.current.difficulty   = d
+    winEngineRef.current.difficulty  = d
     sbEngineRef.current.difficulty   = d
     sbPcEngineRef.current.difficulty = d
+    sbWinEngineRef.current.difficulty = d
   }
 
   // Active device list from whichever topology is current
@@ -213,7 +241,12 @@ export function GameProvider({ children }) {
     // Auto-place a pre-configured ISP device in the top-right of the floorplan.
     const isp = createIspDevice()
     topologyRef.current.addDevice(isp)
-    let initialPlacements = { [isp.id]: { x: 620, y: 20 } }
+    // Auto-place the admin laptop (always present, free, not purchasable from shop).
+    // Starts unpowered and uncabled — the player must connect and configure it.
+    // Its network position is what gates the browser/tools (see ADMIN_LAPTOP_AND_TOOLS.md).
+    const laptop = createAdminLaptop()
+    topologyRef.current.addDevice(laptop)
+    let initialPlacements = { [isp.id]: { x: 620, y: 20 }, [laptop.id]: { x: 20, y: 360 } }
     // Mission 005: pre-build the completed M004 network so the player only adds the firewall.
     if (missionId === 'mission_005') {
       const { placements: scaffoldPlacements } = buildMission005Scaffold(
@@ -225,13 +258,14 @@ export function GameProvider({ children }) {
     }
     setPlacements(initialPlacements)
     setActiveMissionId(missionId)
+    setActiveJobPanelOpen(true)
     setTick(t => t + 1)
   }
 
   function completeMission(missionId, reward) {
     // Refund the purchase cost of all player-bought devices
     const refund = [...topologyRef.current.devices.values()].reduce((sum, d) => {
-      if (d.type === 'isp') return sum
+      if (d.type === 'isp' || d.type === 'laptop') return sum
       const entry = deviceCatalog.find(e => e.model === d.model)
       return sum + (entry?.price ?? 0)
     }, 0)
@@ -308,6 +342,28 @@ export function GameProvider({ children }) {
     }
   }
 
+  // Execute a sequence of CLI commands on a device (used by Firewall Web UI).
+  // Runs commands through the real engine — never writes directly to device state.
+  // Returns the combined output lines from all commands.
+  function executeDeviceCommands(deviceId, cmds) {
+    const dev = activeTopoRef.current.devices.get(deviceId)
+    if (!dev) return ['Error: device not found']
+    const isWindowsLaptop = dev.type === 'laptop' && dev.os_type === 'windows'
+    const isLinuxHost     = dev.type === 'pc' || dev.type === 'server' || (dev.type === 'laptop' && !isWindowsLaptop)
+    const eng = isWindowsLaptop
+      ? (isSandbox ? sbWinEngineRef.current : winEngineRef.current)
+      : isLinuxHost
+        ? (isSandbox ? sbPcEngineRef.current : pcEngineRef.current)
+        : (isSandbox ? sbEngineRef.current   : engineRef.current)
+    const out = []
+    for (const cmd of cmds) {
+      const lines = eng.execute(dev, cmd)
+      if (lines?.length) out.push(...lines)
+    }
+    refresh()
+    return out
+  }
+
   // ── Sandbox actions ────────────────────────────────────────────────────────
 
   function addSandboxDevice(catalogEntry) {
@@ -331,7 +387,11 @@ export function GameProvider({ children }) {
 
   function clearSandbox() {
     sbTopoRef.current.clearDevices()
-    setSbPlacements({})
+    // Re-add the admin laptop to sandbox (always present, like in missions)
+    const sbLaptop = createAdminLaptop()
+    sbTopoRef.current.addDevice(sbLaptop)
+    sbLaptopIdRef.current = sbLaptop.id
+    setSbPlacements({ [sbLaptop.id]: { x: 20, y: 360 } })
     setSbTerminalSessions([])
     setSbActiveTerminalId(null)
     setSbSelectedDeviceId(null)
@@ -479,7 +539,8 @@ export function GameProvider({ children }) {
     setWireMode:         isSandbox ? setSbWireMode      : setWireMode,
     pingAnimations:      isSandbox ? sbPingAnimations   : pingAnimations,
     engine:              isSandbox ? sbEngineRef.current   : engineRef.current,
-    pcEngine:            isSandbox ? sbPcEngineRef.current : pcEngineRef.current,
+    pcEngine:            isSandbox ? sbPcEngineRef.current  : pcEngineRef.current,
+    winEngine:           isSandbox ? sbWinEngineRef.current : winEngineRef.current,
     tick:                isSandbox ? sbTick : tick,
 
     // Terminal sessions — active mode's list drives the tab bar
@@ -511,6 +572,7 @@ export function GameProvider({ children }) {
     sbTopology:         sbTopoRef.current,
     sbEngine:           sbEngineRef.current,
     sbPcEngine:         sbPcEngineRef.current,
+    sbWinEngine:        sbWinEngineRef.current,
     sbConnectInterfaces,
 
     // Dev actions — safe to expose in all builds; DevPanel gates them behind DEV flag.
@@ -528,6 +590,23 @@ export function GameProvider({ children }) {
     fwConsoleDeviceId,
     openFwConsole:  (id) => setFwConsoleDeviceId(id),
     closeFwConsole: ()   => setFwConsoleDeviceId(null),
+
+    // Admin Laptop — always-visible management panel (WireFish + Browser)
+    adminLaptopOpen, setAdminLaptopOpen,
+
+    // Active Job Panel — floating task tracker
+    activeJobPanelOpen, setActiveJobPanelOpen,
+    // Beginner command log (ref — reads are always current on each tick-driven render)
+    executedCommandsRef, logExecutedCommand,
+    // Derived: the laptop device in the active topology (null when no mission started yet)
+    laptopDevice: devices.find(d => d.type === 'laptop') ?? null,
+    setLaptopOsType: (type) => {
+      const laptop = [...activeTopoRef.current.devices.values()].find(d => d.type === 'laptop')
+      if (laptop) { laptop.os_type = type; refresh() }
+    },
+    packetCapture: activeTopoRef.current.packetCapture,
+    clearPacketCapture: () => { activeTopoRef.current.clearPacketCapture(); refresh() },
+    executeDeviceCommands,
 
     // Shared across modes
     terminalFloating, setTerminalFloating,

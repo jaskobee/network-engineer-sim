@@ -138,6 +138,30 @@ export function refreshSubifs(device) {
   }
 }
 
+// Factory for the player's Admin Laptop — always present, free, not in the shop.
+// Starts unpowered and uncabled. The player cables it, powers it on, and configures
+// an IP before the browser/tools can reach anything (by design — see ADMIN_LAPTOP_AND_TOOLS.md).
+// Uses PCCLIEngine (Linux shell) — `ip addr`, `ip route`, `ping`, `dhclient` all work.
+export function createAdminLaptop(hostname = 'admin-laptop') {
+  const d = Object.create(Device.prototype)
+  Object.assign(d, {
+    id: `dev-${++_idCounter}`,
+    type: 'laptop',
+    model: 'ADMIN-LAPTOP',
+    hostname,
+    config_mode: 'user_exec',
+    active_interface: null,
+    active_dhcp_pool: null,
+    powered: false,   // player must power on like any device
+    os_type: 'linux', // 'linux' | 'windows' — controls CLI engine in TerminalPane
+    interfaces: [createInterface('Ethernet0/0')],
+    routing_table: [],
+    vlan_db: {},
+    dns_server: null,
+  })
+  return d
+}
+
 // Factory for the pre-placed ISP/internet device that appears in every mission.
 // The device is pre-powered, pre-configured, and cannot be purchased from the shop.
 export function createIspDevice() {

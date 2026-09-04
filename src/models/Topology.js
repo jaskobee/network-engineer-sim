@@ -3,8 +3,11 @@ import { refreshSubifs } from './Device.js'
 
 export class Topology {
   constructor() {
-    this.devices = new Map() // deviceId -> Device
-    this.pingLog = new Set() // 'srcIp:dstIp' — pings actually run by the user in terminal
+    this.devices  = new Map()  // deviceId -> Device
+    this.pingLog  = new Set()  // 'srcIp:dstIp' — pings actually run by the user in terminal
+    this.packetCapture  = []   // [{id, ts, src, dst, protocol, dport, size, via_device_id, …}]
+    this._captureSeq    = 0    // monotonic frame counter (shown as "No." in Wireshark panel)
+    this._captureStart  = Date.now() // session start — used for relative-time display
   }
 
   addDevice(device) {
@@ -24,6 +27,111 @@ export class Topology {
   clearDevices() {
     this.devices.clear()
     this.pingLog.clear()
+    this.clearPacketCapture()
+  }
+
+  clearPacketCapture() {
+    this.packetCapture  = []
+    this._captureSeq    = 0
+    this._captureStart  = Date.now()
+  }
+
+  // Record a packet-capture trace for a ping that was just executed.
+  // Called by CLIEngine / PCCLIEngine immediately after checkPing; never called
+  // from mission validators (they call checkPing silently).
+  recordCapture(srcIp, dstIp, result, service = { protocol: 'icmp', port: null }) {
+    const ts     = Date.now()
+    const proto  = (service.protocol ?? 'icmp').toUpperCase()
+    const dport  = service.port ?? null
+    const fwdSz  = proto === 'ICMP' ? 74  : proto === 'TCP' ? 60 : 52
+    const retSz  = proto === 'ICMP' ? 74  : proto === 'TCP' ? 52 : 52
+
+    const _info = (dir) => {
+      if (proto === 'ICMP') return dir === 'fwd' ? 'Echo (ping) request' : 'Echo (ping) reply'
+      return `${proto}/${dport} ${dir === 'fwd' ? 'request' : 'reply'}`
+    }
+    const _push = (entry) => {
+      this.packetCapture.push(entry)
+      if (this.packetCapture.length > 2000) this.packetCapture.shift()
+    }
+    const _devRow = (devId, dir, size, action, extra = {}) => {
+      const dev = this.devices.get(devId)
+      const fwdSrc = dir === 'fwd' ? srcIp : dstIp
+      const fwdDst = dir === 'fwd' ? dstIp : srcIp
+      return {
+        id: ++this._captureSeq, ts,
+        src: fwdSrc, dst: fwdDst, protocol: proto, dport, size,
+        via_device_id: devId, via_device_name: dev?.hostname ?? devId,
+        via_device_type: dev?.type ?? 'unknown',
+        direction: dir, action, info: _info(dir), ...extra,
+      }
+    }
+
+    if (result.reachable) {
+      // Forward path
+      const fwdPath = this.findPath(srcIp, dstIp)
+      fwdPath.forEach(id => _push(_devRow(id, 'fwd', fwdSz, 'forward')))
+
+      // Return path — internet destination has no real device for return
+      const ispDst = !this._findDeviceByIp(dstIp)
+      if (!ispDst) {
+        const retPath = this.findPath(dstIp, srcIp)
+        retPath.forEach(id => _push(_devRow(id, 'ret', retSz, 'forward')))
+      } else {
+        // Synthetic internet reply: show the ISP/internet node
+        _push({
+          id: ++this._captureSeq, ts: ts + 1,
+          src: dstIp, dst: srcIp, protocol: proto, dport, size: retSz,
+          via_device_id: null, via_device_name: 'Internet',
+          via_device_type: 'isp', direction: 'ret', action: 'forward',
+          info: _info('ret'),
+        })
+      }
+    } else {
+      // Drop entry — show what we know about the failure point
+      const fpDev = result.failurePoint ? this.devices.get(result.failurePoint) : null
+      _push({
+        id: ++this._captureSeq, ts,
+        src: srcIp, dst: dstIp, protocol: proto, dport, size: fwdSz,
+        via_device_id: result.failurePoint ?? null,
+        via_device_name: fpDev?.hostname ?? 'Network',
+        via_device_type: fpDev?.type ?? 'unknown',
+        direction: 'fwd', action: 'drop',
+        failure_reason: result.failureReason,
+        info: _captureDropInfo(result.failureReason, fpDev?.hostname),
+      })
+    }
+  }
+
+  // Record simulated DHCP exchange packets (called from PCCLIEngine dhclient).
+  recordDhcpCapture(clientDevice, clientIface, relayIp, serverDevice, serverIp, success) {
+    const ts        = Date.now()
+    const clientIp  = clientIface?.ip ?? '0.0.0.0'
+    const clientName = clientDevice?.hostname ?? 'Client'
+    const serverName = serverDevice?.hostname ?? 'DHCP Server'
+    const _push = (entry) => {
+      this.packetCapture.push(entry)
+      if (this.packetCapture.length > 2000) this.packetCapture.shift()
+    }
+    const _dhcp = (src, dst, devId, devName, type, info) => _push({
+      id: ++this._captureSeq, ts: ts + this._captureSeq,
+      src, dst, protocol: 'DHCP', dport: 67, size: 342,
+      via_device_id: devId, via_device_name: devName, via_device_type: 'dhcp',
+      direction: 'fwd', action: 'forward', info: `DHCP ${type}  - ${info}`,
+    })
+
+    _dhcp('0.0.0.0', '255.255.255.255', clientDevice?.id, clientName, 'Discover',
+      `Client ${clientName} seeking DHCP server`)
+    if (serverDevice) {
+      _dhcp(serverIp, '255.255.255.255', serverDevice.id, serverName, 'Offer',
+        success ? `Offered: ${success}` : 'No available addresses')
+    }
+    if (success) {
+      _dhcp('0.0.0.0', '255.255.255.255', clientDevice?.id, clientName, 'Request',
+        `Requesting ${success}`)
+      _dhcp(serverIp, success, serverDevice?.id ?? null, serverName, 'ACK',
+        `Assigned: ${success}`)
+    }
   }
 
   // Record that the user actually ran a ping command and it succeeded.
@@ -785,6 +893,23 @@ function _prefixLenToMask(prefix) {
   if (prefix >= 32) return '255.255.255.255'
   const n = ~((1 << (32 - prefix)) - 1) >>> 0
   return [(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF].join('.')
+}
+
+// Human-readable drop summary for packet capture entries.
+function _captureDropInfo(reason, fpName) {
+  const at = fpName ? ` at ${fpName}` : ''
+  switch (reason) {
+    case 'no_route':           return `No route to destination${at}`
+    case 'host_no_gateway':    return `No default gateway configured`
+    case 'link_down':          return `Link down — check cable`
+    case 'admin_down':         return `Interface administratively down`
+    case 'no_return_path':     return `No return path (one-way route)${at}`
+    case 'vlan_isolated':      return `VLAN boundary — no L3 routing between VLANs`
+    case 'nat_required':       return `RFC 1918 source — NAT required${at}`
+    case 'blocked_by_firewall':return `Blocked by firewall policy${at} [no matching permit rule]`
+    case 'subnet_mismatch':    return `Subnet mismatch — verify IP/mask configuration`
+    default:                   return `Destination unreachable (${reason ?? 'unknown'})`
+  }
 }
 
 // Build the standardised checkPing result object.

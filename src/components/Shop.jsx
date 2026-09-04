@@ -1,8 +1,8 @@
 import { deviceCatalog } from '../data/deviceCatalog.js'
 import { useGame } from '../state/GameContext.jsx'
 
-const TYPE_ICONS = { router: '📡', switch: '🔀', pc: '💻', server: '🗄️', phone: '📞' }
-const TYPE_COLOR = { router: '#4a90e2', switch: '#8be9fd', pc: '#50fa7b', server: '#ffb86c', phone: '#ff79c6' }
+const TYPE_ICONS = { router: '📡', switch: '🔀', pc: '💻', server: '🗄️', phone: '📞', firewall: '🛡️' }
+const TYPE_COLOR = { router: '#4a90e2', switch: '#8be9fd', pc: '#50fa7b', server: '#ffb86c', phone: '#ff79c6', firewall: '#ff5555' }
 
 export default function Shop() {
   const { budget, purchaseDevice, inventory, devices } = useGame()

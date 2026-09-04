@@ -133,7 +133,30 @@ function IspIcon() {
   )
 }
 
-const ICONS = { router: RouterIcon, switch: SwitchIcon, pc: PCIcon, server: ServerIcon, phone: PhoneIcon, firewall: FirewallIcon, isp: IspIcon }
+function LaptopIcon() {
+  return (
+    <svg viewBox="0 0 54 42" width="54" height="42" style={{ display: 'block', margin: '0 auto' }}>
+      {/* Lid */}
+      <rect x="4" y="3" width="46" height="28" rx="2.5" fill="#0d1a40" stroke="#8ab4d4" strokeWidth="1.4"/>
+      <rect x="7" y="6" width="40" height="22" rx="1.5" fill="#060d20"/>
+      {/* Screen content lines */}
+      <rect x="10" y="10" width="24" height="1.5" rx="0.5" fill="#4a90e2" opacity="0.7"/>
+      <rect x="10" y="14" width="18" height="1.5" rx="0.5" fill="#8be9fd" opacity="0.5"/>
+      <rect x="10" y="18" width="20" height="1.5" rx="0.5" fill="#8be9fd" opacity="0.4"/>
+      {/* Admin star badge */}
+      <circle cx="39" cy="16" r="5" fill="#1a2a50" stroke="#4a90e2" strokeWidth="0.8"/>
+      <text x="39" y="19" textAnchor="middle" fontSize="6" fill="#4a90e2">★</text>
+      {/* Base / keyboard */}
+      <path d="M2 31 Q2 38 6 38 L48 38 Q52 38 52 31 Z" fill="#0d1a40" stroke="#8ab4d4" strokeWidth="1.2"/>
+      {/* Touchpad */}
+      <rect x="19" y="33" width="16" height="3" rx="1" fill="#111c2a" stroke="#4a90e2" strokeWidth="0.5" opacity="0.6"/>
+      {/* Hinge */}
+      <rect x="4" y="30" width="46" height="2" rx="1" fill="#1a2a50" stroke="#8ab4d4" strokeWidth="0.6"/>
+    </svg>
+  )
+}
+
+const ICONS = { router: RouterIcon, switch: SwitchIcon, pc: PCIcon, server: ServerIcon, phone: PhoneIcon, firewall: FirewallIcon, isp: IspIcon, laptop: LaptopIcon }
 
 // ── Device hover tooltip ──────────────────────────────────────────────────────
 
@@ -555,6 +578,7 @@ export default function Floorplan() {
     devices, placements, selectedDeviceId, setSelectedDeviceId,
     pingAnimations, wireMode, setWireMode, connectInterfaces, getDevice,
     powerAllDevices,
+    adminLaptopOpen, setAdminLaptopOpen, laptopDevice,
   } = useGame()
 
   const [ctxMenu,          setCtxMenu]          = useState(null)
@@ -747,6 +771,56 @@ export default function Floorplan() {
           onConnect={handlePortPickerConnect}
           onCancel={() => setPortPicker(null)}
         />
+      )}
+
+      {/* Admin Laptop quick-access FAB */}
+      {laptopDevice && (
+        <div style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 50 }}>
+          <button
+            onClick={e => { e.stopPropagation(); setAdminLaptopOpen(o => !o) }}
+            title={adminLaptopOpen ? 'Close Admin Laptop' : 'Open Admin Laptop'}
+            style={{
+              width: 58, height: 58,
+              background: adminLaptopOpen ? '#0f1e38' : '#090d1c',
+              border: `2px solid ${adminLaptopOpen ? '#4a90e2' : laptopDevice.powered ? '#2a4a6a' : '#1a2a3a'}`,
+              borderRadius: 12,
+              cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+              boxShadow: adminLaptopOpen
+                ? '0 0 18px #4a90e230, 0 4px 16px #00000060'
+                : '0 4px 12px #00000050',
+              transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
+              padding: 0,
+            }}
+            onMouseEnter={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = '#3a6aaa'; e.currentTarget.style.background = '#0c1428' } }}
+            onMouseLeave={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = laptopDevice.powered ? '#2a4a6a' : '#1a2a3a'; e.currentTarget.style.background = '#090d1c' } }}
+          >
+            <svg viewBox="0 0 54 42" width="32" height="25" style={{ opacity: adminLaptopOpen ? 1 : laptopDevice.powered ? 0.9 : 0.45 }}>
+              <rect x="4" y="3" width="46" height="28" rx="2.5" fill="#0d1a40" stroke={adminLaptopOpen ? '#4a90e2' : '#8ab4d4'} strokeWidth="1.4"/>
+              <rect x="7" y="6" width="40" height="22" rx="1.5" fill="#060d20"/>
+              <rect x="10" y="10" width="24" height="1.5" rx="0.5" fill={adminLaptopOpen ? '#4a90e2' : '#4a90e2'} opacity="0.7"/>
+              <rect x="10" y="14" width="18" height="1.5" rx="0.5" fill="#8be9fd" opacity="0.5"/>
+              <circle cx="39" cy="16" r="5" fill="#1a2a50" stroke={adminLaptopOpen ? '#4a90e2' : '#4a90e2'} strokeWidth="0.8"/>
+              <text x="39" y="19" textAnchor="middle" fontSize="6" fill={adminLaptopOpen ? '#4a90e2' : '#4a90e2'}>★</text>
+              <path d="M2 31 Q2 38 6 38 L48 38 Q52 38 52 31 Z" fill="#0d1a40" stroke="#8ab4d4" strokeWidth="1.2"/>
+              <rect x="19" y="33" width="16" height="3" rx="1" fill="#111c2a" stroke="#4a90e2" strokeWidth="0.5" opacity="0.6"/>
+            </svg>
+            <span style={{
+              fontSize: 8, fontWeight: 700, letterSpacing: 0.8,
+              color: adminLaptopOpen ? '#4a90e2' : laptopDevice.powered ? '#4a6a8a' : '#2a3a4a',
+            }}>
+              {adminLaptopOpen ? 'LAPTOP ▲' : 'LAPTOP'}
+            </span>
+            {/* Power/config status dot */}
+            <div style={{
+              position: 'absolute', top: 6, right: 6,
+              width: 7, height: 7, borderRadius: '50%',
+              background: !laptopDevice.powered ? '#333355'
+                : laptopDevice.interfaces.some(i => i.ip) ? '#50fa7b'
+                : '#ffb86c',
+            }} title={!laptopDevice.powered ? 'Offline' : laptopDevice.interfaces.some(i => i.ip) ? 'Configured' : 'Not configured'} />
+          </button>
+        </div>
       )}
     </div>
   )

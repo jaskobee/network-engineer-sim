@@ -46,6 +46,7 @@ export class PCCLIEngine {
     }
     const COUNT = 4
     const result = this.topology.checkPing(srcIp, targetIp)
+    this.topology.recordCapture(srcIp, targetIp, result)
 
     // "Network is unreachable" class: show error immediately and exit without packet loop
     if (!result.reachable && _isNetworkUnreachable(result.failureReason)) {
@@ -131,6 +132,8 @@ export class PCCLIEngine {
     }
 
     const result = performDHCP(this.topology, device, iface)
+    // Record DHCP exchange in packet capture for Admin Laptop Wireshark view
+    this.topology.recordDhcpCapture(device, iface, null, result.serverDevice ?? null, result.serverIp ?? null, result.success ? result.ip : null)
     if (!result.success) {
       return [
         `dhclient: No DHCPOFFERS received.`,

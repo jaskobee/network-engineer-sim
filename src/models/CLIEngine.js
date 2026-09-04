@@ -78,6 +78,7 @@ export class CLIEngine {
       return () => timers.forEach(clearTimeout)
     }
     const result = this.topology.checkPing(srcIp, targetIp)
+    this.topology.recordCapture(srcIp, targetIp, result)
     onStart?.(header)
     let i = 0; const timers = []
     const fire = () => {

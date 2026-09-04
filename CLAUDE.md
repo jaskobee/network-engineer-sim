@@ -61,34 +61,33 @@ Vite 5 · React 18 (JavaScript, **no TypeScript**) · @dnd-kit/core +
 - `App.jsx` — layout, DnD wiring, resizable panels
 
 ## Current state
-- **Missions 001, 002, 003 are fully playable and tested.** Mission 004 (TechNova:
-  inter-VLAN / DMZ / ISP) is the remaining capstone — not yet built.
+- **Missions 001–005 are fully playable and tested.** All 5 missions are implemented:
+  - M001 (basic LAN), M002 (switch + multi-PC), M003 (two-router static routing),
+    M004 (TechNova: VLAN+ROAS+DHCP+NAT, 11 tasks, 31 dedicated tests),
+    M005 (Secure the Office: zone firewall, 11 tasks; pre-builds M004 topology via scaffold).
+  - **379 Vitest tests passing** across all engine modules and missions.
 - **Switch is strictly Layer 2** (locked design decision). Inter-VLAN routing is
   done via router-on-a-stick; a separate Layer 3 Switch device may come later.
-- **Engine foundation is hardened and tested** (~220 Vitest tests): bidirectional
-  `checkPing` (returns a result object with a `failureReason`, not a boolean),
-  L2/L3 split, overlapping-subnet rejection, shutdown-peer propagation, static +
-  default routes, router-on-a-stick (subinterfaces + `encapsulation dot1Q` + trunk
-  enforcement), and DHCP (DORA, pools, `ip helper-address` relay, host `dhclient`).
-- `failureReason` codes emitted so far: `no_route`, `admin_down`, `link_down`,
-  `no_return_path`, `host_no_gateway`, `vlan_isolated`. Still generic (fall through
-  to `no_route`): `subnet_mismatch` (deferred), `gateway_unreachable`, `ip_conflict`,
-  `duplex_mismatch`.
-- ISP node exists; verify whether **NAT (private→public)** is modeled before
-  Mission 004 claims to teach ISP handoff.
-- **No persistence yet** — state resets on refresh (save/load planned).
+- **Engine foundation is hardened**: bidirectional `checkPing` (`failureReason` + `failurePoint`),
+  L2/L3 split, overlapping-subnet rejection, shutdown-peer propagation, static + default
+  routes, ROAS (`encapsulation dot1Q` + trunk enforcement), DHCP (DORA, pools, relay,
+  `dhclient`), NAT/PAT overload (`nat_required` reason code), zone-based stateful firewall
+  (`blocked_by_firewall` reason code, service matching, ordered rules).
+- `failureReason` codes: `no_route`, `admin_down`, `link_down`, `no_return_path`,
+  `host_no_gateway`, `vlan_isolated`, `nat_required`, `blocked_by_firewall`. Still
+  generic (fall through to `no_route`): `subnet_mismatch`, `gateway_unreachable`,
+  `ip_conflict`, `duplex_mismatch`.
+- **Auto-save + Export/Import JSON** implemented (localStorage + JSON file).
 
 ## Roadmap / what we're working toward
+- **All 5 intro missions complete.** Next major milestone is the **fault-injection /
+  troubleshooting mission series** (Act 2): pre-broken topologies, no step-by-step
+  hints, players diagnose using `show` commands — see `docs/NETSIM_FAULTS_AND_FEATURES.md`.
 - **Sandbox mode** exists for free practice. Verification labs live in `docs/`:
   `FOUNDATION_SMOKE_TEST.md`, `SANDBOX_TEST_PLAN.md`, `ROAS_SANDBOX_LAB.md`,
   `ISP_DEFAULT_ROUTE_LAB.md`, `DHCP_SANDBOX_LAB.md`.
-- Add the **ISP node to the Sandbox palette**; settle the **NAT** decision.
-- Build **Mission 004** (sits on ROAS + default routes + DHCP).
-- **Troubleshooting missions** via a fault-injection system — see
-  `docs/NETSIM_FAULTS_AND_FEATURES.md` (Part 1). Key idea: faults are real broken
-  state evaluated by the real engine; `checkPing` already returns a result object.
 - Remaining reason-code refinements (`subnet_mismatch` first), live-network / SLA
-  mode, mastery scoring, save/load, shop margins, click-to-connect cabling, network
+  mode, mastery scoring, shop margins, click-to-connect cabling, network
   blueprint diagrams in mission briefings — see `docs/NETSIM_FAULTS_AND_FEATURES.md`.
 
 ## Dev / QA Mode
