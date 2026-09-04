@@ -88,6 +88,51 @@ export const PRESETS = [
     description: 'DHCP on R1, PC behind R2, no helper. PC should get no address.',
     pingCheck: null,
   },
+  {
+    id: 'firewall-zone-solved',
+    label: 'Zone firewall INSIDE→OUTSIDE (solved)',
+    category: 'working',
+    description: 'Firewall with INSIDE/OUTSIDE zones + a permit rule. PC_in→PC_out should succeed.',
+    pingCheck: { src: '10.1.0.10', dst: '10.2.0.10' },
+  },
+  {
+    id: 'firewall-default-deny-broken',
+    label: 'Zone firewall with NO rules (broken)',
+    category: 'broken',
+    expectedFailure: 'blocked_by_firewall',
+    description: 'Same firewall topology, zero rules configured. Implicit default-deny should block the ping — "I installed it and now nothing works."',
+    pingCheck: { src: '10.1.0.10', dst: '10.2.0.10' },
+  },
+  {
+    id: 'firewall-asymmetric-outside-broken',
+    label: 'Outside-initiated ping despite inside→outside permit (broken)',
+    category: 'broken',
+    expectedFailure: 'blocked_by_firewall',
+    description: 'Permit rule only covers INSIDE→OUTSIDE. A fresh ping initiated FROM the outside host should still be blocked — stateful ≠ bidirectional.',
+    pingCheck: { src: '10.2.0.10', dst: '10.1.0.10' },
+  },
+  {
+    id: 'admin-laptop-firewall-ui-solved',
+    label: 'Admin Laptop → Firewall web UI (solved)',
+    category: 'working',
+    description: 'Laptop cabled + addressed on the firewall INSIDE leg. Browser tab should reach the firewall’s own management UI on tcp/443.',
+    pingCheck: { src: '10.1.0.50', dst: '10.1.0.1', service: { protocol: 'tcp', port: 443 }, kind: 'webui' },
+  },
+  {
+    id: 'admin-laptop-crosszone-router-ui-solved',
+    label: 'Admin Laptop → cross-zone Router web UI (solved)',
+    category: 'working',
+    description: 'Laptop (INSIDE) reaches a router’s web UI in the OUTSIDE zone through the firewall via an explicit "service HTTPS" permit rule + a return route on the router.',
+    pingCheck: { src: '10.1.0.50', dst: '10.2.0.5', service: { protocol: 'tcp', port: 443 }, kind: 'webui' },
+  },
+  {
+    id: 'admin-laptop-crosszone-router-ui-broken',
+    label: 'Admin Laptop → cross-zone Router web UI, HTTPS not permitted (broken)',
+    category: 'broken',
+    expectedFailure: 'blocked_by_firewall',
+    description: 'Same cross-zone topology, but the firewall only permits ICMP — ping works but tcp/443 does not. Teaches that a working ping does not imply a working service.',
+    pingCheck: { src: '10.1.0.50', dst: '10.2.0.5', service: { protocol: 'tcp', port: 443 }, kind: 'webui' },
+  },
 ]
 
 // ── Public entry point ────────────────────────────────────────────────────────
@@ -104,14 +149,20 @@ export function buildPreset(presetId, ctx) {
   clearSandbox()
 
   const builders = {
-    'basic-lan-solved':             _basicLan,
-    'two-router-routing-solved':    _twoRouterSolved,
-    'two-router-one-way-broken':    _twoRouterOneway,
-    'roas-solved':                  _roasSolved,
-    'roas-access-broken':           _roasAccessBroken,
-    'dhcp-local-solved':            _dhcpLocal,
-    'dhcp-relay-solved':            _dhcpRelay,
-    'dhcp-relay-no-helper-broken':  _dhcpRelayNoHelper,
+    'basic-lan-solved':                          _basicLan,
+    'two-router-routing-solved':                 _twoRouterSolved,
+    'two-router-one-way-broken':                 _twoRouterOneway,
+    'roas-solved':                                _roasSolved,
+    'roas-access-broken':                         _roasAccessBroken,
+    'dhcp-local-solved':                          _dhcpLocal,
+    'dhcp-relay-solved':                          _dhcpRelay,
+    'dhcp-relay-no-helper-broken':                _dhcpRelayNoHelper,
+    'firewall-zone-solved':                       _firewallZoneSolved,
+    'firewall-default-deny-broken':               _firewallDefaultDenyBroken,
+    'firewall-asymmetric-outside-broken':         _firewallAsymmetricBroken,
+    'admin-laptop-firewall-ui-solved':            _adminLaptopFirewallUiSolved,
+    'admin-laptop-crosszone-router-ui-solved':    _adminLaptopCrosszoneUiSolved,
+    'admin-laptop-crosszone-router-ui-broken':    _adminLaptopCrosszoneUiBroken,
   }
 
   const builder = builders[presetId]
@@ -122,11 +173,12 @@ export function buildPreset(presetId, ctx) {
 
   // Normalise to a common shape for DevPanel display
   if (preset?.pingCheck) {
-    const ping = ctx.sbTopology.checkPing(preset.pingCheck.src, preset.pingCheck.dst)
+    const { src, dst, service, kind } = preset.pingCheck
+    const svc  = service ?? { protocol: 'icmp', port: null }
+    const ping = ctx.sbTopology.checkPing(src, dst, svc)
     return {
-      type: 'ping',
-      src: preset.pingCheck.src,
-      dst: preset.pingCheck.dst,
+      type: kind === 'webui' ? 'webui' : 'ping',
+      src, dst,
       reachable: ping.reachable,
       failureReason: ping.failureReason,
       failurePoint: ping.failurePoint,
@@ -324,6 +376,123 @@ function _dhcpRelayNoHelper(ctx) {
     failureReason: iface?.ip ? null : 'no_dhcp_offer',
   }
 }
+
+// ── Firewall builders ─────────────────────────────────────────────────────────
+// FW: Gi0/0=INSIDE (10.1.0.0/24), Gi0/1=OUTSIDE (10.2.0.0/24). PC_in/PC_out
+// directly cabled to each leg (same simplification as _basicLan — no switch).
+
+function _buildFirewallBase({ addSandboxDevice, sbTopology, sbEngine, sbPcEngine, sbConnectInterfaces }) {
+  addSandboxDevice(cat('firewall'))
+  addSandboxDevice(cat('pc'))
+  addSandboxDevice(cat('pc'))
+
+  const g = byType(sbTopology)
+  const fw = g.firewall[0]
+  const [pcIn, pcOut] = g.pc
+
+  sbConnectInterfaces(`${pcIn.id}:Ethernet0/0`,  `${fw.id}:GigabitEthernet0/0`)
+  sbConnectInterfaces(`${pcOut.id}:Ethernet0/0`, `${fw.id}:GigabitEthernet0/1`)
+
+  exec(sbEngine, fw,
+    'enable', 'configure terminal',
+    'interface GigabitEthernet0/0', 'nameif INSIDE',  'security-level 100', 'ip address 10.1.0.1 255.255.255.0', 'no shutdown', 'exit',
+    'interface GigabitEthernet0/1', 'nameif OUTSIDE', 'security-level 0',   'ip address 10.2.0.1 255.255.255.0', 'no shutdown', 'end',
+  )
+
+  exec(sbPcEngine, pcIn,
+    'ip addr add 10.1.0.10/24 dev eth0', 'ip link set eth0 up', 'ip route add default via 10.1.0.1',
+  )
+  exec(sbPcEngine, pcOut,
+    'ip addr add 10.2.0.10/24 dev eth0', 'ip link set eth0 up', 'ip route add default via 10.2.0.1',
+  )
+
+  return { fw, pcIn, pcOut }
+}
+
+function _firewallZoneSolved(ctx) {
+  const { sbEngine } = ctx
+  const { fw } = _buildFirewallBase(ctx)
+  exec(sbEngine, fw, 'configure terminal',
+    'firewall-rule permit from-zone INSIDE to-zone OUTSIDE src any dst any', 'end')
+}
+
+function _firewallDefaultDenyBroken(ctx) {
+  _buildFirewallBase(ctx)   // no rules configured — implicit default-deny blocks everything
+}
+
+function _firewallAsymmetricBroken(ctx) {
+  const { sbEngine } = ctx
+  const { fw } = _buildFirewallBase(ctx)
+  // Permit only covers INSIDE→OUTSIDE. The pingCheck for this preset is reversed
+  // (OUTSIDE→INSIDE) — a fresh unsolicited flow, so it must hit the rule list (and
+  // fail), not the stateful session table.
+  exec(sbEngine, fw, 'configure terminal',
+    'firewall-rule permit from-zone INSIDE to-zone OUTSIDE src any dst any', 'end')
+}
+
+// ── Admin Laptop web-UI builders ──────────────────────────────────────────────
+// The sandbox laptop already exists (clearSandbox() re-adds it) — grab it rather
+// than creating a second one. Powering it on mirrors the floorplan context-menu
+// action (direct `device.powered = true`, not a CLI command — power is physical).
+
+function _adminLaptopFirewallUiSolved({ addSandboxDevice, sbTopology, sbEngine, sbPcEngine, sbConnectInterfaces }) {
+  addSandboxDevice(cat('firewall'))
+
+  const g      = byType(sbTopology)
+  const fw     = g.firewall[0]
+  const laptop = g.laptop[0]
+
+  sbConnectInterfaces(`${laptop.id}:Ethernet0/0`, `${fw.id}:GigabitEthernet0/0`)
+
+  exec(sbEngine, fw,
+    'enable', 'configure terminal',
+    'interface GigabitEthernet0/0', 'nameif INSIDE', 'security-level 100', 'ip address 10.1.0.1 255.255.255.0', 'no shutdown', 'end',
+  )
+
+  laptop.powered = true
+  exec(sbPcEngine, laptop,
+    'ip addr add 10.1.0.50/24 dev eth0', 'ip link set eth0 up', 'ip route add default via 10.1.0.1',
+  )
+}
+
+// Laptop (INSIDE) reaching a router's web UI in the OUTSIDE zone through the
+// firewall. `permitHttps` controls whether the crossing firewall rule covers
+// tcp/443 — shared by the solved and broken variants below.
+function _buildAdminLaptopCrosszoneUi({ addSandboxDevice, sbTopology, sbEngine, sbPcEngine, sbConnectInterfaces }, permitHttps) {
+  addSandboxDevice(cat('firewall'))
+  addSandboxDevice(cat('router'))
+
+  const g      = byType(sbTopology)
+  const fw     = g.firewall[0]
+  const router = g.router[0]
+  const laptop = g.laptop[0]
+
+  sbConnectInterfaces(`${laptop.id}:Ethernet0/0`,     `${fw.id}:GigabitEthernet0/0`)
+  sbConnectInterfaces(`${router.id}:GigabitEthernet0/0`, `${fw.id}:GigabitEthernet0/1`)
+
+  exec(sbEngine, fw,
+    'enable', 'configure terminal',
+    'interface GigabitEthernet0/0', 'nameif INSIDE',  'security-level 100', 'ip address 10.1.0.1 255.255.255.0', 'no shutdown', 'exit',
+    'interface GigabitEthernet0/1', 'nameif OUTSIDE', 'security-level 0',   'ip address 10.2.0.1 255.255.255.0', 'no shutdown', 'exit',
+    'firewall-rule permit from-zone INSIDE to-zone OUTSIDE src any dst any service icmp',
+    ...(permitHttps ? ['firewall-rule permit from-zone INSIDE to-zone OUTSIDE src any dst any service HTTPS'] : []),
+    'end',
+  )
+
+  exec(sbEngine, router,
+    'enable', 'configure terminal',
+    'interface GigabitEthernet0/0', 'ip address 10.2.0.5 255.255.255.0', 'no shutdown', 'exit',
+    'ip route 10.1.0.0 255.255.255.0 10.2.0.1', 'end',
+  )
+
+  laptop.powered = true
+  exec(sbPcEngine, laptop,
+    'ip addr add 10.1.0.50/24 dev eth0', 'ip link set eth0 up', 'ip route add default via 10.1.0.1',
+  )
+}
+
+function _adminLaptopCrosszoneUiSolved(ctx) { _buildAdminLaptopCrosszoneUi(ctx, true)  }
+function _adminLaptopCrosszoneUiBroken(ctx) { _buildAdminLaptopCrosszoneUi(ctx, false) }
 
 function _dhcpRelay(ctx) {
   const { sbEngine, sbPcEngine } = ctx

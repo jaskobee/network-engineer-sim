@@ -175,6 +175,7 @@ function PresetsTab() {
     if (!r) return '#444'
     if (r.type === 'error') return '#ff5555'
     if (r.type === 'ping')  return r.reachable ? '#50fa7b' : '#ffb86c'
+    if (r.type === 'webui') return r.reachable ? '#50fa7b' : '#ffb86c'
     if (r.type === 'dhcp')  return r.assigned  ? '#50fa7b' : '#ffb86c'
     return '#444'
   }
@@ -186,6 +187,11 @@ function PresetsTab() {
       return r.reachable
         ? `✓ ping ${r.src} → ${r.dst} reachable`
         : `✗ ping ${r.src} → ${r.dst} FAILED — ${r.failureReason}${r.failurePoint ? ` @ ${r.failurePoint}` : ''}`
+    }
+    if (r.type === 'webui') {
+      return r.reachable
+        ? `✓ web UI reachable (tcp/443) — open Admin Laptop → BROWSER → https://${r.dst}`
+        : `✗ web UI unreachable — ${r.failureReason}${r.failurePoint ? ` @ ${r.failurePoint}` : ''}`
     }
     if (r.type === 'dhcp') {
       return r.assigned
