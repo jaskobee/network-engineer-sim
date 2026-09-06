@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useGame } from '../state/GameContext.jsx'
 import { useCareer } from '../state/CareerContext.jsx'
 import { MISSIONS } from '../data/missions.js'
-import { MISSION_DEFINITIONS } from '../data/missionDefinitions/index.js'
+import { MISSION_DEFINITIONS, findMissionById } from '../data/missionDefinitions/index.js'
 import { getMissionRuntime, getMissionMeta } from '../engine/missionEngine.js'
 import { computeRefund } from '../engine/economy.js'
 import { CONTRACT_TYPES } from '../data/contracts.js'
 import CompanyDashboard from './CompanyDashboard.jsx'
 import MissionBriefModal from './MissionBriefModal.jsx'
+import { MissionProgressBar, MissionTaskRows } from './MissionTaskList.jsx'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -19,11 +20,6 @@ function Stars({ n }) {
       {'★'.repeat(filled)}{'☆'.repeat(max - filled)}
     </span>
   )
-}
-
-// Every mission this game knows about, legacy or declarative, by id.
-function findMissionById(id) {
-  return MISSIONS.find(m => m.id === id) ?? MISSION_DEFINITIONS[id] ?? null
 }
 
 // ── Completion modal ──────────────────────────────────────────────────────────
@@ -290,6 +286,7 @@ export default function MissionPanel() {
     activeMissionId, acceptMission,
     difficulty,
     activeJobPanelOpen, setActiveJobPanelOpen,
+    executedCommandsRef,
   } = useGame()
   const { reputation, clients, completeClientMission, acceptContractOffer } = useCareer()
 
@@ -322,6 +319,8 @@ export default function MissionPanel() {
   const allTasksDone = tasks.length > 0 && passed === tasks.length
   const isClaimed    = activeMission ? completedMissions.some(c => c.id === activeMission.id) : false
   const showModal    = allTasksDone && activeMission && !isClaimed
+  const diagFacts     = (missionEntry?.diagnoseFn && difficulty === 'beginner')
+    ? missionEntry.diagnoseFn(devices, placements, topology, checks) : {}
 
   // 'keep' missions (persistent client infrastructure) never refund — must
   // match GameContext.completeMission's own financialModel check exactly (it
@@ -449,37 +448,49 @@ export default function MissionPanel() {
           </div>
         </div>
 
-        {/* ── Active job status bar ── */}
-        {activeMission && !allTasksDone && (
-          <div style={{
-            padding: '8px 14px',
-            background: '#080d1a',
-            borderBottom: '1px solid #1a3060',
-            display: 'flex', alignItems: 'center', gap: 8,
-            flexShrink: 0,
-          }}>
-            <span style={{ fontSize: 16 }}>{activeMission.avatar}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 9, color: '#3a6090', letterSpacing: 1, fontWeight: 700 }}>IN PROGRESS</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#8090b0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {activeMission.title}
+        {/* ── Active job: full task checklist, always visible ──────────────
+            Previously this was a one-line status bar behind a "VIEW TASKS"
+            button — easy to miss, and the floating panel it opened could be
+            dragged off-screen or closed. The full step-by-step list (what
+            beginner mode needs most) now lives right here, impossible to lose. */}
+        {activeMission && (
+          <div style={{ borderBottom: '1px solid #1a3060', flexShrink: 0, maxHeight: '52vh', overflowY: 'auto' }}>
+            <div style={{
+              padding: '10px 14px 8px',
+              background: '#080d1a',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>{activeMission.avatar}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 9, color: allTasksDone ? '#50fa7b' : '#3a6090', letterSpacing: 1, fontWeight: 700 }}>
+                  {allTasksDone ? 'READY TO COLLECT' : 'IN PROGRESS'}
+                </div>
+                <div title={activeMission.title} style={{ fontSize: 12, fontWeight: 700, color: '#c0ccdc', lineHeight: 1.35, overflowWrap: 'break-word' }}>
+                  {activeMission.title}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: allTasksDone ? '#50fa7b' : '#4a90e2', fontFamily: 'monospace' }}>{passed}/{tasks.length}</span>
+                <button
+                  onClick={() => setActiveJobPanelOpen(o => !o)}
+                  title="Pop out a movable copy of this checklist near the floorplan"
+                  style={{
+                    padding: '2px 8px', fontSize: 8, fontWeight: 700, letterSpacing: 0.5,
+                    background: activeJobPanelOpen ? '#1a3a5c' : 'transparent',
+                    color: activeJobPanelOpen ? '#4a90e2' : '#2a4a6a',
+                    border: `1px solid ${activeJobPanelOpen ? '#2a5298' : '#1a3060'}`,
+                    borderRadius: 3, cursor: 'pointer',
+                  }}
+                >POP OUT ◈</button>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <span style={{ fontSize: 9, color: '#2a4a6a', fontFamily: 'monospace' }}>{passed}/{tasks.length}</span>
-              <button
-                onClick={() => setActiveJobPanelOpen(true)}
-                style={{
-                  padding: '3px 10px', fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
-                  background: activeJobPanelOpen ? '#1a3a5c' : '#0c1628',
-                  color: activeJobPanelOpen ? '#4a90e2' : '#3a6090',
-                  border: `1px solid ${activeJobPanelOpen ? '#2a5298' : '#1a3060'}`,
-                  borderRadius: 3, cursor: 'pointer',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#6ab0e8'; e.currentTarget.style.borderColor = '#2a5298' }}
-                onMouseLeave={e => { e.currentTarget.style.color = activeJobPanelOpen ? '#4a90e2' : '#3a6090'; e.currentTarget.style.borderColor = activeJobPanelOpen ? '#2a5298' : '#1a3060' }}
-              >VIEW TASKS ▲</button>
+            <div style={{ padding: '2px 14px 10px' }}>
+              <MissionProgressBar tasks={tasks} checks={checks} />
             </div>
+            <MissionTaskRows
+              tasks={tasks} checks={checks} difficulty={difficulty}
+              diagFacts={diagFacts} executedCommands={executedCommandsRef.current}
+            />
           </div>
         )}
 

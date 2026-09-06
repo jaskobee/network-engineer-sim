@@ -43,7 +43,7 @@ export default function ContextMenu({ x, y, deviceId, onClose }) {
     )
   }
 
-  function handleOpenTerminal() { openTerminal(deviceId); setSelectedDeviceId(deviceId); onClose() }
+  function handleOpenTerminal() { openTerminal(deviceId, { x, y }); setSelectedDeviceId(deviceId); onClose() }
 
   function powerOn() {
     device.powered = true

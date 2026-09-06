@@ -19,6 +19,20 @@ export const CLIENT_TEMPLATES = [
     // First mission offered once this client exists. Later missions unlock via
     // each mission's own `followUpMissionIds` as they're completed.
     initialMissionIds: ['mission_local_shop_1'],
+    // Purely visual: a physical floor-plan backdrop drawn behind the devices
+    // on this client's topology, so younger players can connect "the router
+    // goes in the back room, the register PC is up front" to what they're
+    // actually placing. Coordinates share the same pixel space as `placements`.
+    // Never gameplay-enforced — devices can be placed anywhere.
+    siteMap: {
+      buildingLabel: "Sam's Corner Store — Floor Plan",
+      zones: [
+        { id: 'front',   label: 'Front Counter',          icon: '🛎', x: 20,  y: 20,  w: 360, h: 200, color: '#2a5298' },
+        { id: 'office',  label: 'Back Office',             icon: '💼', x: 400, y: 20,  w: 360, h: 200, color: '#8a6a2a' },
+        { id: 'closet',  label: 'Server Closet (Secure)',  icon: '🔒', x: 20,  y: 240, w: 360, h: 220, color: '#2a8a5a' },
+        { id: 'storage', label: 'Storage / Back Room',     icon: '📦', x: 400, y: 240, w: 360, h: 220, color: '#8a3a3a' },
+      ],
+    },
   },
 ]
 

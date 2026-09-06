@@ -31,40 +31,6 @@ export default function App() {
 
 // ── Resizable dividers ────────────────────────────────────────────────────────
 
-function ResizeDivider({ onDelta }) {
-  const dragRef   = useRef(null)
-  const cbRef     = useRef(onDelta)
-  cbRef.current   = onDelta
-
-  function onMouseDown(e) {
-    dragRef.current = e.clientX
-    function onMove(ev) {
-      if (dragRef.current === null) return
-      cbRef.current(ev.clientX - dragRef.current)
-      dragRef.current = ev.clientX
-    }
-    function onUp() {
-      dragRef.current = null
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-    e.preventDefault()
-  }
-
-  return (
-    <div
-      onMouseDown={onMouseDown}
-      style={{ width: 5, flexShrink: 0, cursor: 'col-resize', background: '#0d0d1a',
-        borderLeft: '1px solid #1a1a3e', borderRight: '1px solid #1a1a3e' }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#2a5298' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#0d0d1a' }}
-      title="Drag to resize"
-    />
-  )
-}
-
 function VerticalResizeDivider({ onDelta }) {
   const dragRef = useRef(null)
   const cbRef   = useRef(onDelta)
@@ -224,11 +190,10 @@ function LaptopIntroModal({ onClose }) {
 
 function AppContent() {
   const { user, logout } = useAuth()
-  const { devices, placements, placeDevice, movePlacedDevice, terminalFloating, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, terminalSessions, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeJobPanelOpen } = useGame()
+  const { devices, placements, placeDevice, movePlacedDevice, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeJobPanelOpen } = useGame()
   const { company, createCompany } = useCareer()
   const importInputRef = useRef(null)
   const [activeDragId,     setActiveDragId]     = useState(null)
-  const [rightPanelWidth,  setRightPanelWidth]  = useState(380)
   const [inspectorHeight,  setInspectorHeight]  = useState(220)
   const [leftTab,          setLeftTab]          = useState('shop')
   const [showTour,         setShowTour]         = useState(() => !hasSeenTour())
@@ -288,7 +253,6 @@ function AppContent() {
   }
 
   const activeDevice  = activeDragId ? devices.find(d => d.id === activeDragId) : null
-  const noSessions    = terminalSessions.length === 0 && !terminalFloating
 
   return (
     <>
@@ -484,38 +448,22 @@ function AppContent() {
             )}
           </aside>
 
-          <main className="main-area" style={{ flexDirection: 'row' }}>
-            {/* Floorplan — fills remaining width */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <main className="main-area" style={{ flexDirection: 'column' }}>
+            {/* Floorplan — fills remaining height */}
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <Floorplan />
             </div>
 
-            {/* Horizontal divider between floorplan and right panel */}
-            <ResizeDivider onDelta={d => setRightPanelWidth(w => Math.max(240, Math.min(720, w - d)))} />
+            {/* Vertical divider between floorplan and inspector */}
+            <VerticalResizeDivider onDelta={d => setInspectorHeight(h => Math.max(120, Math.min(560, h - d)))} />
 
-            {/* Right panel: terminal (top) + inspector (bottom) */}
+            {/* Device inspector — docked full-width along the bottom */}
             <div style={{
-              width: rightPanelWidth, flexShrink: 0,
-              display: 'flex', flexDirection: 'column',
-              borderLeft: '1px solid #1a1a3e', overflow: 'hidden',
+              height: inspectorHeight, flexShrink: 0,
+              overflowY: 'auto', overflowX: 'auto',
+              borderTop: '1px solid #1a1a3e',
             }}>
-              {/* Terminal — shown when sessions exist and not floating */}
-              {!noSessions && !terminalFloating && (
-                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                  <TerminalPane />
-                </div>
-              )}
-              {/* Vertical divider between terminal and inspector */}
-              {!noSessions && !terminalFloating && (
-                <VerticalResizeDivider onDelta={d => setInspectorHeight(h => Math.max(120, Math.min(500, h + d)))} />
-              )}
-              {/* Device inspector — fills full right panel when no terminal */}
-              <div style={{
-                height: (noSessions || terminalFloating) ? '100%' : inspectorHeight,
-                flexShrink: 0, overflowY: 'auto', overflowX: 'auto',
-              }}>
-                <DeviceInspector />
-              </div>
+              <DeviceInspector />
             </div>
           </main>
 
@@ -565,6 +513,7 @@ function AppContent() {
     {activeMissionId && activeJobPanelOpen && (
       <ActiveJobPanel />
     )}
+    <TerminalPane />
     {import.meta.env.DEV && (
       <DevPanel open={devPanelOpen} onClose={() => setDevPanelOpen(false)} />
     )}

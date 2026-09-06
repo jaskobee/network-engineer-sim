@@ -3,6 +3,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useGame } from '../state/GameContext.jsx'
 import ContextMenu from './ContextMenu.jsx'
 import { maskToPrefixLen } from '../models/ipUtils.js'
+import { findClientTemplate } from '../data/clients.js'
 
 const W = 108
 const H = 90
@@ -424,6 +425,42 @@ function DeviceNode({ device, placement, isSelected, onSelect, onCtxMenu, onHove
   )
 }
 
+// ── Client site map (visual only — never gameplay-enforced) ──────────────────
+//
+// A physical floor-plan backdrop for the active client's building, so
+// younger players can connect "the router goes in the secure back room, the
+// register PC sits up front" to what they're actually dragging onto the map.
+// Purely decorative: devices can be placed anywhere regardless of zone.
+
+function SiteMapLayer({ siteMap }) {
+  if (!siteMap?.zones?.length) return null
+  return (
+    <>
+      {siteMap.zones.map(z => (
+        <div key={z.id} style={{
+          position: 'absolute', left: z.x, top: z.y, width: z.w, height: z.h,
+          border: `1.5px dashed ${z.color}55`,
+          background: `${z.color}0d`,
+          borderRadius: 10,
+          pointerEvents: 'none',
+        }}>
+          <div style={{
+            position: 'absolute', top: 8, left: 8,
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '3px 9px', borderRadius: 5,
+            background: '#0a0a1a', border: `1px solid ${z.color}55`,
+          }}>
+            <span style={{ fontSize: 12 }}>{z.icon}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: z.color }}>
+              {z.label.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      ))}
+    </>
+  )
+}
+
 // ── Cable + ping layers ───────────────────────────────────────────────────────
 
 // Cable health states:
@@ -579,7 +616,12 @@ export default function Floorplan() {
     pingAnimations, wireMode, setWireMode, connectInterfaces, getDevice,
     powerAllDevices,
     adminLaptopOpen, setAdminLaptopOpen, laptopDevice,
+    mode, activeClientId,
   } = useGame()
+
+  const siteMap = (mode === 'missions' && activeClientId)
+    ? findClientTemplate(activeClientId)?.siteMap ?? null
+    : null
 
   const [ctxMenu,          setCtxMenu]          = useState(null)
   const [hovered,          setHovered]          = useState(null) // { device, clientX, clientY }
@@ -674,6 +716,9 @@ export default function Floorplan() {
       onContextMenu={e => e.preventDefault()}
       onMouseMove={handleMouseMove}
     >
+      {/* Client site map — decorative floor-plan zones, always behind everything */}
+      <SiteMapLayer siteMap={siteMap} />
+
       {/* Cable layer */}
       <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
         <CableLayer devices={placed} placements={placements} />

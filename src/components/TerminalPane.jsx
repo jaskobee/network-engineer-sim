@@ -9,18 +9,26 @@ const PC_TYPES = new Set(['pc', 'server', 'phone', 'laptop'])
 
 // ── Main pane ─────────────────────────────────────────────────────────────────
 
+const DEFAULT_SIZE = { w: 720, h: 340 }
+
 export default function TerminalPane() {
   const {
     terminalSessions, allTerminalSessions, activeTerminalId, setActiveTerminalId, closeTerminal,
-    terminalFloating, setTerminalFloating,
+    terminalWindowOpen, terminalOrigin, closeTerminalWindow,
   } = useGame()
 
   const [floatPos, setFloatPos]   = useState({ x: 140, y: 80 })
-  const [floatSize, setFloatSize] = useState({ w: 720, h: 340 })
+  const [floatSize, setFloatSize] = useState(DEFAULT_SIZE)
   const [minimized, setMinimized] = useState(false)
 
   const dragRef   = useRef(null)
   const resizeRef = useRef(null)
+  // Closing fully unmounts the window (see the early `return null` below), so
+  // every open is already a fresh mount — the CSS `animation` on containerStyle
+  // replays automatically without any manual key/class bookkeeping. This ref
+  // just distinguishes "just opened" (reposition near the click) from "another
+  // tab opened while already open" (leave the window where the player put it).
+  const wasOpenRef = useRef(false)
 
   useEffect(() => {
     function onMove(e) {
@@ -45,19 +53,45 @@ export default function TerminalPane() {
     }
   }, [])
 
-  const containerStyle = terminalFloating ? {
+  // On each open, anchor the window near the click that triggered it (if we
+  // have one) so the pop-in animation visibly grows out from that device —
+  // then never move it again until the next open.
+  useEffect(() => {
+    if (terminalWindowOpen && !wasOpenRef.current) {
+      setMinimized(false)
+      if (terminalOrigin) {
+        const w = floatSize.w, h = floatSize.h
+        setFloatPos({
+          x: Math.max(8, Math.min(window.innerWidth  - w - 8, terminalOrigin.x - w / 4)),
+          y: Math.max(8, Math.min(window.innerHeight - h - 8, terminalOrigin.y - h / 4)),
+        })
+      }
+    }
+    wasOpenRef.current = terminalWindowOpen
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terminalWindowOpen])
+
+  if (!terminalWindowOpen) return null
+
+  // transform-origin for the grow animation: the click point, expressed
+  // relative to the window's own top-left corner. Falls back to growing from
+  // the bottom-left (roughly where the Admin Laptop shortcut lives) if we
+  // don't have a click point (e.g. reopened programmatically).
+  const originStyle = terminalOrigin
+    ? `${terminalOrigin.x - floatPos.x}px ${terminalOrigin.y - floatPos.y}px`
+    : '15% 100%'
+
+  const containerStyle = {
     position: 'fixed', left: floatPos.x, top: floatPos.y,
-    width: floatSize.w, height: floatSize.h,
+    width: floatSize.w, height: minimized ? 'auto' : floatSize.h,
     zIndex: 300, borderRadius: 8, overflow: 'hidden',
     boxShadow: '0 8px 40px rgba(0,0,0,0.8)', border: '1px solid #2a5298',
-    display: 'flex', flexDirection: 'column', background: '#0a0a0f', resize: 'none',
-  } : {
-    display: 'flex', flexDirection: 'column', height: '100%',
-    background: '#0a0a0f', minWidth: 0, flex: 1,
+    display: 'flex', flexDirection: 'column', background: '#0a0a0f',
+    transformOrigin: originStyle,
+    animation: 'terminal-pop-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both',
   }
 
   function startDrag(e) {
-    if (!terminalFloating) return
     dragRef.current = { mx: e.clientX, my: e.clientY, px: floatPos.x, py: floatPos.y }
     e.preventDefault()
   }
@@ -75,7 +109,7 @@ export default function TerminalPane() {
           display: 'flex', alignItems: 'stretch',
           background: '#07070d', borderBottom: '1px solid #1a1a3e',
           flexShrink: 0, overflowX: 'auto', overflowY: 'hidden', minHeight: 32,
-          cursor: terminalFloating ? 'grab' : 'default', userSelect: 'none',
+          cursor: 'grab', userSelect: 'none',
         }}
         onMouseDown={startDrag}
       >
@@ -98,59 +132,59 @@ export default function TerminalPane() {
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6, flexShrink: 0 }}
           onMouseDown={e => e.stopPropagation()}
         >
-          {!terminalFloating && (
-            <button
-              title={minimized ? 'Expand terminal' : 'Minimize terminal'}
-              onClick={() => setMinimized(m => !m)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: '#444', fontSize: 13, lineHeight: 1, padding: '2px 4px',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ffb86c' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#444' }}
-            >
-              {minimized ? '▲' : '▼'}
-            </button>
-          )}
           <button
-            title={terminalFloating ? 'Dock terminal' : 'Pop out terminal'}
-            onClick={() => setTerminalFloating(f => !f)}
+            title={minimized ? 'Expand terminal' : 'Minimize terminal'}
+            onClick={() => setMinimized(m => !m)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: '#444', fontSize: 13, lineHeight: 1, padding: '2px 4px',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ffb86c' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#444' }}
+          >
+            {minimized ? '▲' : '▼'}
+          </button>
+          <button
+            title="Close terminal"
+            onClick={closeTerminalWindow}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: '#444', fontSize: 14, lineHeight: 1, padding: '2px 4px',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#4a90e2' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ff5555' }}
             onMouseLeave={e => { e.currentTarget.style.color = '#444' }}
           >
-            {terminalFloating ? '⊟' : '⊞'}
+            ✕
           </button>
         </div>
       </div>
 
       {/* Terminal windows — ALL sessions (both modes) stay mounted so xterm
           instances survive MISSIONS↔SANDBOX switches; only the active one is visible. */}
-      <div style={{ flex: 1, position: 'relative', minHeight: 0, display: minimized ? 'none' : undefined }}>
-        {allTerminalSessions.length === 0 ? (
-          <div style={{
-            height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#1a1a30', fontFamily: 'monospace', fontSize: 12,
-          }}>
-            No terminals open
-          </div>
-        ) : (
-          allTerminalSessions.map(session => (
-            <div key={session.id} style={{
-              position: 'absolute', inset: 0,
-              display: session.id === activeTerminalId ? 'block' : 'none',
+      {!minimized && (
+        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+          {allTerminalSessions.length === 0 ? (
+            <div style={{
+              height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#1a1a30', fontFamily: 'monospace', fontSize: 12,
             }}>
-              <TermSession session={session} isActive={session.id === activeTerminalId} />
+              No terminals open
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            allTerminalSessions.map(session => (
+              <div key={session.id} style={{
+                position: 'absolute', inset: 0,
+                display: session.id === activeTerminalId ? 'block' : 'none',
+              }}>
+                <TermSession session={session} isActive={session.id === activeTerminalId} />
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
-      {/* Resize corner (floating only) */}
-      {terminalFloating && (
+      {/* Resize corner */}
+      {!minimized && (
         <div
           onMouseDown={startResize}
           style={{

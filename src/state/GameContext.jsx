@@ -108,7 +108,12 @@ export function GameProvider({ children }) {
   const [pingAnimations,    setPingAnimations]    = useState([])
   const [terminalSessions,  setTerminalSessions]  = useState([])
   const [activeTerminalId,  setActiveTerminalId]  = useState(null)
-  const [terminalFloating,  setTerminalFloating]  = useState(false)
+  // The terminal is always a floating, draggable window (never docked) —
+  // this just tracks whether it's currently shown. terminalOrigin is the
+  // screen point (from the triggering right-click) the pop-open animation
+  // grows from; it's write-only state read by TerminalPane.
+  const [terminalWindowOpen, setTerminalWindowOpen] = useState(false)
+  const [terminalOrigin,     setTerminalOrigin]      = useState(null)
   const [wireMode,          setWireMode]          = useState(null)
   const [saveStatus,        setSaveStatus]        = useState(boot ? 'loaded' : null)
 
@@ -257,13 +262,17 @@ export function GameProvider({ children }) {
     refresh()
   }
 
-  function openTerminal(deviceId) {
+  // origin: optional {x,y} screen point (the right-click that triggered this)
+  // — purely cosmetic, read by TerminalPane to grow the window from that spot.
+  function openTerminal(deviceId, origin) {
     const dev = activeTopoRef.current.devices.get(deviceId)
     if (!dev?.powered) return  // device must be powered on
     const setFn        = isSandbox ? setSbTerminalSessions   : setTerminalSessions
     const setActiveFn  = isSandbox ? setSbActiveTerminalId   : setActiveTerminalId
     const setSelectedFn = isSandbox ? setSbSelectedDeviceId  : setSelectedDeviceId
     setSelectedFn(deviceId)
+    setTerminalOrigin(origin ?? null)
+    setTerminalWindowOpen(true)
     setFn(prev => {
       const existing = prev.find(s => s.deviceId === deviceId)
       if (existing) { setActiveFn(existing.id); return prev }
@@ -271,6 +280,17 @@ export function GameProvider({ children }) {
       setActiveFn(id)
       return [...prev, { id, deviceId }]
     })
+  }
+
+  // Fully closes the floating terminal window — ends every open session
+  // (mission-mode and sandbox alike, since both share the one window) rather
+  // than just hiding it, matching what closing a real terminal app does.
+  function closeTerminalWindow() {
+    setTerminalSessions([])
+    setActiveTerminalId(null)
+    setSbTerminalSessions([])
+    setSbActiveTerminalId(null)
+    setTerminalWindowOpen(false)
   }
 
   function closeTerminal(sessionId) {
@@ -748,8 +768,9 @@ export function GameProvider({ children }) {
     executeDeviceCommands,
 
     // Shared across modes
-    terminalFloating, setTerminalFloating,
+    terminalWindowOpen, setTerminalWindowOpen, terminalOrigin, closeTerminalWindow,
     difficulty, setDifficulty,
+    activeClientId,
   }
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
