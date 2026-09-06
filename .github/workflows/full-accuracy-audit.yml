@@ -1,0 +1,39 @@
+name: Full Networking Accuracy Audit
+
+# Unlike ai-review.yml (which only reviews one PR's diff), this reads the
+# ENTIRE current engine + every mission/dev-mode topology and audits it like a
+# seasoned network engineer would — catching drift and long-standing mistakes
+# a diff-only review can't see. Advisory only; results post to a persistent
+# tracking issue (created on first run), not as a merge gate.
+#
+# Runs monthly (full-source audits are expensive — a lot more tokens than a
+# diff review) plus on-demand via the Actions tab. Adjust the cron below if
+# you want it more/less frequent.
+on:
+  schedule:
+    - cron: '0 9 1 * *'   # 1st of every month, 9am UTC
+  workflow_dispatch:         # manual "Run workflow" button
+
+jobs:
+  full-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write   # needed to create/comment on the tracking issue
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Full Networking Accuracy Audit
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node .github/scripts/full-accuracy-audit.js

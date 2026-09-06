@@ -4,11 +4,13 @@ import { Topology } from '../models/Topology.js'
 import { CLIEngine } from '../models/CLIEngine.js'
 import { PCCLIEngine } from '../models/PCCLIEngine.js'
 import { WindowsCLIEngine } from '../models/WindowsCLIEngine.js'
-import { serialize, saveToStorage, loadFromStorage, deserialize, deleteSave, exportToFile } from '../utils/saveLoad.js'
+import { serialize, saveToStorage, loadFromStorage, deserialize, exportToFile } from '../utils/saveLoad.js'
 import { playPurchase, playMissionComplete, playSave, playCableDisconnect, playCableConnect } from '../utils/sounds.js'
-import { deviceCatalog } from '../data/deviceCatalog.js'
 import { MISSIONS } from '../data/missions.js'
 import { buildMission005Scaffold } from '../data/mission005scaffold.js'
+import { getMissionMeta } from '../engine/missionEngine.js'
+import { computeRefund } from '../engine/economy.js'
+import { markResetting, isResetting } from '../utils/resetGuard.js'
 
 const GameContext = createContext(null)
 
@@ -44,6 +46,29 @@ export function GameProvider({ children }) {
   if (!pcEngineRef.current)  pcEngineRef.current  = new PCCLIEngine(topologyRef.current, difficulty)
   if (!winEngineRef.current) winEngineRef.current = new WindowsCLIEngine(topologyRef.current, difficulty)
 
+  // ── Client topologies (persistent, one per client — see career/progression
+  // plan). Populated lazily in acceptMission() the first time a client-based
+  // mission (one with a MissionDefinition.clientId) is accepted; reused as-is
+  // — never cleared — for that client's follow-up missions. `topologyRef`
+  // above stays the single always-fresh, disposable topology used by the 5
+  // legacy missions (unchanged). Restored from `boot.clientTopologies` (each
+  // gets its own fresh engine instances bound to the restored Topology,
+  // mirroring acceptMission's first-time bootstrap) so a client's network
+  // survives a page reload.
+  const clientTopologiesRef = useRef(null)
+  if (!clientTopologiesRef.current) {
+    const map = new Map()
+    for (const [clientId, saved] of (boot?.clientTopologies ?? new Map())) {
+      map.set(clientId, {
+        topology: saved.topology,
+        engine:    new CLIEngine(saved.topology, difficulty),
+        pcEngine:  new PCCLIEngine(saved.topology, difficulty),
+        winEngine: new WindowsCLIEngine(saved.topology, difficulty),
+      })
+    }
+    clientTopologiesRef.current = map
+  }
+
   // ── Sandbox topology & engines (fully independent of mission state) ────────
   const sbTopoRef    = useRef(null)
   const sbLaptopIdRef = useRef(null)   // stable ref so we can read the sandbox laptop's ID
@@ -70,6 +95,13 @@ export function GameProvider({ children }) {
   const [placements,        setPlacements]        = useState(boot?.placements        ?? {})
   const [completedMissions, setCompletedMissions] = useState(boot?.completedMissions ?? [])
   const [activeMissionId,   setActiveMissionId]   = useState(boot?.activeMissionId   ?? null)
+  // Which client's persistent topology is on-screen — see the comment above
+  // activeClientEntry's definition for why this is separate from
+  // activeMissionId. null for legacy missions and whenever no client mission
+  // has ever been accepted this session. Restored from `boot` — without this,
+  // a page reload would restore the client's topology data into
+  // clientTopologiesRef but have no way to know to actually display it.
+  const [activeClientId,    setActiveClientId]    = useState(boot?.activeClientId ?? null)
 
   const [selectedDeviceId,  setSelectedDeviceId]  = useState(null)
   const [tick,              setTick]              = useState(0)
@@ -109,7 +141,22 @@ export function GameProvider({ children }) {
 
   // ── Mode-derived helpers ───────────────────────────────────────────────────
   const isSandbox    = mode === 'sandbox'
-  const activeTopoRef = isSandbox ? sbTopoRef : topologyRef
+  // Which client's topology is currently on-screen. NOT derived from
+  // activeMissionId: that clears the instant completeMission() runs, but the
+  // player should keep seeing the client's site afterward ("your setup stays
+  // up — explore it", per the completion modal) until they start a mission
+  // for a different client (or a legacy one). So this is tracked as its own
+  // sticky state, set in acceptMission(), and only ever changed there.
+  const activeClientEntry = (!isSandbox && activeClientId)
+    ? (clientTopologiesRef.current.get(activeClientId) ?? null)
+    : null
+  // `{ current: ... }` for the client case is a fresh plain object each
+  // render, not a persistent ref — fine here since nothing ever assigns to
+  // activeTopoRef.current (only reads it); the actual persistent state lives
+  // in clientTopologiesRef.
+  const activeTopoRef = isSandbox
+    ? sbTopoRef
+    : (activeClientEntry ? { current: activeClientEntry.topology } : topologyRef)
 
   // Bump the correct tick.  Mission tick → triggers auto-save.  sbTick → no save.
   function refresh() {
@@ -126,6 +173,11 @@ export function GameProvider({ children }) {
     sbEngineRef.current.difficulty   = d
     sbPcEngineRef.current.difficulty = d
     sbWinEngineRef.current.difficulty = d
+    for (const entry of clientTopologiesRef.current.values()) {
+      entry.engine.difficulty    = d
+      entry.pcEngine.difficulty  = d
+      entry.winEngine.difficulty = d
+    }
   }
 
   // Active device list from whichever topology is current
@@ -136,28 +188,34 @@ export function GameProvider({ children }) {
   // ── Auto-save on mission state changes only ────────────────────────────────
   // sbTick is NOT in the dep array, so sandbox activity never triggers a save.
   useEffect(() => {
-    if (tick === 0) return
+    if (tick === 0 || isResetting()) return
     const data = serialize(
       topologyRef.current, placements, inventory,
-      budget, completedMissions, activeMissionId
+      budget, completedMissions, activeMissionId,
+      clientTopologiesRef.current, activeClientId
     )
     saveToStorage(data)
     setSaveStatus('saved')
     playSave()
     const t = setTimeout(() => setSaveStatus(null), 1800)
     return () => clearTimeout(t)
-  }, [tick, placements, inventory, budget, completedMissions, activeMissionId])
+  }, [tick, placements, inventory, budget, completedMissions, activeMissionId, activeClientId])
 
   // ── Game actions ───────────────────────────────────────────────────────────
 
   function purchaseDevice(catalogEntry) {
     if (budget < catalogEntry.price) return false
     const device = new Device(catalogEntry)
+    // Target whichever topology is actually active (the legacy scratch
+    // topology, or the current client's persistent one) — NOT always
+    // topologyRef directly, or a purchase made during a client mission would
+    // silently land in the wrong topology.
+    const targetTopo = activeTopoRef.current
     // Assign a unique hostname so multiple devices of same type are distinguishable
-    const countOfType = [...topologyRef.current.devices.values()]
+    const countOfType = [...targetTopo.devices.values()]
       .filter(d => d.type === device.type).length
     device.hostname = `${device.type}-${countOfType + 1}`
-    topologyRef.current.addDevice(device)
+    targetTopo.addDevice(device)
     setInventory(inv => [...inv, device.id])
     setBudget(b => b - catalogEntry.price)
     setTick(t => t + 1)
@@ -230,45 +288,85 @@ export function GameProvider({ children }) {
 
   function acceptMission(missionId) {
     if (activeMissionId) return  // guard: already on a mission (double-click protection)
-    // Clear any leftover workspace from the previous mission before starting fresh
-    topologyRef.current.clearDevices()
-    setPlacements({})
+    const { clientId } = getMissionMeta(missionId)
+
+    if (!clientId) {
+      // Legacy path (mission_001-005) — completely unchanged behavior: always
+      // a fresh, disposable topology, wiped on every accept.
+      topologyRef.current.clearDevices()
+      setPlacements({})
+      setInventory([])
+      setTerminalSessions([])
+      setActiveTerminalId(null)
+      setSelectedDeviceId(null)
+      setPingAnimations([])
+      const isp = createIspDevice()
+      topologyRef.current.addDevice(isp)
+      const laptop = createAdminLaptop()
+      topologyRef.current.addDevice(laptop)
+      let initialPlacements = { [isp.id]: { x: 620, y: 20 }, [laptop.id]: { x: 20, y: 360 } }
+      // Mission 005: pre-build the completed M004 network so the player only adds the firewall.
+      if (missionId === 'mission_005') {
+        const { placements: scaffoldPlacements } = buildMission005Scaffold(
+          topologyRef.current,
+          engineRef.current,
+          pcEngineRef.current,
+        )
+        initialPlacements = { ...initialPlacements, ...scaffoldPlacements }
+      }
+      setPlacements(initialPlacements)
+      setActiveMissionId(missionId)
+      setActiveClientId(null)
+      setActiveJobPanelOpen(true)
+      setTick(t => t + 1)
+      return
+    }
+
+    // Client-based mission — persistent per-client topology.
+    let entry = clientTopologiesRef.current.get(clientId)
+    if (!entry) {
+      // First mission ever for this client: fresh topology, same ISP/laptop
+      // bootstrap as the legacy path, but never cleared on later missions.
+      const topo   = new Topology()
+      const eng    = new CLIEngine(topo, difficulty)
+      const pcEng  = new PCCLIEngine(topo, difficulty)
+      const winEng = new WindowsCLIEngine(topo, difficulty)
+      entry = { topology: topo, engine: eng, pcEngine: pcEng, winEngine: winEng }
+      clientTopologiesRef.current.set(clientId, entry)
+
+      const isp = createIspDevice()
+      topo.addDevice(isp)
+      const laptop = createAdminLaptop()
+      topo.addDevice(laptop)
+      // Merge (not replace) — must not wipe another client's or a legacy
+      // mission's placement entries, which may still be sitting in this same
+      // flat placements object (harmless: only entries whose deviceId exists
+      // in the CURRENTLY active topology are ever rendered).
+      setPlacements(p => ({ ...p, [isp.id]: { x: 620, y: 20 }, [laptop.id]: { x: 20, y: 360 } }))
+    }
+    // else: a follow-up mission for a client that already has a topology —
+    // reuse it exactly as-is (devices, cabling, configs all still there).
+    // Do NOT clear, and do NOT touch placements — its devices' positions are
+    // already there from the previous mission.
+
     setInventory([])
     setTerminalSessions([])
     setActiveTerminalId(null)
     setSelectedDeviceId(null)
     setPingAnimations([])
-    // Auto-place a pre-configured ISP device in the top-right of the floorplan.
-    const isp = createIspDevice()
-    topologyRef.current.addDevice(isp)
-    // Auto-place the admin laptop (always present, free, not purchasable from shop).
-    // Starts unpowered and uncabled — the player must connect and configure it.
-    // Its network position is what gates the browser/tools (see ADMIN_LAPTOP_AND_TOOLS.md).
-    const laptop = createAdminLaptop()
-    topologyRef.current.addDevice(laptop)
-    let initialPlacements = { [isp.id]: { x: 620, y: 20 }, [laptop.id]: { x: 20, y: 360 } }
-    // Mission 005: pre-build the completed M004 network so the player only adds the firewall.
-    if (missionId === 'mission_005') {
-      const { placements: scaffoldPlacements } = buildMission005Scaffold(
-        topologyRef.current,
-        engineRef.current,
-        pcEngineRef.current,
-      )
-      initialPlacements = { ...initialPlacements, ...scaffoldPlacements }
-    }
-    setPlacements(initialPlacements)
     setActiveMissionId(missionId)
+    setActiveClientId(clientId)
     setActiveJobPanelOpen(true)
     setTick(t => t + 1)
   }
 
   function completeMission(missionId, reward) {
-    // Refund the purchase cost of all player-bought devices
-    const refund = [...topologyRef.current.devices.values()].reduce((sum, d) => {
-      if (d.type === 'isp' || d.type === 'laptop') return sum
-      const entry = deviceCatalog.find(e => e.model === d.model)
-      return sum + (entry?.price ?? 0)
-    }, 0)
+    const { financialModel } = getMissionMeta(missionId)
+    // 'keep' (persistent client infrastructure) never refunds — the hardware
+    // is still there, still in use by that client. Everything else (including
+    // all 5 legacy missions, which have no financialModel at all) refunds,
+    // matching the original behavior exactly.
+    const refund = financialModel === 'keep' ? 0 : computeRefund(activeTopoRef.current)
     setCompletedMissions(prev => [...prev, { id: missionId, reward, refund }])
     setBudget(b => b + reward + refund)
     playMissionComplete()
@@ -296,18 +394,30 @@ export function GameProvider({ children }) {
 
   function newGame() {
     if (!window.confirm('Start a new game? All progress will be lost.')) return
-    deleteSave()
+    // markResetting() FIRST: window.location.reload() doesn't stop JS
+    // execution immediately, and other autosave effects (CareerContext's)
+    // could otherwise flush a pending write in that gap and put a key right
+    // back moments after the sweep clears it. Every autosave effect checks
+    // isResetting() and skips its write once this is set — see resetGuard.js.
+    markResetting()
+    // Sweep every netsim_* key (main save, company, difficulty, tour-seen,
+    // laptop prefs, career data, …) — not just the main save — so this is a
+    // genuine full reset. A per-key list here would inevitably drift out of
+    // sync as new settings get added; the prefix sweep can't.
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('netsim')) localStorage.removeItem(key)
+    }
     window.location.reload()
   }
 
   function exportSave() {
-    exportToFile(topologyRef.current, placements, inventory, budget, completedMissions, activeMissionId)
+    exportToFile(topologyRef.current, placements, inventory, budget, completedMissions, activeMissionId, clientTopologiesRef.current, activeClientId)
   }
 
   function importSave(json) {
     try {
       const data = JSON.parse(json)
-      if (data?.version !== 1) throw new Error('Unrecognized save format — was this made by a different version?')
+      if (data?.version !== 2) throw new Error('Unrecognized save format — was this made by a different version?')
 
       // Rebuild topology in-place so CLIEngine keeps its reference
       topologyRef.current.clearDevices()
@@ -317,6 +427,27 @@ export function GameProvider({ children }) {
         if (!isNaN(num) && num > maxId) maxId = num
         topologyRef.current.addDevice(deviceFromSave(raw))
       }
+
+      // Rebuild every client topology wholesale (fresh Topology + fresh
+      // engines bound to it) — nothing else holds a long-lived reference to
+      // a specific client's old Topology object, so a full replace is safe
+      // and simpler than trying to patch existing entries in-place.
+      const newClientTopologies = new Map()
+      for (const [clientId, saved] of Object.entries(data.clientTopologies ?? {})) {
+        const topo = new Topology()
+        for (const raw of (saved.devices || [])) {
+          const num = parseInt(raw.id.replace('dev-', ''), 10)
+          if (!isNaN(num) && num > maxId) maxId = num
+          topo.addDevice(deviceFromSave(raw))
+        }
+        newClientTopologies.set(clientId, {
+          topology: topo,
+          engine:    new CLIEngine(topo, difficulty),
+          pcEngine:  new PCCLIEngine(topo, difficulty),
+          winEngine: new WindowsCLIEngine(topo, difficulty),
+        })
+      }
+      clientTopologiesRef.current = newClientTopologies
       setIdCounter(maxId)
 
       // Restore mission state
@@ -325,6 +456,7 @@ export function GameProvider({ children }) {
       setPlacements(data.placements ?? {})
       setCompletedMissions(data.completedMissions ?? [])
       setActiveMissionId(data.activeMissionId ?? null)
+      setActiveClientId(data.activeClientId ?? null)
 
       // Clear transient UI state
       setTerminalSessions([])
@@ -351,10 +483,10 @@ export function GameProvider({ children }) {
     const isWindowsLaptop = dev.type === 'laptop' && dev.os_type === 'windows'
     const isLinuxHost     = dev.type === 'pc' || dev.type === 'server' || (dev.type === 'laptop' && !isWindowsLaptop)
     const eng = isWindowsLaptop
-      ? (isSandbox ? sbWinEngineRef.current : winEngineRef.current)
+      ? (isSandbox ? sbWinEngineRef.current : (activeClientEntry ? activeClientEntry.winEngine : winEngineRef.current))
       : isLinuxHost
-        ? (isSandbox ? sbPcEngineRef.current : pcEngineRef.current)
-        : (isSandbox ? sbEngineRef.current   : engineRef.current)
+        ? (isSandbox ? sbPcEngineRef.current : (activeClientEntry ? activeClientEntry.pcEngine : pcEngineRef.current))
+        : (isSandbox ? sbEngineRef.current   : (activeClientEntry ? activeClientEntry.engine   : engineRef.current))
     const out = []
     for (const cmd of cmds) {
       const lines = eng.execute(dev, cmd)
@@ -433,6 +565,7 @@ export function GameProvider({ children }) {
     topologyRef.current.addDevice(isp)
     setPlacements(p => ({ ...p, [isp.id]: { x: 620, y: 20 } }))
     setActiveMissionId(missionId)
+    setActiveClientId(null)
     setMode('missions')
     setTick(t => t + 1)
   }
@@ -523,7 +656,13 @@ export function GameProvider({ children }) {
     // Forward:  0→1200ms travel + 600ms fade = done at 1800ms
     // Reply:    departs at 1200ms, 1200ms travel + 600ms fade = done at 3000ms
     setTimeout(() => setPingFn(a => a.filter(p => p.id !== id)), 3300)
-  }, [isSandbox]) // eslint-disable-line react-hooks/exhaustive-deps
+    // activeClientId must be a dep alongside isSandbox: activeTopoRef now
+    // resolves to a per-client topology keyed on activeClientId (sticky across
+    // mission completion — see mode-derived helpers above), so that's what
+    // actually determines which topology this callback should target.
+    // Omitting it would let this callback stay memoized against whichever
+    // client's topology was active when it was last recreated.
+  }, [isSandbox, activeClientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = {
     // Mode
@@ -538,9 +677,9 @@ export function GameProvider({ children }) {
     wireMode:            isSandbox ? sbWireMode         : wireMode,
     setWireMode:         isSandbox ? setSbWireMode      : setWireMode,
     pingAnimations:      isSandbox ? sbPingAnimations   : pingAnimations,
-    engine:              isSandbox ? sbEngineRef.current   : engineRef.current,
-    pcEngine:            isSandbox ? sbPcEngineRef.current  : pcEngineRef.current,
-    winEngine:           isSandbox ? sbWinEngineRef.current : winEngineRef.current,
+    engine:              isSandbox ? sbEngineRef.current   : (activeClientEntry ? activeClientEntry.engine    : engineRef.current),
+    pcEngine:            isSandbox ? sbPcEngineRef.current  : (activeClientEntry ? activeClientEntry.pcEngine  : pcEngineRef.current),
+    winEngine:           isSandbox ? sbWinEngineRef.current : (activeClientEntry ? activeClientEntry.winEngine : winEngineRef.current),
     tick:                isSandbox ? sbTick : tick,
 
     // Terminal sessions — active mode's list drives the tab bar

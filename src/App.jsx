@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { GameProvider, useGame } from './state/GameContext.jsx'
+import { CareerProvider, useCareer } from './state/CareerContext.jsx'
 import { useAuth } from './state/AuthContext.jsx'
 import LoginPage from './components/LoginPage.jsx'
 import Floorplan from './components/Floorplan.jsx'
@@ -21,7 +22,9 @@ export default function App() {
   if (!user) return <LoginPage />
   return (
     <GameProvider>
-      <AppContent />
+      <CareerProvider>
+        <AppContent />
+      </CareerProvider>
     </GameProvider>
   )
 }
@@ -222,6 +225,7 @@ function LaptopIntroModal({ onClose }) {
 function AppContent() {
   const { user, logout } = useAuth()
   const { devices, placements, placeDevice, movePlacedDevice, terminalFloating, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, terminalSessions, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeJobPanelOpen } = useGame()
+  const { company, createCompany } = useCareer()
   const importInputRef = useRef(null)
   const [activeDragId,     setActiveDragId]     = useState(null)
   const [rightPanelWidth,  setRightPanelWidth]  = useState(380)
@@ -288,12 +292,25 @@ function AppContent() {
 
   return (
     <>
-    {showTour && <WelcomeModal onDone={(diff) => { setDifficulty(diff); setShowTour(false) }} />}
+    {showTour && <WelcomeModal onDone={(diff, name, avatar) => { setDifficulty(diff); createCompany(name, avatar); setShowTour(false) }} />}
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="app-layout">
         <header className="app-header">
           <span className="app-title">NETSIM</span>
           <span className="app-subtitle">Network Engineer Simulator</span>
+          {company && (
+            <span
+              title="Your company"
+              style={{
+                marginLeft: 10, fontSize: 11, fontWeight: 700, color: '#8ab4d4',
+                display: 'flex', alignItems: 'center', gap: 5,
+                borderLeft: '1px solid #1a1a3e', paddingLeft: 10,
+              }}
+            >
+              <span style={{ fontSize: 13 }}>{company.avatar}</span>
+              {company.name}
+            </span>
+          )}
           {/* Mode toggle */}
           <div style={{ marginLeft: 16, display: 'flex', borderRadius: 4, overflow: 'hidden', border: '1px solid #1a1a3e' }}>
             {(['missions', 'sandbox']).map(m => (

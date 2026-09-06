@@ -15,7 +15,19 @@ const STEPS = [
   {
     icon: '🌐',
     title: 'Welcome to NetSim',
-    body: "You're a freelance Network Engineer. Clients need their networks set up — configure devices, connect cables, and test connectivity to get paid.",
+    body: "A networking sim where the fundamentals are 100% real — actual CLI commands, actual routing, switching, and troubleshooting — but you learn them by running your own network engineering company, not by memorizing a manual.",
+    arrow: null,
+  },
+  {
+    icon: '🎓',
+    title: 'Your Story',
+    body: "You just got certified — no big company job lined up, so you're going independent. Your first lead: an old friend just opened a small shop and needs their network set up. Not glamorous, but everyone starts somewhere.",
+    arrow: null,
+  },
+  {
+    icon: '🚀',
+    title: 'Where This Goes',
+    body: "Every job builds your reputation. Happy clients keep coming back — and they grow. A router and a couple of PCs today can become Wi-Fi, VLANs, and firewalls tomorrow. Junior engineer today, enterprise architect eventually — how far you take it is up to you.",
     arrow: null,
   },
   {
@@ -49,7 +61,16 @@ const STEPS = [
     arrow: null,
     isDifficultyStep: true,
   },
+  {
+    icon: '🏢',
+    title: 'Name Your Company',
+    body: null, // rendered as CompanyNameStep
+    arrow: null,
+    isCompanyStep: true,
+  },
 ]
+
+const COMPANY_AVATARS = ['💼', '🛠️', '🌐', '📡', '🔧', '⚡']
 
 const ARROW = {
   left:   { symbol: '◀', label: 'Shop on the left' },
@@ -109,27 +130,71 @@ function DifficultyPicker({ selected, onChange }) {
   )
 }
 
+function CompanyNameStep({ name, onChangeName, avatar, onChangeAvatar }) {
+  return (
+    <div style={{ textAlign: 'left' }}>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 16 }}>
+        {COMPANY_AVATARS.map(a => (
+          <button
+            key={a}
+            onClick={() => onChangeAvatar(a)}
+            style={{
+              width: 36, height: 36, fontSize: 17, borderRadius: 8, cursor: 'pointer',
+              background: avatar === a ? '#0f1e3a' : '#07080f',
+              border: `2px solid ${avatar === a ? '#4a90e2' : '#1a1a3e'}`,
+            }}
+          >{a}</button>
+        ))}
+      </div>
+      <label style={{ display: 'block', fontSize: 10, color: '#555', letterSpacing: 0.5, marginBottom: 6 }}>
+        COMPANY NAME
+      </label>
+      <input
+        autoFocus
+        value={name}
+        onChange={e => onChangeName(e.target.value)}
+        placeholder="e.g. Ping Networks"
+        maxLength={40}
+        style={{
+          width: '100%', boxSizing: 'border-box', padding: '10px 12px', fontSize: 14,
+          background: '#07080f', color: '#e0e0e0', border: '1px solid #1a1a3e',
+          borderRadius: 8, outline: 'none',
+        }}
+        onFocus={e => { e.currentTarget.style.borderColor = '#4a90e2' }}
+        onBlur={e => { e.currentTarget.style.borderColor = '#1a1a3e' }}
+      />
+      <div style={{ fontSize: 11, color: '#444', marginTop: 8, lineHeight: 1.5 }}>
+        Every network engineer needs a name on the door. This is yours.
+      </div>
+    </div>
+  )
+}
+
 export default function WelcomeModal({ onDone }) {
-  const [step,    setStep]    = useState(0)
-  const [selDiff, setSelDiff] = useState('beginner')
+  const [step,          setStep]          = useState(0)
+  const [selDiff,        setSelDiff]        = useState('beginner')
+  const [companyName,    setCompanyName]    = useState('')
+  const [companyAvatar,  setCompanyAvatar]  = useState(COMPANY_AVATARS[0])
 
   const current = STEPS[step]
   const isLast  = step === STEPS.length - 1
 
-  function next() {
-    if (isLast) {
-      localStorage.setItem(DIFFICULTY_KEY, selDiff)
-      markTourSeen()
-      onDone(selDiff)
-    } else {
-      setStep(s => s + 1)
-    }
-  }
-
-  function skip() {
+  function finish() {
     localStorage.setItem(DIFFICULTY_KEY, selDiff)
     markTourSeen()
-    onDone(selDiff)
+    const finalName = companyName.trim() || 'My Network Co.'
+    onDone(selDiff, finalName, companyAvatar)
+  }
+
+  function next() {
+    if (isLast) finish()
+    else setStep(s => s + 1)
+  }
+
+  // "Skip Tour" skips the explanatory steps only — difficulty and company name
+  // still matter, so it jumps to the final step rather than finishing outright.
+  function skip() {
+    setStep(STEPS.length - 1)
   }
 
   return (
@@ -168,6 +233,17 @@ export default function WelcomeModal({ onDone }) {
               You can change this anytime from the header.
             </div>
             <DifficultyPicker selected={selDiff} onChange={setSelDiff} />
+          </>
+        ) : current.isCompanyStep ? (
+          <>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>{current.icon}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#e0e0e0', marginBottom: 16 }}>
+              {current.title}
+            </div>
+            <CompanyNameStep
+              name={companyName} onChangeName={setCompanyName}
+              avatar={companyAvatar} onChangeAvatar={setCompanyAvatar}
+            />
           </>
         ) : (
           <>
