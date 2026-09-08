@@ -133,8 +133,13 @@ export const mission_local_shop_1 = {
       id: 't5',
       label: 'Configure all 3 PCs with IPs in 10.0.10.0/24',
       hint: [
-        'On each PC terminal (change .x to .101, .102, .103):',
-        'ip addr add 10.0.10.101/24 dev eth0', 'ip link set eth0 up',
+        'Each PC needs its own IP, configured on its own terminal:',
+        { role: 'pc1', cmd: 'ip addr add 10.0.10.101/24 dev eth0' },
+        { role: 'pc1', cmd: 'ip link set eth0 up' },
+        { role: 'pc2', cmd: 'ip addr add 10.0.10.102/24 dev eth0' },
+        { role: 'pc2', cmd: 'ip link set eth0 up' },
+        { role: 'pc3', cmd: 'ip addr add 10.0.10.103/24 dev eth0' },
+        { role: 'pc3', cmd: 'ip link set eth0 up' },
       ],
       condition: {
         type: 'and',
@@ -149,8 +154,10 @@ export const mission_local_shop_1 = {
       id: 't6',
       label: 'Router can ping all 3 PCs',
       hint: [
-        'Open Router terminal and ping each PC (use their actual IPs):',
-        'ping 10.0.10.101', 'ping 10.0.10.102', 'ping 10.0.10.103',
+        'Open the Router terminal and ping each PC (use their actual IPs):',
+        { role: 'router', cmd: 'ping 10.0.10.101' },
+        { role: 'router', cmd: 'ping 10.0.10.102' },
+        { role: 'router', cmd: 'ping 10.0.10.103' },
       ],
       condition: {
         type: 'and',
@@ -166,9 +173,8 @@ export const mission_local_shop_1 = {
       label: 'Bonus: PC-1 can ping PC-2 directly (proves switch forwarding)',
       optional: true,
       hint: [
-        "From PC-1's terminal, ping PC-2 directly — the switch forwards this",
-        'on its own, without the router:',
-        'ping 10.0.10.102',
+        "From PC-1's terminal, ping PC-2 directly — the switch forwards this on its own, without the router:",
+        { role: 'pc1', cmd: 'ping 10.0.10.102' },
       ],
       condition: { type: 'pingSucceeded', roleA: 'pc1', roleB: 'pc2' },
     },

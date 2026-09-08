@@ -40,7 +40,7 @@ function serializeDevice(dev) {
  * from GameContext's clientTopologiesRef (optional — omit for the legacy-only
  * export paths, e.g. sandbox tooling that never touches client missions).
  */
-export function serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId) {
+export function serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket) {
   const devices = [...topology.devices.values()].map(serializeDevice)
 
   const savedClientTopologies = {}
@@ -62,6 +62,7 @@ export function serialize(topology, placements, inventory, budget, completedMiss
     completedMissions,
     activeMissionId: activeMissionId ?? null,
     activeClientId: activeClientId ?? null,
+    activeTicket: activeTicket ?? null,
     devices,
     placements,
     inventory,
@@ -69,8 +70,8 @@ export function serialize(topology, placements, inventory, budget, completedMiss
   }
 }
 
-export function exportToFile(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId) {
-  const data = serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId)
+export function exportToFile(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket) {
+  const data = serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket)
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
@@ -137,6 +138,7 @@ export function deserialize(data) {
     completedMissions: data.completedMissions ?? [],
     activeMissionId: data.activeMissionId ?? null,
     activeClientId: data.activeClientId ?? null,
+    activeTicket: data.activeTicket ?? null,
     placements: mergedPlacements,
     inventory: data.inventory ?? [],
   }

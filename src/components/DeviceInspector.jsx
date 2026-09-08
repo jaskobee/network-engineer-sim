@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGame } from '../state/GameContext.jsx'
 import { maskToPrefixLen, isValidIp, isHostAddress, networkAddress, broadcastAddress } from '../models/ipUtils.js'
+import ConfigSummary from './ConfigSummary.jsx'
 
 export default function DeviceInspector() {
   const {
@@ -12,6 +13,7 @@ export default function DeviceInspector() {
   const [toIface,   setToIface]   = useState('')
   const [editingIp, setEditingIp] = useState(null)  // { ifaceName, ip, prefix }
   const [ipError,   setIpError]   = useState(null)  // validation error shown inline
+  const [tab,       setTab]       = useState('interfaces') // 'interfaces' | 'summary'
 
   const device = selectedDeviceId ? getDevice(selectedDeviceId) : null
 
@@ -105,6 +107,29 @@ export default function DeviceInspector() {
         <span style={{ color: '#555', fontWeight: 'normal', marginLeft: 6 }}>{device.model}</span>
       </h3>
 
+      {/* Interfaces / Config Summary tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 8, borderBottom: '1px solid #1a1a2e' }}>
+        {[['interfaces', 'Interfaces'], ['summary', 'Config Summary']].map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            style={{
+              padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              background: 'transparent', border: 'none',
+              color: tab === id ? '#4a90e2' : '#444',
+              borderBottom: tab === id ? '2px solid #4a90e2' : '2px solid transparent',
+              marginBottom: -1,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'summary' ? (
+        <ConfigSummary device={device} />
+      ) : (
+      <>
       {/* Interface table */}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: 10 }}>
         <thead>
@@ -270,6 +295,8 @@ export default function DeviceInspector() {
           </button>
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

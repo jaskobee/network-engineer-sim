@@ -8,7 +8,7 @@ import { serialize, saveToStorage, loadFromStorage, deserialize, exportToFile } 
 import { playPurchase, playMissionComplete, playSave, playCableDisconnect, playCableConnect } from '../utils/sounds.js'
 import { MISSIONS } from '../data/missions.js'
 import { buildMission005Scaffold } from '../data/mission005scaffold.js'
-import { getMissionMeta } from '../engine/missionEngine.js'
+import { getMissionMeta, resolveMissionRoles } from '../engine/missionEngine.js'
 import { computeRefund } from '../engine/economy.js'
 import { markResetting, isResetting } from '../utils/resetGuard.js'
 
@@ -102,6 +102,12 @@ export function GameProvider({ children }) {
   // a page reload would restore the client's topology data into
   // clientTopologiesRef but have no way to know to actually display it.
   const [activeClientId,    setActiveClientId]    = useState(boot?.activeClientId ?? null)
+  // A background contract ticket currently being worked (or null). Unlike
+  // activeMissionId this holds the whole object, not just an id — tickets are
+  // generated at runtime (see data/serviceTickets.js) and have no static
+  // registry to re-look them up from. Restored from `boot` the same way
+  // activeMissionId/activeClientId are.
+  const [activeTicket,      setActiveTicket]      = useState(boot?.activeTicket ?? null)
 
   const [selectedDeviceId,  setSelectedDeviceId]  = useState(null)
   const [tick,              setTick]              = useState(0)
@@ -135,13 +141,18 @@ export function GameProvider({ children }) {
   // Admin Laptop — always-available management panel (WireFish + Browser)
   const [adminLaptopOpen, setAdminLaptopOpen] = useState(false)
 
-  // Active Job Panel — floating task tracker (auto-opens on mission accept)
-  const [activeJobPanelOpen, setActiveJobPanelOpen] = useState(false)
-
-  // Beginner hint command log — tracks every command typed in any terminal
-  const executedCommandsRef = useRef(new Set())
-  function logExecutedCommand(cmd) {
-    if (cmd?.trim()) executedCommandsRef.current.add(cmd.trim())
+  // Beginner hint command log — tracks every command typed, PER DEVICE
+  // (Map<deviceId, Set<command>>). Device-scoped so a command required on
+  // several devices (e.g. "ip link set eth0 up" on PC-1, PC-2, PC-3) only
+  // ticks off for the device it was actually run on, not for all of them —
+  // and so an unrelated device's command (e.g. the router's "no shutdown")
+  // can never falsely tick a different device's checklist line.
+  const executedCommandsRef = useRef(new Map())
+  function logExecutedCommand(deviceId, cmd) {
+    if (!cmd?.trim()) return
+    let set = executedCommandsRef.current.get(deviceId)
+    if (!set) { set = new Set(); executedCommandsRef.current.set(deviceId, set) }
+    set.add(cmd.trim())
   }
 
   // ── Mode-derived helpers ───────────────────────────────────────────────────
@@ -197,14 +208,14 @@ export function GameProvider({ children }) {
     const data = serialize(
       topologyRef.current, placements, inventory,
       budget, completedMissions, activeMissionId,
-      clientTopologiesRef.current, activeClientId
+      clientTopologiesRef.current, activeClientId, activeTicket
     )
     saveToStorage(data)
     setSaveStatus('saved')
     playSave()
     const t = setTimeout(() => setSaveStatus(null), 1800)
     return () => clearTimeout(t)
-  }, [tick, placements, inventory, budget, completedMissions, activeMissionId, activeClientId])
+  }, [tick, placements, inventory, budget, completedMissions, activeMissionId, activeClientId, activeTicket])
 
   // ── Game actions ───────────────────────────────────────────────────────────
 
@@ -306,8 +317,25 @@ export function GameProvider({ children }) {
     })
   }
 
+  // Shared by acceptMission's client branch, acceptTicket, and viewClient —
+  // every path that switches which topology is on screen must clear
+  // transient UI state scoped to the PREVIOUS one first. terminalSessions in
+  // particular is a flat, unscoped array of {id, deviceId} — a stale tab left
+  // over from a different client's topology would crash TerminalPane the
+  // next time it rendered (getDevice(deviceId) resolves against whichever
+  // topology is CURRENTLY active, so an old id simply won't exist there).
+  function resetWorkspaceForSwitch() {
+    setInventory([])
+    setTerminalSessions([])
+    setActiveTerminalId(null)
+    setSelectedDeviceId(null)
+    setPingAnimations([])
+  }
+
   function acceptMission(missionId) {
-    if (activeMissionId) return  // guard: already on a mission (double-click protection)
+    // guard: already on a mission, or already working a background contract
+    // ticket — only one topology/checklist can ever be on screen at once.
+    if (activeMissionId || activeTicket) return
     const { clientId } = getMissionMeta(missionId)
 
     if (!clientId) {
@@ -315,11 +343,7 @@ export function GameProvider({ children }) {
       // a fresh, disposable topology, wiped on every accept.
       topologyRef.current.clearDevices()
       setPlacements({})
-      setInventory([])
-      setTerminalSessions([])
-      setActiveTerminalId(null)
-      setSelectedDeviceId(null)
-      setPingAnimations([])
+      resetWorkspaceForSwitch()
       const isp = createIspDevice()
       topologyRef.current.addDevice(isp)
       const laptop = createAdminLaptop()
@@ -337,7 +361,6 @@ export function GameProvider({ children }) {
       setPlacements(initialPlacements)
       setActiveMissionId(missionId)
       setActiveClientId(null)
-      setActiveJobPanelOpen(true)
       setTick(t => t + 1)
       return
     }
@@ -362,21 +385,19 @@ export function GameProvider({ children }) {
       // mission's placement entries, which may still be sitting in this same
       // flat placements object (harmless: only entries whose deviceId exists
       // in the CURRENTLY active topology are ever rendered).
-      setPlacements(p => ({ ...p, [isp.id]: { x: 620, y: 20 }, [laptop.id]: { x: 20, y: 360 } }))
+      // Positions land inside this client's 'isp'/'admin' site-map zones
+      // (see data/clients.js) — each gets its own dedicated spot on the floor
+      // plan instead of floating inside the office/closet boxes.
+      setPlacements(p => ({ ...p, [isp.id]: { x: 850, y: 70 }, [laptop.id]: { x: 850, y: 300 } }))
     }
     // else: a follow-up mission for a client that already has a topology —
     // reuse it exactly as-is (devices, cabling, configs all still there).
     // Do NOT clear, and do NOT touch placements — its devices' positions are
     // already there from the previous mission.
 
-    setInventory([])
-    setTerminalSessions([])
-    setActiveTerminalId(null)
-    setSelectedDeviceId(null)
-    setPingAnimations([])
+    resetWorkspaceForSwitch()
     setActiveMissionId(missionId)
     setActiveClientId(clientId)
-    setActiveJobPanelOpen(true)
     setTick(t => t + 1)
   }
 
@@ -398,6 +419,77 @@ export function GameProvider({ children }) {
     setPingAnimations([])
 
     setTick(t => t + 1)
+  }
+
+  // ── Background contract tickets ─────────────────────────────────────────────
+  // Mirrors acceptMission's client-reuse branch only — a ticket's client
+  // topology already exists by construction (a ticket only ever comes from an
+  // established contract), so there's no first-mission bootstrap path here,
+  // and no hardware/refund logic since tickets never involve purchases.
+
+  function acceptTicket(ticket) {
+    if (activeMissionId || activeTicket) return
+    const entry = clientTopologiesRef.current.get(ticket.clientId)
+    if (!entry) return  // shouldn't happen — a ticket only exists for an established client
+
+    resetWorkspaceForSwitch()
+    setActiveClientId(ticket.clientId)
+    setActiveTicket(ticket)
+    setTick(t => t + 1)
+  }
+
+  /**
+   * Switches the floorplan to an already-established client's persistent
+   * network WITHOUT accepting any new work — lets the player freely revisit
+   * a client to double-check or fix something. Guarded exactly like
+   * accepting new work: only when nothing else is currently in flight (the
+   * single-viewport invariant every other mode-switch in this file already
+   * relies on). Never constructs a topology — only ever switches to a
+   * client that already has one from a prior mission/ticket.
+   */
+  function viewClient(clientId) {
+    if (activeMissionId || activeTicket) return
+    if (!clientTopologiesRef.current.get(clientId)) return
+    resetWorkspaceForSwitch()
+    setActiveClientId(clientId)
+    setTick(t => t + 1)
+  }
+
+  function completeTicket(reward) {
+    // No refund logic (tickets never involve purchases), but the reward is
+    // real income — same as completeMission's payout.
+    setBudget(b => b + (reward ?? 0))
+    setActiveTicket(null)
+    setInventory([])
+    setPingAnimations([])
+    setTick(t => t + 1)
+  }
+
+  /**
+   * Applies a newly-issued ticket's real topology fault — a single, minimal,
+   * legitimate mutation (disconnecting a real cable, clearing a real
+   * interface's IP fields) via the same Topology/Device APIs the CLI engines
+   * themselves use. Not the planned Act 2 fault-injection mission series
+   * (pre-built broken scaffolds) — just enough to make a background ticket's
+   * network genuinely broken while it's open, the same way any other mission
+   * objective is genuinely unmet until solved.
+   */
+  function applyTicketFault(ticket) {
+    const entry = clientTopologiesRef.current.get(ticket.clientId)
+    if (!entry || !ticket.fault) return
+    const devices = [...entry.topology.devices.values()]
+    const roles = resolveMissionRoles(ticket, devices)
+    const device = roles[ticket.fault.role]
+    if (!device) return
+
+    if (ticket.fault.type === 'disconnect') {
+      const iface = device.interfaces.find(i => i.connected_to)
+      if (iface) entry.topology.disconnect(`${device.id}:${iface.name}`)
+    } else if (ticket.fault.type === 'clearIp') {
+      const iface = device.interfaces.find(i => i.ip)
+      if (iface) { iface.ip = null; iface.subnet_mask = null }
+    }
+    refresh()
   }
 
   function powerAllDevices() {
@@ -431,7 +523,7 @@ export function GameProvider({ children }) {
   }
 
   function exportSave() {
-    exportToFile(topologyRef.current, placements, inventory, budget, completedMissions, activeMissionId, clientTopologiesRef.current, activeClientId)
+    exportToFile(topologyRef.current, placements, inventory, budget, completedMissions, activeMissionId, clientTopologiesRef.current, activeClientId, activeTicket)
   }
 
   function importSave(json) {
@@ -477,6 +569,7 @@ export function GameProvider({ children }) {
       setCompletedMissions(data.completedMissions ?? [])
       setActiveMissionId(data.activeMissionId ?? null)
       setActiveClientId(data.activeClientId ?? null)
+      setActiveTicket(data.activeTicket ?? null)
 
       // Clear transient UI state
       setTerminalSessions([])
@@ -745,6 +838,9 @@ export function GameProvider({ children }) {
     activeMissionId, acceptMission,
     saveStatus, newGame, exportSave, importSave,
 
+    // Background contract tickets (see data/serviceTickets.js, engine/contractClock.js)
+    activeTicket, acceptTicket, completeTicket, applyTicketFault, viewClient,
+
     // Firewall console — device-agnostic overlay (missions + sandbox)
     fwConsoleDeviceId,
     openFwConsole:  (id) => setFwConsoleDeviceId(id),
@@ -754,7 +850,6 @@ export function GameProvider({ children }) {
     adminLaptopOpen, setAdminLaptopOpen,
 
     // Active Job Panel — floating task tracker
-    activeJobPanelOpen, setActiveJobPanelOpen,
     // Beginner command log (ref — reads are always current on each tick-driven render)
     executedCommandsRef, logExecutedCommand,
     // Derived: the laptop device in the active topology (null when no mission started yet)

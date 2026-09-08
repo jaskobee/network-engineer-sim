@@ -49,13 +49,29 @@ function UpcomingTask({ task, num }) {
   )
 }
 
-function ActiveTask({ task, num, difficulty, diagLines, executedCommands }) {
+// A hint command is either a plain string (legacy shape — ticks off if that
+// exact text was typed on ANY device, matching the original behavior every
+// existing mission relies on) or `{ role, cmd }` (ticks off only if `cmd` was
+// typed on the SPECIFIC device that role resolves to). The object form is what
+// makes a multi-device task (e.g. "bring up eth0" on three different PCs)
+// track each device independently, instead of one PC's command falsely
+// checking off the same line for the other two.
+function isCommandDone(item, executedCommands, resolvedRoles) {
+  if (typeof item === 'string') {
+    for (const set of executedCommands.values()) if (set.has(item)) return true
+    return false
+  }
+  const deviceId = resolvedRoles?.[item.role]?.id
+  return !!deviceId && !!executedCommands.get(deviceId)?.has(item.cmd)
+}
+
+function ActiveTask({ task, num, difficulty, diagLines, executedCommands, resolvedRoles }) {
   const [showDiag, setShowDiag] = useState(false)
 
   const isBeginnerMode = difficulty === 'beginner'
   const hintArr    = Array.isArray(task.hint) ? task.hint : (task.hint ? [task.hint] : [])
   const actionText = hintArr[0] ?? null
-  const cliItems   = hintArr.slice(1)   // mix of '# comment' lines and actual commands
+  const cliItems   = hintArr.slice(1)   // mix of '# comment' strings and command strings/{role,cmd} objects
   const hasCli     = isBeginnerMode && cliItems.length > 0
   const hasDiag    = isBeginnerMode && diagLines?.length > 0
 
@@ -96,16 +112,17 @@ function ActiveTask({ task, num, difficulty, diagLines, executedCommands }) {
           <div style={{ padding: '5px 10px 3px', fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: '#2a4a7a', borderBottom: '1px solid #0d1e38' }}>
             COMMANDS TO TYPE
           </div>
-          {cliItems.map((cmd, i) => {
-            const isComment = cmd.startsWith('# ')
+          {cliItems.map((item, i) => {
+            const isComment = typeof item === 'string' && item.startsWith('# ')
             if (isComment) {
               return (
                 <div key={i} style={{ fontSize: 9, fontFamily: 'monospace', color: '#2a3a5a', lineHeight: 1.6, padding: '4px 10px 0', fontStyle: 'italic' }}>
-                  {cmd.slice(2)}
+                  {item.slice(2)}
                 </div>
               )
             }
-            const done = executedCommands.has(cmd)
+            const cmd  = typeof item === 'string' ? item : item.cmd
+            const done = isCommandDone(item, executedCommands, resolvedRoles)
             return (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -187,7 +204,7 @@ export function MissionProgressBar({ tasks, checks }) {
 
 // ── Full ordered task list ────────────────────────────────────────────────────
 
-export function MissionTaskRows({ tasks, checks, difficulty, diagFacts, executedCommands }) {
+export function MissionTaskRows({ tasks, checks, difficulty, diagFacts, executedCommands, resolvedRoles }) {
   const allTasksDone = tasks.length > 0 && tasks.every(t => !!checks[t.id])
   const ordinals = tasks.map((_, i) => i + 1)
   return (
@@ -198,7 +215,7 @@ export function MissionTaskRows({ tasks, checks, difficulty, diagFacts, executed
         const isActive    = !isChecked && prevChecked
         const num         = ordinals[i]
         if (isChecked) return <DoneTask     key={task.id} task={task} num={num} />
-        if (isActive)  return <ActiveTask   key={task.id} task={task} num={num} difficulty={difficulty} diagLines={diagFacts?.[task.id] ?? null} executedCommands={executedCommands} />
+        if (isActive)  return <ActiveTask   key={task.id} task={task} num={num} difficulty={difficulty} diagLines={diagFacts?.[task.id] ?? null} executedCommands={executedCommands} resolvedRoles={resolvedRoles} />
         return             <UpcomingTask key={task.id} task={task} num={num} />
       })}
       {allTasksDone && (

@@ -30,7 +30,13 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { createClientInstance, CLIENT_TEMPLATES } from '../data/clients.js'
 import { createContract } from '../data/contracts.js'
-import { scoreAfterMission, tierForScore } from '../engine/reputation.js'
+import { scoreAfterMission, tierForScore, scoreAfterTicket, scoreAfterExpiredTicket, satisfactionDelta } from '../engine/reputation.js'
+import { shouldIssueNewTicket, ticketUrgency, isTicketExpired, SLA_DURATION_MS, DORMANCY_THRESHOLD } from '../engine/contractClock.js'
+import { pickTicketTemplate, createTicketInstance } from '../data/serviceTickets.js'
+import {
+  ticketIssuedNotification, slaWarningNotification, slaExpiredNotification,
+  ticketCompletedNotification, clientDormantNotification,
+} from '../data/notifications.js'
 import { isResetting } from '../utils/resetGuard.js'
 
 const COMPANY_KEY = 'netsim_v1_company'
@@ -62,15 +68,21 @@ export function CareerProvider({ children }) {
   const [reputation, setReputation] = useState(savedCareer?.reputation ?? 0)
   const [clients, setClients]     = useState(savedCareer?.clients ?? {})   // clientId -> Client
   const [contracts, setContracts] = useState(savedCareer?.contracts ?? {}) // contractId -> Contract
+  // Background-contract SLA state (see engine/contractClock.js). Both are
+  // additive to an unversioned, freely-extensible save blob — old saves
+  // simply predate these fields and default to empty here.
+  const [activeTickets, setActiveTickets] = useState(savedCareer?.activeTickets ?? {}) // ticketId -> Ticket
+  const [notifications, setNotifications] = useState(savedCareer?.notifications ?? []) // newest first
 
-  // Persist reputation/clients/contracts as they change. Runs after every
-  // render where one of them changed — cheap (small JSON) and simpler than
-  // trying to hook this to GameContext's tick-driven autosave.
+  // Persist reputation/clients/contracts/tickets/notifications as they change.
+  // Runs after every render where one of them changed — cheap (small JSON)
+  // and simpler than trying to hook this to GameContext's tick-driven autosave.
   useEffect(() => {
     if (isResetting()) return
-    try { localStorage.setItem(CAREER_KEY, JSON.stringify({ reputation, clients, contracts })) }
-    catch { /* ignore quota errors */ }
-  }, [reputation, clients, contracts])
+    try {
+      localStorage.setItem(CAREER_KEY, JSON.stringify({ reputation, clients, contracts, activeTickets, notifications }))
+    } catch { /* ignore quota errors */ }
+  }, [reputation, clients, contracts, activeTickets, notifications])
 
   // Seed the game's first client the moment a company exists but has none
   // yet — covers both "just created a company" (Phase 5's onboarding) and
@@ -140,11 +152,206 @@ export function CareerProvider({ children }) {
     return contract
   }
 
+  // ── Background contract tickets (SLA-timed maintenance work) ───────────────
+  //
+  // The single orchestration entry point, called from ContractClockDriver.jsx
+  // (mounted once in App.jsx, the one place with both useGame() and
+  // useCareer() readily available) rather than from an internal interval
+  // here — CareerContext has no way to know whether a job-board mission is
+  // currently active (that's GameContext state), and a ticket's SLA clock
+  // must PAUSE while one is, so a ticket can never expire through no fault of
+  // the player. The caller passes that in as `activeMissionId`.
+  // `contractsInput`/`ticketsInput` default to live state, but callers that
+  // just mutated timestamps in the SAME synchronous pass (see
+  // devFastForwardContracts below) must pass the freshly-computed values
+  // directly — setContracts()/setActiveTickets() don't apply until the next
+  // render, so reading the (still-stale) `contracts`/`activeTickets` closure
+  // immediately afterward would evaluate against pre-fast-forward timestamps.
+  // `forceCommit` guarantees contractsInput/ticketsInput get persisted even
+  // when nothing "eventful" happened this pass (no threshold crossed) — the
+  // changed-flags below exist to skip pointless setState calls on the real
+  // ContractClockDriver's frequent no-op polling, but a caller that just
+  // computed genuinely new timestamps (like a fast-forward) must not have
+  // that optimization silently discard them.
+  function tickContracts(activeMissionId, now, contractsInput = contracts, ticketsInput = activeTickets, forceCommit = false) {
+    let nextReputation = reputation
+    const nextClients   = { ...clients }
+    const nextContracts = { ...contractsInput }
+    const nextTickets   = { ...ticketsInput }
+    const newNotifications = []
+    let clientsChanged = false, contractsChanged = forceCommit, ticketsChanged = forceCommit
+
+    for (const contract of Object.values(contractsInput)) {
+      const client = nextClients[contract.clientId]
+      if (!client) continue
+
+      const openTicket = contract.openTicketId ? nextTickets[contract.openTicketId] : null
+
+      if (openTicket) {
+        // Pause the clock entirely while a job-board mission is active —
+        // a ticket can never expire through no fault of the player.
+        if (activeMissionId) {
+          nextTickets[openTicket.id] = { ...openTicket, pausedMs: (openTicket.pausedMs ?? 0) + 15_000 }
+          ticketsChanged = true
+          continue
+        }
+
+        if (isTicketExpired(openTicket, now)) {
+          // Force-closed, unaddressed: reputation/satisfaction penalty,
+          // clear the ticket, track the miss, possibly go dormant.
+          nextReputation = scoreAfterExpiredTicket(nextReputation).newScore
+          const missed = (client.consecutiveMissedTickets ?? 0) + 1
+          const goingDormant = missed >= DORMANCY_THRESHOLD
+          nextClients[contract.clientId] = {
+            ...client,
+            satisfaction: Math.max(0, client.satisfaction + satisfactionDelta('expired')),
+            consecutiveMissedTickets: missed,
+            dormant: goingDormant,
+          }
+          clientsChanged = true
+          nextContracts[contract.id] = { ...contract, openTicketId: null, lastTicketAt: now }
+          contractsChanged = true
+          delete nextTickets[openTicket.id]
+          ticketsChanged = true
+          newNotifications.push(slaExpiredNotification(client, openTicket, now))
+          if (goingDormant) newNotifications.push(clientDormantNotification(client, now))
+          continue
+        }
+
+        const urgency = ticketUrgency(openTicket, now)
+        if (urgency === 'warning' && !openTicket.notifiedStages.includes('warning')) {
+          nextTickets[openTicket.id] = { ...openTicket, notifiedStages: [...openTicket.notifiedStages, 'warning'] }
+          ticketsChanged = true
+          newNotifications.push(slaWarningNotification(client, openTicket, now))
+        }
+        continue
+      }
+
+      if (shouldIssueNewTicket(contract, client, now)) {
+        const template = pickTicketTemplate(contract.clientId)
+        if (!template) continue
+        const ticket = createTicketInstance(contract.clientId, contract.id, template, now, SLA_DURATION_MS)
+        nextTickets[ticket.id] = ticket
+        ticketsChanged = true
+        nextContracts[contract.id] = { ...contract, openTicketId: ticket.id, lastTicketAt: now }
+        contractsChanged = true
+        newNotifications.push(ticketIssuedNotification(client, ticket, now))
+      }
+    }
+
+    if (nextReputation !== reputation) setReputation(nextReputation)
+    if (clientsChanged)   setClients(nextClients)
+    if (contractsChanged) setContracts(nextContracts)
+    if (ticketsChanged)   setActiveTickets(nextTickets)
+    if (newNotifications.length > 0) setNotifications(prev => [...newNotifications.reverse(), ...prev])
+  }
+
+  /** Applies a newly-issued ticket's real topology fault (GameContext already
+   * did the actual mutation) — flips faultApplied so ContractClockDriver
+   * doesn't try to apply it again on the next tick. */
+  function markTicketFaultApplied(ticketId) {
+    setActiveTickets(prev => {
+      const ticket = prev[ticketId]
+      if (!ticket || ticket.faultApplied) return prev
+      return { ...prev, [ticketId]: { ...ticket, faultApplied: true } }
+    })
+  }
+
+  /** Bookkeeping only — the actual topology switch happens in GameContext. */
+  function acceptTicket(ticket) {
+    setActiveTickets(prev => {
+      const existing = prev[ticket.id]
+      if (!existing || existing.status === 'active') return prev
+      return { ...prev, [ticket.id]: { ...existing, status: 'active' } }
+    })
+  }
+
+  /** Call once GameContext confirms every objective on the ticket passed. */
+  function completeTicket(ticket, completedAtMs) {
+    const { newScore, kind } = scoreAfterTicket(reputation, ticket, completedAtMs)
+    setReputation(newScore)
+    setClients(prev => {
+      const client = prev[ticket.clientId]
+      if (!client) return prev
+      return {
+        ...prev,
+        [ticket.clientId]: {
+          ...client,
+          satisfaction: Math.min(100, Math.max(0, client.satisfaction + satisfactionDelta(kind))),
+          consecutiveMissedTickets: 0,
+        },
+      }
+    })
+    setContracts(prev => {
+      const contract = prev[ticket.contractId]
+      if (!contract) return prev
+      return { ...prev, [ticket.contractId]: { ...contract, openTicketId: null, lastTicketAt: completedAtMs } }
+    })
+    setActiveTickets(prev => {
+      const next = { ...prev }
+      delete next[ticket.id]
+      return next
+    })
+    const client = clients[ticket.clientId]
+    if (client) setNotifications(prev => [ticketCompletedNotification(client, ticket, kind, completedAtMs), ...prev])
+    return { kind, newReputation: newScore }
+  }
+
+  function markNotificationRead(id) {
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)))
+  }
+
+  /**
+   * DEV/QA ONLY — never fakes an outcome, only moves the clock backward and
+   * immediately re-runs the real tick check against those shifted values —
+   * NOT via separate setState calls (setContracts()/setActiveTickets() don't
+   * apply until the next render, so a naive "shift, then call tickContracts()"
+   * would evaluate against the still-stale pre-shift timestamps). Passing the
+   * freshly-computed values straight into tickContracts()'s optional
+   * `contractsInput`/`ticketsInput` params sidesteps that entirely. Lets a
+   * human tester see a ticket issue/warn/expire in seconds instead of the
+   * real 5-14 minutes.
+   */
+  function devFastForwardContracts(minutes, activeMissionId) {
+    const ms = minutes * 60 * 1000
+    const shiftedContracts = {}
+    for (const [id, c] of Object.entries(contracts)) {
+      shiftedContracts[id] = {
+        ...c,
+        lastTicketAt: c.lastTicketAt != null ? c.lastTicketAt - ms : null,
+        startedAtMs: (c.startedAtMs ?? Date.now()) - ms,
+      }
+    }
+    const shiftedTickets = {}
+    for (const [id, t] of Object.entries(activeTickets)) {
+      // issuedAt/deadlineAt always shift back by the full simulated duration
+      // (that many ms have elapsed since issuance, full stop). If a mission
+      // was active for this stretch, ALSO add the same amount to pausedMs so
+      // msRemaining/ticketUrgency's (now - issuedAt) - pausedMs nets to zero
+      // for it — matching the real driver's pattern of pairing every real
+      // elapsed tick with a matching pausedMs bump, just at fast-forward
+      // granularity instead of 15s-per-call. (Shifting pausedMs alone, with
+      // issuedAt left untouched, would silently cancel out a LATER unpaused
+      // fast-forward that shifts issuedAt on its own — this keeps the two
+      // consistent across any sequence of paused/unpaused fast-forwards.)
+      shiftedTickets[id] = {
+        ...t,
+        issuedAt: t.issuedAt - ms,
+        deadlineAt: t.deadlineAt - ms,
+        pausedMs: activeMissionId ? (t.pausedMs ?? 0) + ms : (t.pausedMs ?? 0),
+      }
+    }
+    tickContracts(activeMissionId, Date.now(), shiftedContracts, shiftedTickets, true)
+  }
+
   const value = {
     company, createCompany,
     reputation,
     clients, contracts,
     completeClientMission, acceptContractOffer,
+    activeTickets, notifications,
+    tickContracts, markTicketFaultApplied, acceptTicket, completeTicket, markNotificationRead,
+    devFastForwardContracts,
   }
 
   return <CareerContext.Provider value={value}>{children}</CareerContext.Provider>

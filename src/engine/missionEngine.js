@@ -44,6 +44,13 @@ function roleLabel(mission, roleName) {
   return mission.deviceRoles?.[roleName]?.label ?? roleName
 }
 
+// Public wrapper so UI components (which need to know "which device is
+// `pc2`?" to scope the per-device executed-commands checklist) can resolve
+// roles without duplicating resolveDeviceRoles' matching logic.
+export function resolveMissionRoles(mission, devices) {
+  return resolveDeviceRoles(mission?.deviceRoles, devices)
+}
+
 // Finds the interface to check on a role's device. If `ifaceName` is given,
 // match it exactly (use this whenever a device has more than one candidate
 // interface — e.g. a router with both a LAN and a WAN port — the same way

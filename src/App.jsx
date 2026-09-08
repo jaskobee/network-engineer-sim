@@ -16,6 +16,7 @@ import DevPanel from './components/DevPanel.jsx'
 import FirewallConsole from './components/FirewallConsole.jsx'
 import AdminLaptop from './components/AdminLaptop.jsx'
 import ActiveJobPanel from './components/ActiveJobPanel.jsx'
+import ContractClockDriver from './components/ContractClockDriver.jsx'
 
 export default function App() {
   const { user } = useAuth()
@@ -65,30 +66,127 @@ function VerticalResizeDivider({ onDelta }) {
   )
 }
 
-// ── Sidebar tabs ──────────────────────────────────────────────────────────────
+// ── Left icon rail + slide-in dock (Shop/Inventory) ──────────────────────────
+//
+// Shop/Inventory don't need to sit on screen the whole time — they're only
+// needed while shopping/placing, not while working a mission. An icon rail
+// (always present, minimal footprint) triggers a dock that slides in over
+// the floorplan and closes again, reclaiming floorplan width by default.
 
-function SidebarTabs({ active, onChange }) {
-  const tabs = [
-    { id: 'shop',      label: 'SHOP' },
-    { id: 'inventory', label: 'INVENTORY' },
-  ]
+const RAIL_WIDTH = 46
+const DOCK_WIDTH = 210
+const CAREER_DOCK_WIDTH = 260
+
+function MenuButton({ children, onClick, danger }) {
   return (
-    <div style={{ display: 'flex', borderBottom: '1px solid #1a1a3e', background: '#07070d', flexShrink: 0 }}>
-      {tabs.map(t => (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'block', width: '100%', textAlign: 'left',
+        padding: '6px 8px', fontSize: 11, fontWeight: 700, letterSpacing: 0.3,
+        background: 'transparent', color: danger ? '#ff5555' : '#4a90e2',
+        border: 'none', borderRadius: 4, cursor: 'pointer',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = danger ? '#2a1010' : '#111122' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function RailButton({ icon, label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      style={{
+        width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 17, background: active ? '#1a2e4a' : 'transparent',
+        border: `1px solid ${active ? '#2a5298' : 'transparent'}`,
+        borderRadius: 6, cursor: 'pointer', transition: 'all 0.15s',
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#111122' }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+    >
+      {icon}
+    </button>
+  )
+}
+
+// Shared click-catcher for both docks — spans the whole middle zone between
+// the two 46px rails (never the rails themselves, so an icon click always
+// reaches its RailButton) and closes *both* docks, not just whichever one's
+// catcher happens to be on top, so a background click reliably clears the
+// screen even if both were somehow open at once on a narrow viewport.
+function DockClickCatcher({ onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: 'absolute', top: 0, bottom: 0, left: RAIL_WIDTH, right: RAIL_WIDTH, zIndex: 29 }} />
+  )
+}
+
+function ShopInventoryDock({ openPanel, onClose }) {
+  if (!openPanel) return null
+  return (
+    <div style={{
+      position: 'absolute', top: 0, bottom: 0, left: RAIL_WIDTH, width: DOCK_WIDTH, zIndex: 30,
+      background: '#0d0d1a', borderRight: '1px solid #1a1a3e',
+      display: 'flex', flexDirection: 'column',
+      boxShadow: '6px 0 24px rgba(0,0,0,0.5)',
+    }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '8px 12px', borderBottom: '1px solid #1a1a3e', flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#4a90e2', letterSpacing: 1.5 }}>
+          {openPanel === 'shop' ? 'SHOP' : 'INVENTORY'}
+        </span>
         <button
-          key={t.id}
-          onClick={() => onChange(t.id)}
-          style={{
-            flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer',
-            background: active === t.id ? '#111122' : 'transparent',
-            color: active === t.id ? '#4a90e2' : '#444',
-            fontSize: 10, fontWeight: 700, letterSpacing: 1,
-            borderBottom: active === t.id ? '2px solid #4a90e2' : '2px solid transparent',
-          }}
-        >
-          {t.label}
-        </button>
-      ))}
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#e0e0e0' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
+        >✕</button>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        {openPanel === 'shop' ? <Shop /> : <Inventory />}
+      </div>
+    </div>
+  )
+}
+
+// ── Right icon rail + slide-in dock (Career) ─────────────────────────────────
+//
+// Mirrors ShopInventoryDock exactly, anchored to the opposite edge: Company
+// Dashboard / Client Networks / Job Board / Completed Jobs don't need to sit
+// on screen the whole time either — the active job's own checklist lives in
+// the always-visible floating ActiveJobPanel instead, so this dock is purely
+// for browsing/managing career state on demand.
+
+function CareerDock({ open, onClose, children }) {
+  if (!open) return null
+  return (
+    <div style={{
+      position: 'absolute', top: 0, bottom: 0, right: RAIL_WIDTH, width: CAREER_DOCK_WIDTH, zIndex: 30,
+      background: '#0d0d1a', borderLeft: '1px solid #1a1a3e',
+      display: 'flex', flexDirection: 'column',
+      boxShadow: '-6px 0 24px rgba(0,0,0,0.5)',
+    }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '8px 12px', borderBottom: '1px solid #1a1a3e', flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#4a90e2', letterSpacing: 1.5 }}>CAREER</span>
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#e0e0e0' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
+        >✕</button>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -190,16 +288,26 @@ function LaptopIntroModal({ onClose }) {
 
 function AppContent() {
   const { user, logout } = useAuth()
-  const { devices, placements, placeDevice, movePlacedDevice, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeJobPanelOpen } = useGame()
-  const { company, createCompany } = useCareer()
+  const { devices, placements, placeDevice, movePlacedDevice, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeTicket } = useGame()
+  const { company, createCompany, notifications } = useCareer()
+  const unreadNotifications = notifications.filter(n => !n.read).length
   const importInputRef = useRef(null)
   const [activeDragId,     setActiveDragId]     = useState(null)
   const [inspectorHeight,  setInspectorHeight]  = useState(220)
-  const [leftTab,          setLeftTab]          = useState('shop')
+  const [openPanel,        setOpenPanel]        = useState(null) // 'shop' | 'inventory' | null
+  const [careerOpen,       setCareerOpen]       = useState(false)
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
+  const settingsMenuRef = useRef(null)
   const [showTour,         setShowTour]         = useState(() => !hasSeenTour())
   const [devPanelOpen,     setDevPanelOpen]     = useState(false)
   const [laptopIntroOpen,  setLaptopIntroOpen]  = useState(false)
   const prevMissionIdRef = useRef(null)
+  const prevJobActiveRef = useRef(null)
+
+  function closeAllDocks() {
+    setOpenPanel(null)
+    setCareerOpen(false)
+  }
 
   // Show the Admin Laptop intro once when the player accepts their first ever mission
   useEffect(() => {
@@ -210,6 +318,15 @@ function AppContent() {
     }
     prevMissionIdRef.current = activeMissionId
   }, [activeMissionId])
+
+  // Close the Career dock the instant a job is accepted — browsing naturally
+  // ends the moment one is picked, mirroring MissionPanel's own jobBoardOpen
+  // auto-collapse. The floorplan + floating ActiveJobPanel take over from here.
+  useEffect(() => {
+    const jobActive = !!(activeMissionId || activeTicket)
+    if (jobActive && !prevJobActiveRef.current) setCareerOpen(false)
+    prevJobActiveRef.current = jobActive
+  }, [activeMissionId, activeTicket])
 
   // Ctrl+Shift+D toggles dev panel (only active in DEV builds)
   useEffect(() => {
@@ -223,6 +340,16 @@ function AppContent() {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
+
+  // Close the ⚙ settings menu on any click outside it
+  useEffect(() => {
+    if (!settingsMenuOpen) return
+    function onMouseDown(e) {
+      if (!settingsMenuRef.current?.contains(e.target)) setSettingsMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [settingsMenuOpen])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -316,8 +443,9 @@ function AppContent() {
           {/* Admin Laptop toggle */}
           <button
             onClick={() => setAdminLaptopOpen(o => !o)}
-            title="Admin Laptop — Wireshark + Browser"
+            title="Admin Laptop — Wireshark + Browser + Inbox"
             style={{
+              position: 'relative',
               marginLeft: 16,
               padding: '3px 12px', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
               background: adminLaptopOpen ? '#1a3a5c' : 'transparent',
@@ -328,7 +456,18 @@ function AppContent() {
             }}
             onMouseEnter={e => { if (!adminLaptopOpen) { e.currentTarget.style.color = '#4a90e2'; e.currentTarget.style.borderColor = '#2a3a5c' } }}
             onMouseLeave={e => { if (!adminLaptopOpen) { e.currentTarget.style.color = '#4a5568'; e.currentTarget.style.borderColor = '#1a1a3e' } }}
-          >🖥 ADMIN LAPTOP</button>
+          >
+            🖥 ADMIN LAPTOP
+            {unreadNotifications > 0 && (
+              <span style={{
+                position: 'absolute', top: -6, right: -6,
+                minWidth: 15, height: 15, borderRadius: 8, padding: '0 3px',
+                background: '#ff5555', color: '#fff', fontSize: 9, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid #0a0a0f',
+              }}>{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>
+            )}
+          </button>
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Save indicator */}
@@ -338,20 +477,6 @@ function AppContent() {
             {saveStatus === 'loaded' && (
               <span style={{ fontSize: 10, color: '#4a90e2', opacity: 0.7 }}>↺ Restored</span>
             )}
-            {/* Export / Import */}
-            <button
-              onClick={exportSave}
-              title="Download save as JSON"
-              style={{
-                padding: '3px 10px', fontSize: 10, fontWeight: 700,
-                background: 'transparent', color: '#4a90e2',
-                border: '1px solid #1a1a3e', borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5298' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a1a3e' }}
-            >
-              EXPORT
-            </button>
             <input
               ref={importInputRef}
               type="file"
@@ -369,46 +494,54 @@ function AppContent() {
                 e.target.value = ''
               }}
             />
-            <button
-              onClick={() => importInputRef.current?.click()}
-              title="Load save from JSON file"
-              style={{
-                padding: '3px 10px', fontSize: 10, fontWeight: 700,
-                background: 'transparent', color: '#4a90e2',
-                border: '1px solid #1a1a3e', borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5298' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a1a3e' }}
-            >
-              IMPORT
-            </button>
-            {/* Difficulty selector */}
-            <select
-              value={difficulty}
-              onChange={e => setDifficulty(e.target.value)}
-              style={{
-                fontSize: 10, fontWeight: 700,
-                background: '#0d0d1a', color: difficulty === 'beginner' ? '#50fa7b' : difficulty === 'advanced' ? '#ffb86c' : '#ff5555',
-                border: '1px solid #1a1a3e', borderRadius: 3, padding: '3px 6px',
-                cursor: 'pointer', letterSpacing: 0.3,
-              }}
-            >
-              <option value="beginner">BEGINNER</option>
-              <option value="advanced">ADVANCED</option>
-              <option value="networkEngineer">NETWORK ENGINEER</option>
-            </select>
-            <button
-              onClick={newGame}
-              style={{
-                padding: '3px 10px', fontSize: 10, fontWeight: 700,
-                background: 'transparent', color: '#ff5555',
-                border: '1px solid #3a1010', borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#2a1010' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-            >
-              NEW GAME
-            </button>
+
+            {/* Settings menu — Export/Import/Difficulty/New Game are occasional
+                setup actions, not moment-to-moment ones, so they're tucked
+                behind one button instead of sitting in the header permanently. */}
+            <div ref={settingsMenuRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setSettingsMenuOpen(o => !o)}
+                title="Settings"
+                style={{
+                  padding: '3px 9px', fontSize: 13,
+                  background: settingsMenuOpen ? '#1a2e4a' : 'transparent',
+                  color: settingsMenuOpen ? '#4a90e2' : '#4a5568',
+                  border: `1px solid ${settingsMenuOpen ? '#2a5298' : '#1a1a3e'}`,
+                  borderRadius: 3, cursor: 'pointer',
+                }}
+              >⚙</button>
+              {settingsMenuOpen && (
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 6,
+                  background: '#0d0d1a', border: '1px solid #1a1a3e', borderRadius: 6,
+                  padding: 8, zIndex: 200, minWidth: 190,
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+                }}>
+                  <MenuButton onClick={() => { exportSave(); setSettingsMenuOpen(false) }}>⬇ Export Save</MenuButton>
+                  <MenuButton onClick={() => { importInputRef.current?.click(); setSettingsMenuOpen(false) }}>⬆ Import Save</MenuButton>
+
+                  <div style={{ fontSize: 8, color: '#445', letterSpacing: 0.5, margin: '8px 0 4px' }}>DIFFICULTY</div>
+                  <select
+                    value={difficulty}
+                    onChange={e => setDifficulty(e.target.value)}
+                    style={{
+                      width: '100%', fontSize: 10, fontWeight: 700,
+                      background: '#07070d', color: difficulty === 'beginner' ? '#50fa7b' : difficulty === 'advanced' ? '#ffb86c' : '#ff5555',
+                      border: '1px solid #1a1a3e', borderRadius: 3, padding: '4px 6px',
+                      cursor: 'pointer', letterSpacing: 0.3, marginBottom: 8,
+                    }}
+                  >
+                    <option value="beginner">BEGINNER</option>
+                    <option value="advanced">ADVANCED</option>
+                    <option value="networkEngineer">NETWORK ENGINEER</option>
+                  </select>
+
+                  <div style={{ borderTop: '1px solid #1a1a3e', margin: '4px 0 8px' }} />
+                  <MenuButton danger onClick={() => { setSettingsMenuOpen(false); newGame() }}>NEW GAME</MenuButton>
+                </div>
+              )}
+            </div>
+
             {/* Session info + logout */}
             <span style={{
               fontSize: 9, color: user?.role === 'admin' ? '#ffb86c' : '#4a90e2',
@@ -433,57 +566,80 @@ function AppContent() {
         </header>
 
         <div className="app-body">
-          {/* Left sidebar: spawn palette in sandbox, tabbed shop+inventory in missions */}
-          <aside className="sidebar-left">
-            {mode === 'sandbox' ? (
-              <SandboxPalette />
-            ) : (
-              <>
-                <SidebarTabs active={leftTab} onChange={setLeftTab} />
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                  {leftTab === 'shop'      ? <Shop />      : null}
-                  {leftTab === 'inventory' ? <Inventory /> : null}
+          {/* Wrapper holding both rails + floorplan together, so the
+              Shop/Inventory dock and the Career dock (positioned inside it)
+              can each overlay the floorplan from their own edge without
+              being clipped by either sidebar's own overflow — structural
+              guarantee rather than a hand-computed pixel offset. */}
+          <div style={{ position: 'relative', display: 'flex', flex: 1, minWidth: 0 }}>
+            {/* Left rail: spawn palette in sandbox (unchanged), icon-only Shop/Inventory triggers in missions */}
+            <aside className="sidebar-left" style={{ width: mode === 'sandbox' ? 210 : RAIL_WIDTH }}>
+              {mode === 'sandbox' ? (
+                <SandboxPalette />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 10 }}>
+                  <RailButton icon="🛒" label="Shop" active={openPanel === 'shop'}
+                    onClick={() => setOpenPanel(p => p === 'shop' ? null : 'shop')} />
+                  <RailButton icon="📦" label="Inventory" active={openPanel === 'inventory'}
+                    onClick={() => setOpenPanel(p => p === 'inventory' ? null : 'inventory')} />
                 </div>
-              </>
+              )}
+            </aside>
+
+            {mode === 'missions' && (openPanel || careerOpen) && (
+              <DockClickCatcher onClose={closeAllDocks} />
             )}
-          </aside>
+            {mode === 'missions' && (
+              <ShopInventoryDock openPanel={openPanel} onClose={() => setOpenPanel(null)} />
+            )}
 
-          <main className="main-area" style={{ flexDirection: 'column' }}>
-            {/* Floorplan — fills remaining height */}
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <Floorplan />
-            </div>
-
-            {/* Vertical divider between floorplan and inspector */}
-            <VerticalResizeDivider onDelta={d => setInspectorHeight(h => Math.max(120, Math.min(560, h - d)))} />
-
-            {/* Device inspector — docked full-width along the bottom */}
-            <div style={{
-              height: inspectorHeight, flexShrink: 0,
-              overflowY: 'auto', overflowX: 'auto',
-              borderTop: '1px solid #1a1a3e',
-            }}>
-              <DeviceInspector />
-            </div>
-          </main>
-
-          <aside className="sidebar-right">
-            {mode === 'missions' ? (
-              <MissionPanel />
-            ) : (
-              <div style={{ padding: '16px 12px', textAlign: 'center' }}>
-                <div style={{ fontSize: 32, marginBottom: 10, opacity: 0.25 }}>🧪</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#333360', letterSpacing: 1, marginBottom: 8 }}>
-                  SANDBOX MODE
-                </div>
-                <div style={{ fontSize: 10, color: '#252545', lineHeight: 1.7 }}>
-                  Build any topology.<br/>
-                  No missions · No budget.<br/>
-                  Full CLI accuracy enforced.
-                </div>
+            <main className="main-area" style={{ flexDirection: 'column' }}>
+              {/* Floorplan — fills remaining height */}
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <Floorplan />
               </div>
+
+              {/* Vertical divider between floorplan and inspector */}
+              <VerticalResizeDivider onDelta={d => setInspectorHeight(h => Math.max(120, Math.min(560, h - d)))} />
+
+              {/* Device inspector — docked full-width along the bottom */}
+              <div style={{
+                height: inspectorHeight, flexShrink: 0,
+                overflowY: 'auto', overflowX: 'auto',
+                borderTop: '1px solid #1a1a3e',
+              }}>
+                <DeviceInspector />
+              </div>
+            </main>
+
+            {/* Right rail: Career icon in missions mode, existing Sandbox placeholder unchanged */}
+            <aside className="sidebar-right" style={{ width: mode === 'sandbox' ? 260 : RAIL_WIDTH }}>
+              {mode === 'missions' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 10 }}>
+                  <RailButton icon="💼" label="Career" active={careerOpen}
+                    onClick={() => setCareerOpen(v => !v)} />
+                </div>
+              ) : (
+                <div style={{ padding: '16px 12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, marginBottom: 10, opacity: 0.25 }}>🧪</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#333360', letterSpacing: 1, marginBottom: 8 }}>
+                    SANDBOX MODE
+                  </div>
+                  <div style={{ fontSize: 10, color: '#252545', lineHeight: 1.7 }}>
+                    Build any topology.<br/>
+                    No missions · No budget.<br/>
+                    Full CLI accuracy enforced.
+                  </div>
+                </div>
+              )}
+            </aside>
+
+            {mode === 'missions' && (
+              <CareerDock open={careerOpen} onClose={() => setCareerOpen(false)}>
+                <MissionPanel onNavigateAway={() => setCareerOpen(false)} />
+              </CareerDock>
             )}
-          </aside>
+          </div>
         </div>
       </div>
 
@@ -510,9 +666,8 @@ function AppContent() {
     {adminLaptopOpen && (
       <AdminLaptop onClose={() => setAdminLaptopOpen(false)} />
     )}
-    {activeMissionId && activeJobPanelOpen && (
-      <ActiveJobPanel />
-    )}
+    <ActiveJobPanel />
+    <ContractClockDriver />
     <TerminalPane />
     {import.meta.env.DEV && (
       <DevPanel open={devPanelOpen} onClose={() => setDevPanelOpen(false)} />

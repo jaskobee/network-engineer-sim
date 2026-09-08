@@ -37,5 +37,9 @@ export function createContract({ clientId, contractType, startedAtMissionId }) {
     amountPerMonth: def.amountPerMonth,
     startedAtMissionId,
     active: true,
+    // Background-contract SLA bookkeeping (see engine/contractClock.js).
+    startedAtMs: Date.now(),
+    lastTicketAt: null,
+    openTicketId: null,
   }
 }

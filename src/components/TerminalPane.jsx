@@ -240,7 +240,7 @@ function TermTab({ session, isActive, onSelect, onClose }) {
 // ── Individual terminal session ───────────────────────────────────────────────
 
 function TermSession({ session, isActive }) {
-  const { getDevice, engine, pcEngine, winEngine, topology, placements, addPingAnimation, refresh, logExecutedCommand } = useGame()
+  const { getDevice, engine, pcEngine, winEngine, topology, placements, addPingAnimation, refresh, logExecutedCommand, closeTerminal, closeTerminalWindow, allTerminalSessions } = useGame()
 
   const containerRef    = useRef(null)
   const xtermRef        = useRef(null)
@@ -256,11 +256,17 @@ function TermSession({ session, isActive }) {
   const addPingAnimationRef     = useRef(addPingAnimation)
   const refreshRef              = useRef(refresh)
   const logExecutedCommandRef   = useRef(logExecutedCommand)
+  const closeTerminalRef        = useRef(closeTerminal)
+  const closeTerminalWindowRef  = useRef(closeTerminalWindow)
+  const sessionCountRef         = useRef(allTerminalSessions.length)
   useEffect(() => {
     placementsRef.current           = placements
     addPingAnimationRef.current     = addPingAnimation
     refreshRef.current              = refresh
     logExecutedCommandRef.current   = logExecutedCommand
+    closeTerminalRef.current        = closeTerminal
+    closeTerminalWindowRef.current  = closeTerminalWindow
+    sessionCountRef.current         = allTerminalSessions.length
   })
 
   useEffect(() => {
@@ -349,9 +355,30 @@ function TermSession({ session, isActive }) {
         cursorRef.current = 0
         term.write('\r\n')
         if (!line) { writePrompt(); return }
-        logExecutedCommandRef.current(line.trim())
+        logExecutedCommandRef.current(device.id, line.trim())
 
-        const tokens     = line.trim().split(/\s+/)
+        const tokens = line.trim().split(/\s+/)
+
+        // ── exit ──────────────────────────────────────────────────────────
+        // On a PC/server/phone/laptop shell, 'exit' always ends the session
+        // (real bash/cmd.exe behavior). On a router/switch, 'exit' is a real
+        // IOS command that just pops one config-mode level (interface config
+        // → global config → priv exec → user exec) — it only actually ends
+        // the session at user exec, the top level, matching a real device
+        // dropping the connection. Any other mode falls through to the
+        // normal engine dispatch below so mode navigation is unaffected.
+        if (tokens[0].toLowerCase() === 'exit') {
+          const endsSession = isPC || isWindows || device.config_mode === 'user_exec'
+          if (endsSession) {
+            term.writeln(isWindows ? 'Logging off.' : isPC ? 'logout' : '')
+            setTimeout(() => {
+              if (sessionCountRef.current <= 1) closeTerminalWindowRef.current()
+              else closeTerminalRef.current(session.id)
+            }, 400)
+            return
+          }
+        }
+
         const isPingCmd  = tokens[0].toLowerCase() === 'ping' && tokens.length >= 2
         const pingTarget = isPingCmd ? tokens[tokens.length - 1] : null
         // Resolve hostname to IP for both animation and topology checks

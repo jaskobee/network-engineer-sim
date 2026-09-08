@@ -24,13 +24,18 @@ export const CLIENT_TEMPLATES = [
     // goes in the back room, the register PC is up front" to what they're
     // actually placing. Coordinates share the same pixel space as `placements`.
     // Never gameplay-enforced — devices can be placed anywhere.
+    // ISP/laptop default coordinates in GameContext.jsx's acceptMission()
+    // bootstrap are chosen to land inside the 'isp'/'admin' zones below —
+    // keep the two in sync if either is repositioned.
     siteMap: {
       buildingLabel: "Sam's Corner Store — Floor Plan",
       zones: [
         { id: 'front',   label: 'Front Counter',          icon: '🛎', x: 20,  y: 20,  w: 360, h: 200, color: '#2a5298' },
         { id: 'office',  label: 'Back Office',             icon: '💼', x: 400, y: 20,  w: 360, h: 200, color: '#8a6a2a' },
+        { id: 'isp',     label: 'WAN / ISP Uplink',        icon: '🌐', x: 800, y: 20,  w: 180, h: 200, color: '#00bcd4' },
         { id: 'closet',  label: 'Server Closet (Secure)',  icon: '🔒', x: 20,  y: 240, w: 360, h: 220, color: '#2a8a5a' },
         { id: 'storage', label: 'Storage / Back Room',     icon: '📦', x: 400, y: 240, w: 360, h: 220, color: '#8a3a3a' },
+        { id: 'admin',   label: 'IT / Admin Corner',       icon: '🖥', x: 800, y: 240, w: 180, h: 220, color: '#8ab4d4' },
       ],
     },
   },
@@ -56,5 +61,10 @@ export function createClientInstance(templateId) {
     satisfaction: 100,
     revenueTotal: 0,
     growthStage: 0,
+    // Background-contract SLA state (see engine/contractClock.js). A dormant
+    // client stops issuing new service tickets until a future re-engagement
+    // mechanic brings them back — the record itself is never deleted.
+    dormant: false,
+    consecutiveMissedTickets: 0,
   }
 }

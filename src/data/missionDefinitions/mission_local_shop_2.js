@@ -77,19 +77,31 @@ export const mission_local_shop_2 = {
     {
       id: 't4',
       label: "Configure the new PC's address",
-      hint: ['On the new PC terminal:', 'ip addr add 10.0.10.104/24 dev eth0', 'ip link set eth0 up'],
+      hint: [
+        'On the new PC terminal:',
+        { role: 'pc4', cmd: 'ip addr add 10.0.10.104/24 dev eth0' },
+        { role: 'pc4', cmd: 'ip link set eth0 up' },
+      ],
       condition: { type: 'sameSubnet', roleA: 'pc4', roleB: 'router' },
     },
     {
       id: 't5',
       label: 'Give the POS server a static address',
-      hint: ['On the Server terminal:', 'ip addr add 10.0.10.50/24 dev eth0', 'ip link set eth0 up'],
+      hint: [
+        'On the Server terminal:',
+        { role: 'server', cmd: 'ip addr add 10.0.10.50/24 dev eth0' },
+        { role: 'server', cmd: 'ip link set eth0 up' },
+      ],
       condition: { type: 'sameSubnet', roleA: 'server', roleB: 'router' },
     },
     {
       id: 't6',
       label: 'Router can reach both new devices',
-      hint: ['From the Router terminal:', 'ping 10.0.10.104', 'ping 10.0.10.50'],
+      hint: [
+        'From the Router terminal:',
+        { role: 'router', cmd: 'ping 10.0.10.104' },
+        { role: 'router', cmd: 'ping 10.0.10.50' },
+      ],
       condition: {
         type: 'and',
         conditions: [
@@ -102,7 +114,10 @@ export const mission_local_shop_2 = {
       id: 't7',
       label: 'Bonus: the Register PC can reach the new POS server',
       optional: true,
-      hint: ["From PC-1 (Register)'s terminal, ping the POS server:", 'ping 10.0.10.50'],
+      hint: [
+        "From PC-1 (Register)'s terminal, ping the POS server:",
+        { role: 'pc1', cmd: 'ping 10.0.10.50' },
+      ],
       condition: { type: 'pingSucceeded', roleA: 'pc1', roleB: 'server' },
     },
   ],

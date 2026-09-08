@@ -15,9 +15,11 @@
 
 import { useState, useRef } from 'react'
 import { useGame } from '../state/GameContext.jsx'
+import { useCareer } from '../state/CareerContext.jsx'
 import { MISSIONS } from '../data/missions.js'
 import { PRESETS, buildPreset } from '../devMode/presets.js'
 import { runSmokeTests } from '../devMode/smokeTests.js'
+import { ticketUrgency } from '../engine/contractClock.js'
 
 // ── Shared micro-styles ───────────────────────────────────────────────────────
 
@@ -487,6 +489,90 @@ function SmokeTab() {
   )
 }
 
+// ── Tab: CONTRACTS ────────────────────────────────────────────────────────────
+
+function ContractsTab() {
+  const { activeMissionId } = useGame()
+  const { clients, contracts, activeTickets, devFastForwardContracts } = useCareer()
+  const [minutes, setMinutes] = useState('6')
+  const [msg, setMsg] = useState(null)
+
+  function notify(text) { setMsg(text); setTimeout(() => setMsg(null), 2500) }
+
+  function fastForward() {
+    const m = parseFloat(minutes)
+    if (!m || m <= 0) return
+    devFastForwardContracts(m, activeMissionId)
+    notify(`Fast-forwarded ${m} min and re-checked contracts`)
+  }
+
+  const contractList = Object.values(contracts)
+
+  return (
+    <div>
+      <div style={S.section}>
+        <div style={S.sectionTitle}>FAST-FORWARD CONTRACT CLOCK</div>
+        <div style={{ fontSize: 9, color: '#444', marginBottom: 8, lineHeight: 1.6 }}>
+          Moves every contract/ticket timestamp backward by N minutes, then runs
+          a real tickContracts() check — never fakes an outcome, just lets you
+          see SLA issue/warn/expire without waiting real minutes.
+        </div>
+        <div style={S.row}>
+          <input
+            type="number"
+            value={minutes}
+            onChange={e => setMinutes(e.target.value)}
+            style={{ ...S.input, width: 70 }}
+          />
+          <span style={{ fontSize: 9, color: '#444' }}>minutes</span>
+          <button style={S.btn()} onClick={fastForward}>⏩ FAST-FORWARD</button>
+        </div>
+        {msg && (
+          <div style={{ marginTop: 8, padding: '4px 8px', background: '#1a4a1a', color: '#50fa7b', fontSize: 10, borderRadius: 3 }}>
+            ✓ {msg}
+          </div>
+        )}
+      </div>
+
+      <div style={S.section}>
+        <div style={S.sectionTitle}>CONTRACTS ({contractList.length})</div>
+        {contractList.length === 0 && (
+          <div style={{ fontSize: 10, color: '#333360' }}>No active contracts yet.</div>
+        )}
+        {contractList.map(c => {
+          const client = clients[c.clientId]
+          const ticket = c.openTicketId ? activeTickets[c.openTicketId] : null
+          return (
+            <div key={c.id} style={{ marginBottom: 8, padding: 8, background: '#07070d', border: '1px solid #1a1a3e', borderRadius: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#c0c0e0' }}>
+                {client?.companyName ?? c.clientId} {client?.dormant && <span style={{ color: '#ff5555' }}>(DORMANT)</span>}
+              </div>
+              <div style={{ fontSize: 9, color: '#555', marginTop: 2 }}>
+                satisfaction: {client?.satisfaction ?? '?'} · missed: {client?.consecutiveMissedTickets ?? 0} ·
+                lastTicketAt: {c.lastTicketAt ? new Date(c.lastTicketAt).toLocaleTimeString() : 'never'}
+              </div>
+              {ticket ? (
+                <>
+                  <div style={{ fontSize: 9, color: '#8be9fd', marginTop: 2, fontFamily: 'monospace' }}>
+                    ticket: {ticket.title} — {ticketUrgency(ticket, Date.now())}
+                  </div>
+                  <div style={{ fontSize: 8, color: '#556', marginTop: 2, fontFamily: 'monospace' }}>
+                    now-issuedAt: {Math.round((Date.now() - ticket.issuedAt) / 1000)}s ·
+                    pausedMs: {Math.round((ticket.pausedMs ?? 0) / 1000)}s ·
+                    effective: {Math.round(((Date.now() - ticket.issuedAt) - (ticket.pausedMs ?? 0)) / 1000)}s
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 9, color: '#333360', marginTop: 2 }}>no open ticket</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Tab: UTILS ────────────────────────────────────────────────────────────────
 
 function UtilsTab() {
@@ -569,6 +655,7 @@ const TABS = [
   { id: 'presets',   label: 'PRESETS'   },
   { id: 'inspector', label: 'INSPECTOR' },
   { id: 'smoke',     label: 'SMOKE'     },
+  { id: 'contracts', label: 'CONTRACTS' },
   { id: 'utils',     label: 'UTILS'     },
 ]
 
@@ -611,6 +698,7 @@ function DevPanelInner({ onClose }) {
         {tab === 'presets'   && <PresetsTab />}
         {tab === 'inspector' && <InspectorTab />}
         {tab === 'smoke'     && <SmokeTab />}
+        {tab === 'contracts' && <ContractsTab />}
         {tab === 'utils'     && <UtilsTab />}
       </div>
     </div>

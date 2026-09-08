@@ -7,12 +7,15 @@ import { useState, useRef, useCallback } from 'react'
 import WireFishPanel from './WiresharkPanel.jsx'
 import BrowserPanel from './BrowserPanel.jsx'
 import { useGame } from '../state/GameContext.jsx'
+import { useCareer } from '../state/CareerContext.jsx'
 
 const INITIAL_W = 900
 const INITIAL_H = 600
 
 export default function AdminLaptop({ onClose }) {
-  const { laptopDevice, setLaptopOsType } = useGame()
+  const { laptopDevice, setLaptopOsType, openTerminal } = useGame()
+  const { notifications, markNotificationRead } = useCareer()
+  const unreadCount = notifications.filter(n => !n.read).length
 
   const [tab, setTab] = useState('guide')
   const [pos, setPos] = useState(() => ({
@@ -73,9 +76,11 @@ export default function AdminLaptop({ onClose }) {
     : { position: 'fixed', left: pos.x, top: pos.y, width: size.w, height: size.h, zIndex: 3000, display: 'flex', flexDirection: 'column' }
 
   const TABS = [
-    { id: 'guide',    label: '📖 GUIDE'    },
-    { id: 'wirefish', label: '🐟 WIREFISH'  },
-    { id: 'browser',  label: '🌐 BROWSER'   },
+    { id: 'guide',    icon: '📖', label: 'Guide' },
+    { id: 'wirefish', icon: '🐟', label: 'WireFish' },
+    { id: 'browser',  icon: '🌐', label: 'Browser' },
+    { id: 'inbox',    icon: '📧', label: 'Inbox', badge: unreadCount },
+    { id: 'settings', icon: '⚙️', label: 'Settings' },
   ]
 
   return (
@@ -104,24 +109,46 @@ export default function AdminLaptop({ onClose }) {
         </span>
         <span style={{ fontSize: 9, color: '#334', marginLeft: 2 }}>management console</span>
 
-        {/* OS toggle */}
-        <div style={{ marginLeft: 10, display: 'flex', gap: 2, alignItems: 'center' }}
-             onMouseDown={e => e.stopPropagation()}>
-          <span style={{ fontSize: 8, color: '#446', marginRight: 3, textTransform: 'uppercase', letterSpacing: 0.5 }}>OS</span>
-          <OsButton active={osType === 'linux'}   onClick={() => handleSetOs('linux')}   label="🐧 Linux" />
-          <OsButton active={osType === 'windows'} onClick={() => handleSetOs('windows')} label="🪟 Win" />
-        </div>
+        {/* Terminal shortcut — opens the laptop's own real terminal (same
+            action right-clicking it on the floorplan does), not a tab with
+            its own content pane. Grows from wherever this button sits. */}
+        <button
+          onClick={e => openTerminal(laptopDevice?.id, { x: e.clientX, y: e.clientY })}
+          onMouseDown={e => e.stopPropagation()}
+          disabled={!laptopDevice?.powered}
+          title={laptopDevice?.powered ? 'Open Terminal' : 'Power on the laptop first'}
+          style={{
+            marginLeft: 14, width: 30, height: 26, fontSize: 15,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: '1px solid #1a2a3e', borderRadius: 4,
+            cursor: laptopDevice?.powered ? 'pointer' : 'not-allowed',
+            color: laptopDevice?.powered ? '#8ab4d4' : '#334',
+            opacity: laptopDevice?.powered ? 1 : 0.5,
+          }}
+        >⌨</button>
 
-        {/* Tab bar */}
+        {/* Tab bar — icon-first, tooltip for the label instead of inline text */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }} onMouseDown={e => e.stopPropagation()}>
           {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              padding: '3px 14px', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+            <button key={t.id} onClick={() => setTab(t.id)} title={t.label} style={{
+              position: 'relative',
+              width: 34, height: 26, fontSize: 15,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: 'none', borderRadius: 3, cursor: 'pointer',
               background: tab === t.id ? '#1a2e4a' : 'transparent',
-              color:      tab === t.id ? '#4a90e2' : '#445',
               borderBottom: tab === t.id ? '2px solid #4a90e2' : '2px solid transparent',
-            }}>{t.label}</button>
+            }}>
+              {t.icon}
+              {t.badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: 1, right: 1,
+                  minWidth: 12, height: 12, borderRadius: 6, padding: '0 2px',
+                  background: '#ff5555', color: '#fff', fontSize: 7, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1px solid #0a0f18',
+                }}>{t.badge > 9 ? '9+' : t.badge}</span>
+              )}
+            </button>
           ))}
         </div>
       </div>
@@ -129,13 +156,19 @@ export default function AdminLaptop({ onClose }) {
       {/* ── Content area ───────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div style={{ display: tab === 'guide' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
-          <GuideTab laptopDevice={laptopDevice} osType={osType} guideMode={guideMode} onSetMode={handleSetMode} onSetOs={handleSetOs} />
+          <GuideTab laptopDevice={laptopDevice} osType={osType} guideMode={guideMode} />
         </div>
         <div style={{ display: tab === 'wirefish' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
           <WireFishPanel />
         </div>
         <div style={{ display: tab === 'browser' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
           <BrowserPanel />
+        </div>
+        <div style={{ display: tab === 'inbox' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+          <NotificationsTab notifications={notifications} onMarkRead={markNotificationRead} />
+        </div>
+        <div style={{ display: tab === 'settings' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+          <SettingsTab osType={osType} guideMode={guideMode} onSetMode={handleSetMode} onSetOs={handleSetOs} />
         </div>
       </div>
 
@@ -153,7 +186,7 @@ export default function AdminLaptop({ onClose }) {
 
 // ── Guide tab ─────────────────────────────────────────────────────────────────
 
-function GuideTab({ laptopDevice, osType, guideMode, onSetMode, onSetOs }) {
+function GuideTab({ laptopDevice, osType, guideMode }) {
   const iface   = laptopDevice?.interfaces?.[0]
   const hasIp   = !!(iface?.ip)
   const cabled  = !!(iface?.connected_to)
@@ -167,46 +200,17 @@ function GuideTab({ laptopDevice, osType, guideMode, onSetMode, onSetOs }) {
   return (
     <div style={{ padding: 24, color: '#8ab', fontFamily: 'monospace', overflowY: 'auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 24 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#c8d8e8', marginBottom: 4 }}>
-            🖥 Admin Laptop Setup
-          </div>
-          <div style={{ fontSize: 10, color: '#557', lineHeight: 1.7 }}>
-            The Admin Laptop is your network engineer&apos;s workstation. It lives on the floorplan
-            as a real device — cable it, power it on, and configure an IP before the Browser
-            or WireFish tools can reach anything.
-          </div>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#c8d8e8', marginBottom: 4 }}>
+          🖥 Admin Laptop Setup
         </div>
-
-        {/* Mode selector */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontSize: 8, color: '#446', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>Guide mode</div>
-          <ModeBtn active={guideMode === 'beginner'} onClick={() => onSetMode('beginner')} label="📖 Beginner" />
-          <ModeBtn active={guideMode === 'expert'}   onClick={() => onSetMode('expert')}   label="⚡ Expert" />
+        <div style={{ fontSize: 10, color: '#557', lineHeight: 1.7 }}>
+          The Admin Laptop is your network engineer&apos;s workstation. It lives on the floorplan
+          as a real device — cable it, power it on, and configure an IP before the Browser
+          or WireFish tools can reach anything. Currently set up for <strong style={{ color: '#8ab4d4' }}>{osType === 'windows' ? 'Windows' : 'Linux'}</strong> —
+          change that anytime in ⚙ Settings.
         </div>
       </div>
-
-      {/* OS selector */}
-      <Section title="Operating System">
-        <div style={{ display: 'flex', gap: 12 }}>
-          <OsCard
-            active={osType === 'linux'} onClick={() => onSetOs('linux')}
-            icon="🐧" name="Linux" sub="Ubuntu / Debian shell"
-            cmds={['ip addr add', 'ip route add default via', 'ping', 'dhclient']}
-          />
-          <OsCard
-            active={osType === 'windows'} onClick={() => onSetOs('windows')}
-            icon="🪟" name="Windows" sub="Windows CMD"
-            cmds={['ipconfig /all', 'netsh interface ip set address', 'route print', 'ping']}
-          />
-        </div>
-        <div style={{ fontSize: 9, color: '#446', marginTop: 8 }}>
-          The OS choice changes the CLI commands in the terminal tab. Both OSes teach the
-          same networking — just different syntax. The choice is saved on the device and
-          persists across sessions.
-        </div>
-      </Section>
 
       {/* Setup checklist */}
       <Section title="Setup Checklist">
@@ -249,6 +253,112 @@ function GuideTab({ laptopDevice, osType, guideMode, onSetMode, onSetOs }) {
           <ToolCard icon="🐟" name="WireFish" desc="Packet capture analyser — coming in Phase 3. Will show real frames emitted by the packet engine hop-by-hop. See the WireFish tab for the build timeline." />
         </div>
       </Section>
+    </div>
+  )
+}
+
+// ── Settings tab ──────────────────────────────────────────────────────────────
+//
+// Holds the OS choice and Guide verbosity — things worth picking once, not
+// chrome that needs to sit in front of the player permanently. Guide reads
+// both (read-only there) but can no longer change them.
+
+function SettingsTab({ osType, guideMode, onSetMode, onSetOs }) {
+  return (
+    <div style={{ padding: 24, color: '#8ab', fontFamily: 'monospace', overflowY: 'auto' }}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#c8d8e8', marginBottom: 16 }}>
+        ⚙ Settings
+      </div>
+
+      <Section title="Operating System">
+        <div style={{ display: 'flex', gap: 12 }}>
+          <OsCard
+            active={osType === 'linux'} onClick={() => onSetOs('linux')}
+            icon="🐧" name="Linux" sub="Ubuntu / Debian shell"
+            cmds={['ip addr add', 'ip route add default via', 'ping', 'dhclient']}
+          />
+          <OsCard
+            active={osType === 'windows'} onClick={() => onSetOs('windows')}
+            icon="🪟" name="Windows" sub="Windows CMD"
+            cmds={['ipconfig /all', 'netsh interface ip set address', 'route print', 'ping']}
+          />
+        </div>
+        <div style={{ fontSize: 9, color: '#446', marginTop: 8 }}>
+          The OS choice changes the CLI commands in the terminal tab. Both OSes teach the
+          same networking — just different syntax. The choice is saved on the device and
+          persists across sessions.
+        </div>
+      </Section>
+
+      <Section title="Guide Mode">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <ModeBtn active={guideMode === 'beginner'} onClick={() => onSetMode('beginner')} label="📖 Beginner" />
+          <ModeBtn active={guideMode === 'expert'}   onClick={() => onSetMode('expert')}   label="⚡ Expert" />
+        </div>
+        <div style={{ fontSize: 9, color: '#446', marginTop: 8 }}>
+          Beginner mode shows step-by-step hints and example commands in the Guide tab and
+          mission task list. Expert mode hides them — you're expected to know your commands.
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+// ── Inbox tab ─────────────────────────────────────────────────────────────────
+
+const NOTIFICATION_ICON = {
+  'ticket-issued':    '🔧',
+  'sla-warning':      '⚠️',
+  'sla-expired':       '⛔',
+  'ticket-completed': '✅',
+  'client-dormant':   '💤',
+}
+
+function relativeTime(ms) {
+  const diff = Date.now() - ms
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+function NotificationsTab({ notifications, onMarkRead }) {
+  if (notifications.length === 0) {
+    return (
+      <div style={{ padding: 24, textAlign: 'center', color: '#446', fontFamily: 'monospace' }}>
+        <div style={{ fontSize: 32, marginBottom: 10, opacity: 0.5 }}>📭</div>
+        <div style={{ fontSize: 11 }}>No messages yet — your clients will reach out here.</div>
+      </div>
+    )
+  }
+  return (
+    <div style={{ padding: 16 }}>
+      {notifications.map(n => (
+        <div
+          key={n.id}
+          onClick={() => !n.read && onMarkRead(n.id)}
+          style={{
+            display: 'flex', gap: 10, padding: '10px 12px', marginBottom: 6, borderRadius: 6,
+            background: n.read ? '#0a0f18' : '#0d1a2a',
+            border: `1px solid ${n.read ? '#141c28' : '#1e3a5c'}`,
+            cursor: n.read ? 'default' : 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 18, flexShrink: 0 }}>{NOTIFICATION_ICON[n.kind] ?? '📩'}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: n.read ? 400 : 700, color: n.read ? '#8ab' : '#c8d8e8' }}>
+                {n.subject}
+              </span>
+              <span style={{ fontSize: 9, color: '#446', flexShrink: 0 }}>{relativeTime(n.createdAt)}</span>
+            </div>
+            <div style={{ fontSize: 10, color: '#5a7', marginTop: 3, lineHeight: 1.5 }}>{n.body}</div>
+          </div>
+          {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4a90e2', flexShrink: 0, marginTop: 4 }} />}
+        </div>
+      ))}
     </div>
   )
 }
@@ -365,18 +475,6 @@ function ToolCard({ icon, name, desc }) {
       <div style={{ fontSize: 11, fontWeight: 700, color: '#8ab', marginBottom: 6 }}>{icon} {name}</div>
       <div style={{ fontSize: 9, color: '#446', lineHeight: 1.7 }}>{desc}</div>
     </div>
-  )
-}
-
-function OsButton({ active, onClick, label }) {
-  return (
-    <button onClick={onClick} style={{
-      padding: '2px 8px', fontSize: 9, border: 'none', borderRadius: 3, cursor: 'pointer',
-      background: active ? '#1a2e4a' : 'transparent',
-      color: active ? '#4a90e2' : '#446',
-      fontWeight: active ? 700 : 400,
-      borderBottom: active ? '1px solid #4a90e2' : '1px solid transparent',
-    }}>{label}</button>
   )
 }
 
