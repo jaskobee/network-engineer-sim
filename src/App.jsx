@@ -214,8 +214,10 @@ function findFreePosition(x, y, placements, excludeId) {
     for (let dx = -ring; dx <= ring; dx++) {
       for (let dy = -ring; dy <= ring; dy++) {
         if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue
-        const nx = Math.max(10, x + dx * step)
-        const ny = Math.max(10, y + dy * step)
+        // No lower clamp — the floorplan is an unbounded canvas, so a
+        // negative world coordinate (reached by panning) is perfectly valid.
+        const nx = x + dx * step
+        const ny = y + dy * step
         if (!wouldOverlap(nx, ny, excludeId, placements)) return { x: nx, y: ny }
       }
     }
@@ -288,7 +290,7 @@ function LaptopIntroModal({ onClose }) {
 
 function AppContent() {
   const { user, logout } = useAuth()
-  const { devices, placements, placeDevice, movePlacedDevice, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeTicket } = useGame()
+  const { devices, placements, placeDevice, movePlacedDevice, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeTicket, panOffset } = useGame()
   const { company, createCompany, notifications } = useCareer()
   const unreadNotifications = notifications.filter(n => !n.read).length
   const importInputRef = useRef(null)
@@ -362,15 +364,23 @@ function AppContent() {
     const data = active.data.current
     if (data?.type === 'inventory' && over.id === 'floorplan') {
       const translated = active.rect.current?.translated
-      const rawX = translated ? Math.max(10, Math.round(translated.left - over.rect.left)) : 80
-      const rawY = translated ? Math.max(10, Math.round(translated.top  - over.rect.top))  : 80
+      // over.rect is the floorplan viewport's on-screen box (never itself
+      // transformed — only its content wrapper pans), so translated-minus-that
+      // gives a viewport-relative pixel position; subtracting panOffset
+      // converts it into the world coordinate the panned content is actually
+      // using. No lower clamp — negative world coordinates are valid once
+      // you've panned into that territory.
+      const rawX = translated ? Math.round(translated.left - over.rect.left - panOffset.x) : 80
+      const rawY = translated ? Math.round(translated.top  - over.rect.top  - panOffset.y) : 80
       const { x, y } = findFreePosition(rawX, rawY, placements, null)
       placeDevice(data.deviceId, x, y)
     } else if (data?.type === 'placed') {
       const cur = placements[data.deviceId]
       if (cur) {
-        const nx = Math.max(0, Math.round(cur.x + delta.x))
-        const ny = Math.max(0, Math.round(cur.y + delta.y))
+        // delta is a screen-space pointer movement, independent of any pan
+        // offset, so it applies to the world coordinate unchanged.
+        const nx = Math.round(cur.x + delta.x)
+        const ny = Math.round(cur.y + delta.y)
         if (!wouldOverlap(nx, ny, data.deviceId, placements)) {
           movePlacedDevice(data.deviceId, nx, ny)
         }

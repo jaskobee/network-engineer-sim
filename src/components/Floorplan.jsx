@@ -3,7 +3,6 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useGame } from '../state/GameContext.jsx'
 import ContextMenu from './ContextMenu.jsx'
 import { maskToPrefixLen } from '../models/ipUtils.js'
-import { findClientTemplate } from '../data/clients.js'
 
 const W = 108
 const H = 90
@@ -217,6 +216,70 @@ function DeviceTooltip({ device, x, y }) {
 
 // ── Port picker modal ─────────────────────────────────────────────────────────
 
+function abbreviatePortLabel(name) {
+  return name
+    .replace('GigabitEthernet', 'Gi')
+    .replace('FastEthernet', 'Fa')
+    .replace('Ethernet', 'Eth')
+}
+
+// A device's front panel, rendered as a real port grid rather than a bare
+// dropdown — occupied ports are lit green (matching the "up" convention
+// used everywhere else in the sim) and unclickable; free ports are dark
+// slots the player picks by clicking, lighting up blue once chosen.
+function DevicePortPanel({ device, selectedPort, onSelectPort }) {
+  const Icon = ICONS[device.type] || (() => null)
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <div style={{ transform: 'scale(0.7)', transformOrigin: 'left center' }}><Icon /></div>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#c8d0e0', fontFamily: 'monospace' }}>{device.hostname}</div>
+          <div style={{ fontSize: 9, color: '#4a5a7a' }}>{device.model}</div>
+        </div>
+      </div>
+      <div style={{
+        background: '#080c18', border: '1px solid #1a2a4a', borderRadius: 6,
+        padding: '10px 10px 8px', display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center',
+      }}>
+        {device.interfaces.map(iface => {
+          const occupied = !!iface.connected_to
+          const isSelected = iface.name === selectedPort
+          const portNum = abbreviatePortLabel(iface.name).replace(/^\D+/, '')
+          return (
+            <button
+              key={iface.name}
+              disabled={occupied}
+              onClick={() => onSelectPort(iface.name)}
+              title={occupied ? `${abbreviatePortLabel(iface.name)} — already connected` : abbreviatePortLabel(iface.name)}
+              style={{
+                width: 36, height: 32, borderRadius: 3, padding: 0,
+                cursor: occupied ? 'not-allowed' : 'pointer',
+                background: occupied ? '#0a2010' : isSelected ? '#12254a' : '#0d1a30',
+                border: `2px solid ${occupied ? '#50fa7b' : isSelected ? '#4a90e2' : '#2a3a5a'}`,
+                boxShadow: isSelected ? '0 0 10px #4a90e260' : 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                transition: 'border-color 0.12s, background 0.12s',
+              }}
+              onMouseEnter={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#4a6a9a' }}
+              onMouseLeave={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#2a3a5a' }}
+            >
+              <div style={{
+                width: 13, height: 9, borderRadius: '1px 1px 0 0',
+                background: occupied ? '#50fa7b' : isSelected ? '#4a90e2' : '#1a2a4a',
+              }} />
+              <span style={{
+                fontSize: 7, marginTop: 2, fontFamily: 'monospace',
+                color: occupied ? '#50fa7b' : isSelected ? '#8ab4d4' : '#5a6a8a',
+              }}>{portNum}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
   const srcFree = srcDevice.interfaces.filter(i => !i.connected_to)
   const dstFree = dstDevice.interfaces.filter(i => !i.connected_to)
@@ -235,12 +298,13 @@ function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
       <div
         style={{
           background: '#0d1226', border: '1px solid #2a5298', borderRadius: 10,
-          padding: '24px 28px', minWidth: 320, boxShadow: '0 8px 40px rgba(0,0,0,0.7)',
+          padding: '22px 26px', minWidth: 340, boxShadow: '0 8px 40px rgba(0,0,0,0.7)',
+          animation: 'portPickerIn 0.15s ease-out',
         }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ fontSize: 11, color: '#4a90e2', fontWeight: 700, letterSpacing: 1.5, marginBottom: 16 }}>
-          CONNECT CABLE
+          CONNECT CABLE — pick a free port on each device
         </div>
 
         {(noSrc || noDst) ? (
@@ -260,11 +324,17 @@ function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
           </>
         ) : (
           <>
-            <PortRow label={srcDevice.hostname} ports={srcFree} value={srcPort} onChange={setSrcPort} />
-            <div style={{ textAlign: 'center', color: '#2a5298', fontSize: 18, margin: '8px 0' }}>↕</div>
-            <PortRow label={dstDevice.hostname} ports={dstFree} value={dstPort} onChange={setDstPort} />
+            <DevicePortPanel device={srcDevice} selectedPort={srcPort} onSelectPort={setSrcPort} />
+            <div style={{ textAlign: 'center', color: '#2a5298', fontSize: 16, margin: '6px 0' }}>⇅</div>
+            <DevicePortPanel device={dstDevice} selectedPort={dstPort} onSelectPort={setDstPort} />
 
-            <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
+            <div style={{ fontSize: 9, color: '#3a4a6a', marginTop: 10, textAlign: 'center' }}>
+              <span style={{ color: '#50fa7b' }}>■</span> connected &nbsp;
+              <span style={{ color: '#4a90e2' }}>■</span> selected &nbsp;
+              <span style={{ color: '#2a3a5a' }}>■</span> free
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
               <button
                 style={{
                   padding: '6px 16px', background: 'transparent', color: '#666',
@@ -298,23 +368,127 @@ function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
   )
 }
 
-function PortRow({ label, ports, value, onChange }) {
+// ── Floorplan tags ────────────────────────────────────────────────────────────
+//
+// Freeform text labels the player can drop anywhere to keep a busy topology
+// organized ("Server01", "DMZ", …) — purely cosmetic, never read by any
+// mission check. Dragged with plain mouse listeners (matching the pattern
+// already used by ActiveJobPanel's title bar / the inspector resize divider)
+// rather than pulling label placement into the dnd-kit wiring App.jsx uses
+// for devices, since these never need to interact with the Inventory drop zone.
+
+function FloorLabel({ label, onMove, onEdit, onDelete }) {
+  const [editing, setEditing] = useState(false)
+  const [draft,   setDraft]   = useState(label.text)
+  const [hovered, setHovered] = useState(false)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (editing) { inputRef.current?.focus(); inputRef.current?.select() }
+  }, [editing])
+
+  function handleDragStart(e) {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    const start = { mx: e.clientX, my: e.clientY, px: label.x, py: label.y }
+    function handleDragMove(ev) {
+      onMove(start.px + ev.clientX - start.mx, start.py + ev.clientY - start.my)
+    }
+    function handleDragEnd() {
+      document.removeEventListener('mousemove', handleDragMove)
+      document.removeEventListener('mouseup', handleDragEnd)
+    }
+    document.addEventListener('mousemove', handleDragMove)
+    document.addEventListener('mouseup', handleDragEnd)
+  }
+
+  function commitEdit() {
+    onEdit(draft.trim() || 'Label')
+    setEditing(false)
+  }
+
   return (
-    <div style={{ marginBottom: 4 }}>
-      <div style={{ fontSize: 10, color: '#4a90e2', marginBottom: 4, fontFamily: 'monospace' }}>{label}</div>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          width: '100%', background: '#07070d', color: '#e0e0e0',
-          border: '1px solid #2a5298', borderRadius: 4, padding: '4px 8px',
-          fontSize: 12, fontFamily: 'monospace',
-        }}
+    <div
+      style={{ position: 'absolute', left: label.x, top: label.y, zIndex: 8, userSelect: 'none', pointerEvents: 'auto' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={e => e.stopPropagation()}
+      onContextMenu={e => { e.preventDefault(); e.stopPropagation() }}
+    >
+      {editing ? (
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commitEdit()
+            if (e.key === 'Escape') { setDraft(label.text); setEditing(false) }
+          }}
+          style={{
+            background: '#0d1226', color: '#e0e0e0', border: '1px solid #4a90e2',
+            borderRadius: 4, padding: '3px 8px', fontSize: 11, fontFamily: 'monospace',
+            outline: 'none', minWidth: 70,
+          }}
+        />
+      ) : (
+        <div
+          onMouseDown={handleDragStart}
+          onDoubleClick={e => { e.stopPropagation(); setDraft(label.text); setEditing(true) }}
+          title="Drag to move · double-click to rename"
+          style={{
+            position: 'relative', display: 'inline-block',
+            background: '#12182a', border: '1px dashed #3a4a6a', borderRadius: 4,
+            padding: `3px ${hovered ? 22 : 10}px 3px 10px`,
+            fontSize: 11, fontFamily: 'monospace', color: '#c0ccdc',
+            cursor: 'grab', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
+            transition: 'padding 0.1s',
+          }}
+        >
+          {label.text}
+          {hovered && (
+            <button
+              onMouseDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onDelete() }}
+              title="Remove label"
+              style={{
+                position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)',
+                width: 15, height: 15, lineHeight: '13px', padding: 0,
+                background: 'transparent', color: '#8a4a4a', border: '1px solid #4a2a2a',
+                borderRadius: 3, fontSize: 10, cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ff5555'; e.currentTarget.style.borderColor = '#ff5555' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#8a4a4a'; e.currentTarget.style.borderColor = '#4a2a2a' }}
+            >×</button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Small right-click menu on empty floorplan background — the one way to
+// create a new tag, so it appears exactly where the player clicked rather
+// than at some fixed default the player then has to drag into place.
+function BackgroundContextMenu({ x, y, onAddLabel }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', left: x, top: y, zIndex: 1000,
+        background: '#16213e', border: '1px solid #2a5298', borderRadius: 4,
+        minWidth: 160, boxShadow: '0 6px 20px rgba(0,0,0,0.6)', overflow: 'hidden', userSelect: 'none',
+      }}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+    >
+      <div
+        onClick={onAddLabel}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', fontSize: 12, color: '#50fa7b', cursor: 'pointer' }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#0a2010' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
       >
-        {ports.map(p => (
-          <option key={p.name} value={p.name}>{p.name}</option>
-        ))}
-      </select>
+        <span style={{ fontSize: 11 }}>🏷</span> Add Label Here
+      </div>
     </div>
   )
 }
@@ -353,6 +527,7 @@ function DeviceNode({ device, placement, isSelected, onSelect, onCtxMenu, onHove
     zIndex: isSelected ? 10 : 5,
     userSelect: 'none',
     touchAction: 'none',
+    pointerEvents: 'auto',
   }
 
   function handleClick(e) {
@@ -422,42 +597,6 @@ function DeviceNode({ device, placement, isSelected, onSelect, onCtxMenu, onHove
         )}
       </div>
     </div>
-  )
-}
-
-// ── Client site map (visual only — never gameplay-enforced) ──────────────────
-//
-// A physical floor-plan backdrop for the active client's building, so
-// younger players can connect "the router goes in the secure back room, the
-// register PC sits up front" to what they're actually dragging onto the map.
-// Purely decorative: devices can be placed anywhere regardless of zone.
-
-function SiteMapLayer({ siteMap }) {
-  if (!siteMap?.zones?.length) return null
-  return (
-    <>
-      {siteMap.zones.map(z => (
-        <div key={z.id} style={{
-          position: 'absolute', left: z.x, top: z.y, width: z.w, height: z.h,
-          border: `1.5px dashed ${z.color}55`,
-          background: `${z.color}0d`,
-          borderRadius: 10,
-          pointerEvents: 'none',
-        }}>
-          <div style={{
-            position: 'absolute', top: 8, left: 8,
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '3px 9px', borderRadius: 5,
-            background: '#0a0a1a', border: `1px solid ${z.color}55`,
-          }}>
-            <span style={{ fontSize: 12 }}>{z.icon}</span>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: z.color }}>
-              {z.label.toUpperCase()}
-            </span>
-          </div>
-        </div>
-      ))}
-    </>
   )
 }
 
@@ -616,29 +755,32 @@ export default function Floorplan() {
     pingAnimations, wireMode, setWireMode, connectInterfaces, getDevice,
     powerAllDevices,
     adminLaptopOpen, setAdminLaptopOpen, laptopDevice,
-    mode, activeClientId,
+    labels, addLabel, moveLabel, updateLabelText, removeLabel,
+    panOffset, setPanOffset,
   } = useGame()
 
-  const siteMap = (mode === 'missions' && activeClientId)
-    ? findClientTemplate(activeClientId)?.siteMap ?? null
-    : null
-
   const [ctxMenu,          setCtxMenu]          = useState(null)
+  const [bgCtxMenu,        setBgCtxMenu]        = useState(null) // { x, y } screen coords
   const [hovered,          setHovered]          = useState(null) // { device, clientX, clientY }
   const [wireHoverDevId,   setWireHoverDevId]   = useState(null)
   const [portPicker,       setPortPicker]       = useState(null) // { srcDeviceId, dstDeviceId }
   const [mousePos,         setMousePos]         = useState({ x: 0, y: 0 })
+  const [isPanning,        setIsPanning]        = useState(false)
   const floorplanRef = useRef(null)
+  // Distinguishes "just released a pan-drag" from "a genuine click on empty
+  // background" — mouseup fires before click, so this survives just long
+  // enough for handleBackgroundClick to see it and skip deselecting.
+  const justPannedRef = useRef(false)
 
-  // Close context menu on any mousedown outside it (bubbling phase).
+  // Close either context menu on any mousedown outside it (bubbling phase).
   // Using a document listener instead of a z-index overlay means underlying elements
   // (including the xterm textarea) receive their pointerdown first and stay focusable.
   useEffect(() => {
-    if (!ctxMenu) return
-    function onMouseDown() { setCtxMenu(null) }
+    if (!ctxMenu && !bgCtxMenu) return
+    function onMouseDown() { setCtxMenu(null); setBgCtxMenu(null) }
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
-  }, [ctxMenu])
+  }, [ctxMenu, bgCtxMenu])
 
   const placed = devices.filter(d => placements[d.id])
   const { isOver, setNodeRef } = useDroppable({ id: 'floorplan' })
@@ -652,7 +794,7 @@ export default function Floorplan() {
   // Escape cancels wire mode
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'Escape') { setWireMode(null); setPortPicker(null) }
+      if (e.key === 'Escape') { setWireMode(null); setPortPicker(null); setBgCtxMenu(null) }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -661,13 +803,62 @@ export default function Floorplan() {
   function handleMouseMove(e) {
     if (!wireMode || !floorplanRef.current) return
     const rect = floorplanRef.current.getBoundingClientRect()
-    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    // Convert viewport-relative pixels to world coordinates — WireLayer draws
+    // this alongside device centers, which are already in world space.
+    setMousePos({ x: e.clientX - rect.left - panOffset.x, y: e.clientY - rect.top - panOffset.y })
   }
 
   function handleBackgroundClick() {
+    if (justPannedRef.current) { justPannedRef.current = false; return }
     setSelectedDeviceId(null)
+    setBgCtxMenu(null)
     if (wireMode) { setWireMode(null); return }
     setCtxMenu(null)
+  }
+
+  // Right-clicking a device stops propagation (see DeviceNode.handleCtxMenu),
+  // so this only ever fires for genuine empty-background right-clicks.
+  function handleBackgroundContextMenu(e) {
+    e.preventDefault()
+    if (wireMode || !floorplanRef.current) return
+    const rect = floorplanRef.current.getBoundingClientRect()
+    setBgCtxMenu({
+      x: e.clientX, y: e.clientY,
+      floorX: e.clientX - rect.left - panOffset.x, floorY: e.clientY - rect.top - panOffset.y,
+    })
+  }
+
+  // Click-drag anywhere on empty background pans the (endless) canvas —
+  // same feel as Figma's space-drag pan, minus the modifier key since there's
+  // no competing "marquee select" gesture here to disambiguate from.
+  function handleBackgroundMouseDown(e) {
+    // Guards against dnd-kit's own drag listeners on a device (which don't
+    // necessarily stop propagation) also bubbling up into this handler —
+    // only a mousedown on the empty background itself (not a device, not a
+    // label) should ever start a pan.
+    if (e.target !== e.currentTarget) return
+    if (wireMode || e.button !== 0) return
+    const start = { mx: e.clientX, my: e.clientY, px: panOffset.x, py: panOffset.y, moved: false }
+    setIsPanning(true)
+    function onMove(ev) {
+      const dx = ev.clientX - start.mx, dy = ev.clientY - start.my
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) start.moved = true
+      setPanOffset({ x: start.px + dx, y: start.py + dy })
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      setIsPanning(false)
+      if (start.moved) justPannedRef.current = true
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  function handleAddLabelHere() {
+    if (!bgCtxMenu) return
+    addLabel(bgCtxMenu.floorX, bgCtxMenu.floorY, 'Label')
+    setBgCtxMenu(null)
   }
 
   function attemptWireConnect(dstDeviceId) {
@@ -708,52 +899,79 @@ export default function Floorplan() {
         background: '#0d0d1a',
         backgroundImage: 'radial-gradient(circle, #151530 1px, transparent 1px)',
         backgroundSize: '28px 28px',
+        // The grid pans in lockstep with content so an endless canvas actually
+        // reads as one continuous plane sliding under a fixed viewport,
+        // rather than content moving over a static backdrop.
+        backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
         outline: isOver ? '2px solid #2a5298' : 'none',
         outlineOffset: -2,
-        cursor: wireMode ? 'crosshair' : 'default',
+        cursor: wireMode ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
       }}
       onClick={handleBackgroundClick}
-      onContextMenu={e => e.preventDefault()}
+      onContextMenu={handleBackgroundContextMenu}
       onMouseMove={handleMouseMove}
+      onMouseDown={handleBackgroundMouseDown}
     >
-      {/* Client site map — decorative floor-plan zones, always behind everything */}
-      <SiteMapLayer siteMap={siteMap} />
+      {/* World-space content — one shared transform pans everything inside
+          together. Every coordinate below (device placements, cable/wire/ping
+          SVG points, label positions) stays exactly as it always was; only
+          the viewport's mapping from world to screen changes here.
+          pointerEvents:none on this wrapper is required, not decorative: it's
+          an inset:0 box covering the whole viewport, so without it every
+          "empty background" click/mousedown would hit this div instead of
+          bubbling to the container's pan/deselect handlers. Its interactive
+          children (DeviceNode, FloorLabel) opt back in with pointerEvents:auto. */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+      }}>
+        {/* Cable layer */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1, overflow: 'visible' }}>
+          <CableLayer devices={placed} placements={placements} />
+        </svg>
 
-      {/* Cable layer */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
-        <CableLayer devices={placed} placements={placements} />
-      </svg>
+        {/* Device nodes */}
+        {placed.map(device => (
+          <DeviceNode
+            key={device.id}
+            device={device}
+            placement={placements[device.id]}
+            isSelected={device.id === selectedDeviceId}
+            onSelect={() => setSelectedDeviceId(device.id)}
+            onCtxMenu={e => setCtxMenu({ x: e.clientX, y: e.clientY, deviceId: device.id })}
+            onHover={(cx, cy) => handleHover(device, cx, cy)}
+            onLeave={handleLeave}
+            wireMode={wireMode}
+            onWireConnect={attemptWireConnect}
+          />
+        ))}
 
-      {/* Device nodes */}
-      {placed.map(device => (
-        <DeviceNode
-          key={device.id}
-          device={device}
-          placement={placements[device.id]}
-          isSelected={device.id === selectedDeviceId}
-          onSelect={() => setSelectedDeviceId(device.id)}
-          onCtxMenu={e => setCtxMenu({ x: e.clientX, y: e.clientY, deviceId: device.id })}
-          onHover={(cx, cy) => handleHover(device, cx, cy)}
-          onLeave={handleLeave}
-          wireMode={wireMode}
-          onWireConnect={attemptWireConnect}
-        />
-      ))}
+        {/* Floorplan tags */}
+        {!wireMode && Object.values(labels).map(label => (
+          <FloorLabel
+            key={label.id}
+            label={label}
+            onMove={(x, y) => moveLabel(label.id, x, y)}
+            onEdit={text => updateLabelText(label.id, text)}
+            onDelete={() => removeLabel(label.id)}
+          />
+        ))}
 
-      {/* Wire mode overlay */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 15 }}>
-        <WireLayer
-          wireMode={wireMode}
-          placements={placements}
-          mousePos={mousePos}
-          wireHoverDeviceId={wireHoverDevId}
-        />
-      </svg>
+        {/* Wire mode overlay */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 15, overflow: 'visible' }}>
+          <WireLayer
+            wireMode={wireMode}
+            placements={placements}
+            mousePos={mousePos}
+            wireHoverDeviceId={wireHoverDevId}
+          />
+        </svg>
 
-      {/* Ping animation layer */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 20 }}>
-        <PingLayer pingAnimations={pingAnimations} placements={placements} />
-      </svg>
+        {/* Ping animation layer */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 20, overflow: 'visible' }}>
+          <PingLayer pingAnimations={pingAnimations} placements={placements} />
+        </svg>
+      </div>
 
       {placed.length === 0 && !wireMode && (
         <div style={{
@@ -801,6 +1019,11 @@ export default function Floorplan() {
       {/* Context menu */}
       {ctxMenu && (
         <ContextMenu x={ctxMenu.x} y={ctxMenu.y} deviceId={ctxMenu.deviceId} onClose={() => setCtxMenu(null)} />
+      )}
+
+      {/* Background context menu — "Add Label Here" */}
+      {bgCtxMenu && (
+        <BackgroundContextMenu x={bgCtxMenu.x} y={bgCtxMenu.y} onAddLabel={handleAddLabelHere} />
       )}
 
       {/* Hover tooltip */}

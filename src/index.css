@@ -147,6 +147,12 @@ body {
   100% { transform: scale(1);    opacity: 1; }
 }
 
+/* Port picker briefly grows in when a cable connection needs a port choice */
+@keyframes portPickerIn {
+  0%   { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
 .dev-panel {
   position: fixed;
   top: 0;

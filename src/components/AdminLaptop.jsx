@@ -6,6 +6,8 @@
 import { useState, useRef, useCallback } from 'react'
 import WireFishPanel from './WiresharkPanel.jsx'
 import BrowserPanel from './BrowserPanel.jsx'
+import AdminDashboardTab from './AdminDashboardTab.jsx'
+import { Section, relativeTime } from './AdminLaptopShared.jsx'
 import { useGame } from '../state/GameContext.jsx'
 import { useCareer } from '../state/CareerContext.jsx'
 
@@ -17,7 +19,7 @@ export default function AdminLaptop({ onClose }) {
   const { notifications, markNotificationRead } = useCareer()
   const unreadCount = notifications.filter(n => !n.read).length
 
-  const [tab, setTab] = useState('guide')
+  const [tab, setTab] = useState('dashboard')
   const [pos, setPos] = useState(() => ({
     x: Math.max(20, (window.innerWidth  - INITIAL_W) / 2),
     y: Math.max(20, (window.innerHeight - INITIAL_H) / 2),
@@ -29,6 +31,15 @@ export default function AdminLaptop({ onClose }) {
   )
 
   const osType = laptopDevice?.os_type ?? 'linux'
+
+  // Laptop setup status — lifted out of GuideTab so both it and the
+  // Dashboard tab's setup nudge read the same derivation instead of
+  // duplicating it.
+  const laptopIface   = laptopDevice?.interfaces?.[0]
+  const laptopHasIp   = !!(laptopIface?.ip)
+  const laptopCabled  = !!(laptopIface?.connected_to)
+  const laptopPowered = !!(laptopDevice?.powered)
+  const laptopHasGw   = !!(laptopDevice?.routing_table?.find(r => r.network === '0.0.0.0'))
 
   function handleSetOs(type) {
     setLaptopOsType(type)
@@ -76,6 +87,7 @@ export default function AdminLaptop({ onClose }) {
     : { position: 'fixed', left: pos.x, top: pos.y, width: size.w, height: size.h, zIndex: 3000, display: 'flex', flexDirection: 'column' }
 
   const TABS = [
+    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     { id: 'guide',    icon: '📖', label: 'Guide' },
     { id: 'wirefish', icon: '🐟', label: 'WireFish' },
     { id: 'browser',  icon: '🌐', label: 'Browser' },
@@ -155,6 +167,12 @@ export default function AdminLaptop({ onClose }) {
 
       {/* ── Content area ───────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <div style={{ display: tab === 'dashboard' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+          <AdminDashboardTab
+            cabled={laptopCabled} powered={laptopPowered} hasIp={laptopHasIp} hasGw={laptopHasGw}
+            onOpenGuide={() => setTab('guide')} onOpenInbox={() => setTab('inbox')}
+          />
+        </div>
         <div style={{ display: tab === 'guide' ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
           <GuideTab laptopDevice={laptopDevice} osType={osType} guideMode={guideMode} />
         </div>
@@ -314,16 +332,6 @@ const NOTIFICATION_ICON = {
   'client-dormant':   '💤',
 }
 
-function relativeTime(ms) {
-  const diff = Date.now() - ms
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
-}
-
 function NotificationsTab({ notifications, onMarkRead }) {
   if (notifications.length === 0) {
     return (
@@ -401,15 +409,6 @@ function winSteps(iface, hasIp, hasGw) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function Section({ title, children }) {
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 9, color: '#4a90e2', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, borderBottom: '1px solid #1a2a3e', paddingBottom: 4 }}>{title}</div>
-      {children}
-    </div>
-  )
-}
 
 function StepRow({ done, num, label, hint, cmd, guideMode }) {
   return (

@@ -4,14 +4,17 @@ import { useGame } from '../state/GameContext.jsx'
 let _fallbackCounter = 0
 
 export default function Inventory() {
-  const { inventory, devices, placeDevice } = useGame()
+  const { inventory, devices, placeDevice, panOffset } = useGame()
   const inventoryDevices = inventory.map(id => devices.find(d => d.id === id)).filter(Boolean)
 
   function handlePlace(deviceId) {
     const col = _fallbackCounter % 4
     const row = Math.floor(_fallbackCounter / 4)
     _fallbackCounter++
-    placeDevice(deviceId, 60 + col * 150, 60 + row * 110)
+    // Anchor the grid to whatever part of the world is currently visible
+    // (-panOffset), not a fixed world coordinate — on an endless canvas, a
+    // fixed spot could be scrolled off-screen with no clue where it landed.
+    placeDevice(deviceId, -panOffset.x + 60 + col * 150, -panOffset.y + 60 + row * 110)
   }
 
   return (

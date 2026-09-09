@@ -108,6 +108,20 @@ export function GameProvider({ children }) {
   // registry to re-look them up from. Restored from `boot` the same way
   // activeMissionId/activeClientId are.
   const [activeTicket,      setActiveTicket]      = useState(boot?.activeTicket ?? null)
+  // Freeform floorplan tags ("Server01", "Router", …) — purely cosmetic, never
+  // gameplay-enforced. Flat map keyed by label id; each carries its own
+  // `scope` (the owning clientId, or 'legacy' for the tutorial missions) so
+  // only the tags belonging to whichever floorplan is on-screen ever render —
+  // see the `labels` entry in the context value below.
+  const [labels,            setLabels]            = useState(boot?.labels ?? {})
+
+  // Floorplan camera — pure view state (never persisted, never gameplay
+  // data), shared between Floorplan.jsx (renders the pan + drives it via
+  // background click-drag) and App.jsx (needs it to convert an
+  // inventory-drop's screen position into the correct world coordinate).
+  // Same value for every mode/topology — panning is "where you're currently
+  // looking," not something that needs its own memory per client.
+  const [panOffset,         setPanOffset]         = useState({ x: 0, y: 0 })
 
   const [selectedDeviceId,  setSelectedDeviceId]  = useState(null)
   const [tick,              setTick]              = useState(0)
@@ -128,6 +142,7 @@ export function GameProvider({ children }) {
   const [sbPlacements,       setSbPlacements]       = useState(() =>
     sbLaptopIdRef.current ? { [sbLaptopIdRef.current]: { x: 20, y: 360 } } : {}
   )
+  const [sbLabels,           setSbLabels]           = useState({})
   const [sbSelectedDeviceId, setSbSelectedDeviceId] = useState(null)
   const [sbTerminalSessions, setSbTerminalSessions] = useState([])
   const [sbActiveTerminalId, setSbActiveTerminalId] = useState(null)
@@ -208,14 +223,14 @@ export function GameProvider({ children }) {
     const data = serialize(
       topologyRef.current, placements, inventory,
       budget, completedMissions, activeMissionId,
-      clientTopologiesRef.current, activeClientId, activeTicket
+      clientTopologiesRef.current, activeClientId, activeTicket, labels
     )
     saveToStorage(data)
     setSaveStatus('saved')
     playSave()
     const t = setTimeout(() => setSaveStatus(null), 1800)
     return () => clearTimeout(t)
-  }, [tick, placements, inventory, budget, completedMissions, activeMissionId, activeClientId, activeTicket])
+  }, [tick, placements, inventory, budget, completedMissions, activeMissionId, activeClientId, activeTicket, labels])
 
   // ── Game actions ───────────────────────────────────────────────────────────
 
@@ -259,6 +274,39 @@ export function GameProvider({ children }) {
       setPlacements(p => { const n = { ...p }; delete n[deviceId]; return n })
       setInventory(inv => [...inv, deviceId])
     }
+  }
+
+  // ── Floorplan tags ──────────────────────────────────────────────────────────
+  // Freeform, purely cosmetic text markers the player can drop anywhere on the
+  // floorplan to keep a busy topology organized — never read by the engine or
+  // any mission check. `scope` ties a missions-mode label to whichever
+  // floorplan it was created on (a clientId, or 'legacy' for the tutorial
+  // missions) so switching clients doesn't leak another client's tags onto
+  // the current view — mirrors how `placements` entries are implicitly
+  // scoped by which topology's devices actually reference them.
+
+  function addLabel(x, y, text = 'Label') {
+    const id = `label-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    const scope = isSandbox ? null : (activeClientId ?? 'legacy')
+    const label = { id, x, y, text, scope }
+    if (isSandbox) setSbLabels(ls => ({ ...ls, [id]: label }))
+    else           setLabels(ls => ({ ...ls, [id]: label }))
+    return id
+  }
+
+  function moveLabel(labelId, x, y) {
+    if (isSandbox) setSbLabels(ls => ls[labelId] ? { ...ls, [labelId]: { ...ls[labelId], x, y } } : ls)
+    else           setLabels(ls => ls[labelId] ? { ...ls, [labelId]: { ...ls[labelId], x, y } } : ls)
+  }
+
+  function updateLabelText(labelId, text) {
+    if (isSandbox) setSbLabels(ls => ls[labelId] ? { ...ls, [labelId]: { ...ls[labelId], text } } : ls)
+    else           setLabels(ls => ls[labelId] ? { ...ls, [labelId]: { ...ls[labelId], text } } : ls)
+  }
+
+  function removeLabel(labelId) {
+    if (isSandbox) setSbLabels(ls => { const n = { ...ls }; delete n[labelId]; return n })
+    else           setLabels(ls => { const n = { ...ls }; delete n[labelId]; return n })
   }
 
   function connectInterfaces(ifaceId1, ifaceId2) {
@@ -330,6 +378,10 @@ export function GameProvider({ children }) {
     setActiveTerminalId(null)
     setSelectedDeviceId(null)
     setPingAnimations([])
+    // Recenter the view so whichever topology is about to show up is actually
+    // visible — otherwise a pan left over from a previous client/mission
+    // could land the new one off-screen with no visual cue why.
+    setPanOffset({ x: 0, y: 0 })
   }
 
   function acceptMission(missionId) {
@@ -385,9 +437,6 @@ export function GameProvider({ children }) {
       // mission's placement entries, which may still be sitting in this same
       // flat placements object (harmless: only entries whose deviceId exists
       // in the CURRENTLY active topology are ever rendered).
-      // Positions land inside this client's 'isp'/'admin' site-map zones
-      // (see data/clients.js) — each gets its own dedicated spot on the floor
-      // plan instead of floating inside the office/closet boxes.
       setPlacements(p => ({ ...p, [isp.id]: { x: 850, y: 70 }, [laptop.id]: { x: 850, y: 300 } }))
     }
     // else: a follow-up mission for a client that already has a topology —
@@ -408,7 +457,7 @@ export function GameProvider({ children }) {
     // all 5 legacy missions, which have no financialModel at all) refunds,
     // matching the original behavior exactly.
     const refund = financialModel === 'keep' ? 0 : computeRefund(activeTopoRef.current)
-    setCompletedMissions(prev => [...prev, { id: missionId, reward, refund }])
+    setCompletedMissions(prev => [...prev, { id: missionId, reward, refund, completedAt: Date.now() }])
     setBudget(b => b + reward + refund)
     playMissionComplete()
 
@@ -523,7 +572,7 @@ export function GameProvider({ children }) {
   }
 
   function exportSave() {
-    exportToFile(topologyRef.current, placements, inventory, budget, completedMissions, activeMissionId, clientTopologiesRef.current, activeClientId, activeTicket)
+    exportToFile(topologyRef.current, placements, inventory, budget, completedMissions, activeMissionId, clientTopologiesRef.current, activeClientId, activeTicket, labels)
   }
 
   function importSave(json) {
@@ -570,6 +619,7 @@ export function GameProvider({ children }) {
       setActiveMissionId(data.activeMissionId ?? null)
       setActiveClientId(data.activeClientId ?? null)
       setActiveTicket(data.activeTicket ?? null)
+      setLabels(data.labels ?? {})
 
       // Clear transient UI state
       setTerminalSessions([])
@@ -777,6 +827,14 @@ export function GameProvider({ children }) {
     // client's topology was active when it was last recreated.
   }, [isSandbox, activeClientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Only the tags belonging to whichever floorplan is currently on-screen —
+  // sandbox has its own separate, unscoped set; missions mode filters the
+  // flat `labels` map down to the active client's (or 'legacy' for the
+  // tutorial missions') own scope, mirroring `placements`' implicit scoping.
+  const visibleLabels = isSandbox
+    ? sbLabels
+    : Object.fromEntries(Object.entries(labels).filter(([, l]) => l.scope === (activeClientId ?? 'legacy')))
+
   const value = {
     // Mode
     mode, setMode,
@@ -785,6 +843,9 @@ export function GameProvider({ children }) {
     topology:            activeTopoRef.current,
     devices,
     placements:          isSandbox ? sbPlacements       : placements,
+    panOffset, setPanOffset,
+    labels:              visibleLabels,
+    addLabel, moveLabel, updateLabelText, removeLabel,
     selectedDeviceId:    isSandbox ? sbSelectedDeviceId : selectedDeviceId,
     setSelectedDeviceId: isSandbox ? setSbSelectedDeviceId : setSelectedDeviceId,
     wireMode:            isSandbox ? sbWireMode         : wireMode,

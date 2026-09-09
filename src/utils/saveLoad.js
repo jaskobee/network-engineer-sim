@@ -40,7 +40,7 @@ function serializeDevice(dev) {
  * from GameContext's clientTopologiesRef (optional — omit for the legacy-only
  * export paths, e.g. sandbox tooling that never touches client missions).
  */
-export function serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket) {
+export function serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket, labels) {
   const devices = [...topology.devices.values()].map(serializeDevice)
 
   const savedClientTopologies = {}
@@ -67,11 +67,16 @@ export function serialize(topology, placements, inventory, budget, completedMiss
     placements,
     inventory,
     clientTopologies: savedClientTopologies,
+    // Freeform text tags the player drops on the floorplan — purely cosmetic,
+    // never gameplay-enforced. Flat map keyed by label id; each label carries
+    // its own `scope` (clientId, or 'legacy' for the 5 tutorial missions) so
+    // restoring a save shows the right tags on the right floorplan.
+    labels: labels ?? {},
   }
 }
 
-export function exportToFile(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket) {
-  const data = serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket)
+export function exportToFile(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket, labels) {
+  const data = serialize(topology, placements, inventory, budget, completedMissions, activeMissionId, clientTopologies, activeClientId, activeTicket, labels)
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
@@ -141,5 +146,6 @@ export function deserialize(data) {
     activeTicket: data.activeTicket ?? null,
     placements: mergedPlacements,
     inventory: data.inventory ?? [],
+    labels: data.labels ?? {},
   }
 }

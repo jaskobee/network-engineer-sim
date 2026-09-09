@@ -73,6 +73,13 @@ export function CareerProvider({ children }) {
   // simply predate these fields and default to empty here.
   const [activeTickets, setActiveTickets] = useState(savedCareer?.activeTickets ?? {}) // ticketId -> Ticket
   const [notifications, setNotifications] = useState(savedCareer?.notifications ?? []) // newest first
+  // Append-only record of completed contract tickets — notifications capture
+  // the same events but without a dollar amount, so this is what lets the
+  // Admin Laptop dashboard show real (not guessed) earnings-over-time and a
+  // real "recent activity" feed that includes ticket income alongside
+  // mission income. Additive to the unversioned save blob, same pattern as
+  // `activeTicket`/floorplan `labels` before it.
+  const [ticketHistory, setTicketHistory] = useState(savedCareer?.ticketHistory ?? [])
 
   // Persist reputation/clients/contracts/tickets/notifications as they change.
   // Runs after every render where one of them changed — cheap (small JSON)
@@ -80,9 +87,9 @@ export function CareerProvider({ children }) {
   useEffect(() => {
     if (isResetting()) return
     try {
-      localStorage.setItem(CAREER_KEY, JSON.stringify({ reputation, clients, contracts, activeTickets, notifications }))
+      localStorage.setItem(CAREER_KEY, JSON.stringify({ reputation, clients, contracts, activeTickets, notifications, ticketHistory }))
     } catch { /* ignore quota errors */ }
-  }, [reputation, clients, contracts, activeTickets, notifications])
+  }, [reputation, clients, contracts, activeTickets, notifications, ticketHistory])
 
   // Seed the game's first client the moment a company exists but has none
   // yet — covers both "just created a company" (Phase 5's onboarding) and
@@ -294,6 +301,9 @@ export function CareerProvider({ children }) {
     })
     const client = clients[ticket.clientId]
     if (client) setNotifications(prev => [ticketCompletedNotification(client, ticket, kind, completedAtMs), ...prev])
+    setTicketHistory(prev => [...prev, {
+      clientId: ticket.clientId, title: ticket.title, reward: ticket.reward, kind, completedAt: completedAtMs,
+    }])
     return { kind, newReputation: newScore }
   }
 
@@ -349,7 +359,7 @@ export function CareerProvider({ children }) {
     reputation,
     clients, contracts,
     completeClientMission, acceptContractOffer,
-    activeTickets, notifications,
+    activeTickets, notifications, ticketHistory,
     tickContracts, markTicketFaultApplied, acceptTicket, completeTicket, markNotificationRead,
     devFastForwardContracts,
   }
