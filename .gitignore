@@ -1,4 +1,6 @@
 node_modules/
 dist/
-.claude/
 *.local
+# Claude Code: the project brain (.claude/brain, rules, skills, agents, settings.json)
+# is versioned on purpose; only per-machine settings stay local.
+.claude/settings.local.json

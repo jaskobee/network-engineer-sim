@@ -1,125 +1,73 @@
 # CLAUDE.md — NetSim (network-engineer-sim)
 
 ## What this project is
-NetSim is a **browser-based networking education game** inspired by Cisco Packet
-Tracer + a tower-defense shop loop. The player acts as a network engineer: accept
-client jobs, buy hardware, configure devices via **real CLI commands**, and get
-paid when the network works. Runs entirely in the browser.
+NetSim is a **browser-based networking education game**: Cisco Packet Tracer meets a
+tower-defense shop loop. The player is a network engineer who takes client jobs, buys
+hardware, configures devices through **real CLI commands**, and gets paid when the
+network works. Runs entirely in the browser.
 
-**The mission: teach networking fundamentals CORRECTLY.** Accuracy to CCNA / CCNP /
-CompTIA Network+ standards is the whole point of this project.
-
-- Dev server: http://localhost:5174  (`npm run dev`)
-- Build check: `npx vite build` (only the expected xterm chunk-size warning is OK)
-
-## Stack
-Vite 5 · React 18 (JavaScript, **no TypeScript**) · @dnd-kit/core +
-@dnd-kit/utilities · @xterm/xterm@5.5 + @xterm/addon-fit · React Context
-(`GameContext`, via `useGame()`) · plain CSS (`index.css`).
+**The mission: teach networking fundamentals CORRECTLY** — to CCNA / CCNP / CompTIA
+Network+ standard. Accuracy is the product.
 
 ## ⛔ HARD RULES (non-negotiable)
 1. **Networking accuracy outranks convenience.** If a simplification would teach a
-   beginner something they'd have to unlearn for a cert or a real job, do not ship
-   it. When in doubt, flag the conflict instead of silently simplifying.
-2. Treat **@docs/NETWORKING_ACCURACY.md as a hard spec.** All networking behavior,
-   CLI commands, `show` output, and mission validation must comply with it.
-3. A Layer 2 switch has **no per-port IPs** — management is one IP on an SVI
-   (`interface vlan <id>`), and it does **not** route between subnets/VLANs.
-   Inter-VLAN routing requires router-on-a-stick or a Layer 3 switch.
-4. A ping only succeeds along a path **real hardware would actually forward**, and
-   only if **both** the forward and **return** paths work.
-5. Keep IOS idioms (router/switch) and Linux iproute2 idioms (PC/server) faithful
-   to their own OS — don't leak one into the other.
+   beginner something they'd have to unlearn for a cert or a real job, do not ship it.
+   When in doubt, flag the conflict instead of silently simplifying.
+2. **`docs/NETWORKING_ACCURACY.md` is a hard spec.** All networking behaviour, CLI
+   commands, `show` output, hints, and mission validation must comply with it.
+3. **A Layer 2 switch has no per-port IPs**, one management SVI, and never routes
+   between VLANs. Inter-VLAN routing = router-on-a-stick (or a future L3 switch device).
+4. **A ping succeeds only along a path real hardware would forward — both directions.**
+5. **Each OS keeps its idioms**: IOS (router/switch/firewall), Linux iproute2
+   (pc/server), Windows CMD (admin laptop). No leakage.
+6. **Dev mode drives the real engine, never bypasses it.** No direct state writes in
+   presets/tests; dev UI is compiled out of production (`import.meta.env.DEV`).
+7. **JavaScript only, no TypeScript.** `src/models/` and `src/engine/` stay free of
+   React/DOM imports.
 
-## Architecture (quick reference)
-- **Mutation + tick:** CLI engines mutate `Device`/`Topology` objects in place,
-  then call `refresh()` to bump a tick counter in `GameContext` → consumers
-  re-render.
-- **Interface IDs** are composite strings: `"dev-1:GigabitEthernet0/0"` (split on
-  first `:`).
-- **Two CLI engines:** `CLIEngine` = IOS state machine
-  (user_exec→priv_exec→global_config→interface_config), used by router + switch.
-  `PCCLIEngine` = Linux shell (`ip addr`/`ip link`/`ip route`/`ifconfig`/`ping`),
-  used by pc + server.
-- **xterm persistence:** all terminal tabs stay mounted; inactive tabs use
-  `display:none` to preserve xterm instances.
-- **Async ping:** `executePingAsync(device, ip, {onStart,onPacket,onDone})` fires
-  per-packet callbacks (~1100ms apart) and returns a `cancel()`.
+## Stack
+Vite 5 · React 18 · @dnd-kit · @xterm/xterm 5.5 · React Context (`GameContext` via
+`useGame()`, `CareerContext`) · plain CSS (`src/index.css`) · Vitest 4.
 
-## File map (src/)
-- `data/deviceCatalog.js` — Router (4 ports $1200), Switch (8 ports $800),
-  PC (1 port $200), Server (2 ports $600)
-- `data/missions.js` — MISSIONS array (rewards, prerequisites)
-- `models/ipUtils.js` — isValidIp, ipToNum, networkAddress, maskToPrefixLen
-- `models/Device.js` — Device class, createInterface(), normalizeIfName()
-- `models/Topology.js` — devices Map, connect/disconnect, checkPing() BFS
-- `models/CLIEngine.js` — IOS CLI
-- `models/PCCLIEngine.js` — Linux CLI
-- `state/GameContext.jsx` — all game state + actions via useGame()
-- `components/` — Shop, Inventory, Floorplan, ContextMenu, DeviceInspector,
-  TerminalPane, MissionPanel
-- `App.jsx` — layout, DnD wiring, resizable panels
+- `npm run dev` → Vite dev server (5173, or 5174 if busy)
+- `npm test` → Vitest · `npx vite build` → only the xterm chunk-size warning is OK
 
-## Current state
-- **Missions 001–005 are fully playable and tested.** All 5 missions are implemented:
-  - M001 (basic LAN), M002 (switch + multi-PC), M003 (two-router static routing),
-    M004 (TechNova: VLAN+ROAS+DHCP+NAT, 11 tasks, 31 dedicated tests),
-    M005 (Secure the Office: zone firewall, 11 tasks; pre-builds M004 topology via scaffold).
-  - **379 Vitest tests passing** across all engine modules and missions.
-- **Switch is strictly Layer 2** (locked design decision). Inter-VLAN routing is
-  done via router-on-a-stick; a separate Layer 3 Switch device may come later.
-- **Engine foundation is hardened**: bidirectional `checkPing` (`failureReason` + `failurePoint`),
-  L2/L3 split, overlapping-subnet rejection, shutdown-peer propagation, static + default
-  routes, ROAS (`encapsulation dot1Q` + trunk enforcement), DHCP (DORA, pools, relay,
-  `dhclient`), NAT/PAT overload (`nat_required` reason code), zone-based stateful firewall
-  (`blocked_by_firewall` reason code, service matching, ordered rules).
-- `failureReason` codes: `no_route`, `admin_down`, `link_down`, `no_return_path`,
-  `host_no_gateway`, `vlan_isolated`, `nat_required`, `blocked_by_firewall`. Still
-  generic (fall through to `no_route`): `subnet_mismatch`, `gateway_unreachable`,
-  `ip_conflict`, `duplex_mismatch`.
-- **Auto-save + Export/Import JSON** implemented (localStorage + JSON file).
+## The brain — read before working
+Project knowledge lives in `.claude/brain/` (versioned; see `.claude/brain/README.md`):
+- **STATUS** and **DECISIONS** are included below and always in context.
+- `.claude/brain/GLOSSARY.md` — device types, interface IDs, `failureReason` codes,
+  mission DSL, career-layer terms. Read when a term is unfamiliar.
+- `.claude/brain/LESSONS.md` — gotchas. Read before touching missions, engine, or
+  React state.
 
-## Roadmap / what we're working toward
-- **All 5 intro missions complete.** Next major milestone is the **fault-injection /
-  troubleshooting mission series** (Act 2): pre-broken topologies, no step-by-step
-  hints, players diagnose using `show` commands — see `docs/NETSIM_FAULTS_AND_FEATURES.md`.
-- **Sandbox mode** exists for free practice. Verification labs live in `docs/`:
-  `FOUNDATION_SMOKE_TEST.md`, `SANDBOX_TEST_PLAN.md`, `ROAS_SANDBOX_LAB.md`,
-  `ISP_DEFAULT_ROUTE_LAB.md`, `DHCP_SANDBOX_LAB.md`.
-- Remaining reason-code refinements (`subnet_mismatch` first), live-network / SLA
-  mode, mastery scoring, shop margins, click-to-connect cabling, network
-  blueprint diagrams in mission briefings — see `docs/NETSIM_FAULTS_AND_FEATURES.md`.
+Path-scoped rules in `.claude/rules/` attach automatically when you edit
+`src/models|engine`, missions/data, `src/devMode`, UI/state, or `.github`.
 
-## Dev / QA Mode
-A developer/QA mode exists (or is planned) for fast testing without manual setup.
-**Core principle: dev mode is a faster way to DRIVE the real engine, never a way
-around it.** Presets must reach their state by running the same devices, cabling,
-and CLI/engine paths a player would — never by writing IPs/routes/statuses/ping
-results directly into the data model. A preset that "looks solved" must actually be
-solved by the engine, or QA would hide real bugs.
-- **Gated** behind a dev-only flag (`import.meta.env.DEV`) and/or a key combo; off by
-  default; never reachable in a production build (a teaching tool must not let real
-  learners skip missions). Shows an unmistakable "DEV MODE" banner when active.
-- Capabilities: mission jump / unlock-all / set-balance / force-complete; one-click
-  topology presets (WORKING *and* BROKEN — e.g. one-way route → `no_return_path`,
-  access-mode ROAS uplink → `vlan_isolated`, DHCP without helper → no offer); a live
-  state inspector (interfaces, routes, DHCP bindings, last `checkPing` result with
-  `failureReason`/`failurePoint`); a "run smoke test" button (drives the real engine
-  per `docs/FOUNDATION_SMOKE_TEST.md`); topology export/import JSON (doubles as the
-  basis for save/load).
-- **When testing, prefer dev-mode presets over hand-typing topologies.** Source
-  preset scenarios from `docs/FOUNDATION_SMOKE_TEST.md` and the sandbox labs.
+### Skills (invoke them; the user can too with `/name`)
+| Skill | Use when |
+|---|---|
+| `/accuracy-gate` | Before finalizing **any** networking/CLI/hint/mission change |
+| `/new-mission` | Authoring a mission on the declarative DSL |
+| `/new-preset` | Adding a dev-mode working/broken topology preset |
+| `/cli-command` | Adding/fixing a terminal command or `show` output |
+| `/fault-scenario` | Act 2 troubleshooting scenarios, ticket faults, new reason codes |
+| `/verify-in-browser` | Confirming a change in the running app |
+| `/brain-update` | End of substantial work — keep the brain true |
 
-## Conventions
-- JavaScript only, no TypeScript. Match existing code style.
-- **Test runner is Vitest** (`npm test`). Networking behavior is locked in by tests;
-  when changing engine logic, update/extend tests so rules can't regress silently.
-  "Broken" scenarios must assert the correct `failureReason`, not just failure.
-- After any change touching networking behavior, run the accuracy gate in
-  @docs/NETWORKING_ACCURACY.md (Prompt 8) before finalizing, and confirm
-  `npm test` + `npx vite build` are clean.
-- Build/test discipline for big changes: plan first and list files to touch; work in
-  phases with a checkpoint each; keep existing missions playable.
+### Subagents
+- `accuracy-reviewer` — independent review of a diff against the spec (local twin of CI).
+- `mission-qa` — plays a mission on paper + runs its test; reports blockers/mis-teaching.
+
+## Working discipline
+- Networking behaviour is locked in by tests. Broken scenarios assert the exact
+  `failureReason`, never just "failed". Never loosen a test to make code pass without
+  justifying it against the spec.
+- Big changes: plan first, list files, work in phases with a checkpoint each, keep
+  every existing mission playable.
+- Finish with `npm test` + `npx vite build` clean, then `/accuracy-gate` if networking
+  was touched, then `/brain-update` if project facts changed.
 
 ---
+@.claude/brain/STATUS.md
+@.claude/brain/DECISIONS.md
 @docs/NETWORKING_ACCURACY.md
