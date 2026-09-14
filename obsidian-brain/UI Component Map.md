@@ -1,0 +1,90 @@
+---
+tags: [ui, components]
+---
+
+# UI Component Map
+
+`src/components/` — all presentational. See [[Architecture Overview]] for the
+governing rule: components read `GameContext`/`CareerContext` state and call engine
+methods; they never reimplement networking logic themselves.
+
+## The floorplan — the main play surface
+
+`Floorplan.jsx` renders every placed device (`DeviceNode`), cable (`CableLayer`
+SVG), floorplan label (`FloorLabel`), the wire-mode connection-preview overlay, and a
+ping-animation layer, all inside one endless, pannable canvas:
+
+- **Panning**: click-and-drag anywhere on empty background pans the whole canvas
+  (no modifier key needed). Implemented as a single shared `panOffset: {x, y}` in
+  `GameContext` — a pure CSS `transform: translate()` on one wrapper div, so every
+  existing device/cable/label coordinate stays in the same absolute pixel space it
+  always was; panning is a camera move, not a data change. `panOffset` lives in
+  `GameContext` (not component-local state) specifically because `App.jsx`'s
+  top-level `DndContext.onDragEnd` handler — which spans both the Inventory panel and
+  the floorplan — also needs to convert screen coordinates to world coordinates using
+  it.
+  - The wrapper is `pointer-events: none` with `auto` re-enabled on each device/label
+    root (the standard "transparent pass-through, interactive children" CSS pattern)
+    so the pan layer doesn't swallow clicks meant for devices.
+  - A movement-threshold flag distinguishes an actual pan-drag from a plain click, so
+    releasing a pan doesn't also fire background-click-to-deselect.
+  - The canvas is genuinely endless: negative world coordinates are valid (no origin
+    clamping), and the view recenters to `{0,0}` on every mission/ticket/client
+    switch so a player is never dropped into an already-panned-away view of a
+    topology they've never seen.
+- **Cabling**: right-click a device → "Connect Cable" → click the target device (a
+  port picker appears when the source device has multiple free ports) — a visual,
+  click-to-connect flow, not manual coordinate entry.
+- Every device's terminal is an `@xterm/xterm` instance in `TerminalPane.jsx`. Tabs
+  for inactive devices stay **mounted** and hidden with `display: none` — never
+  unmounted — because unmounting an xterm instance loses its scrollback, which would
+  be a real regression for a player switching between devices mid-task.
+
+## Career and mission surfaces
+
+- `MissionPanel.jsx` — the job board / client list, including a `clientCards` view
+  sourced from `availableFutureMissionIds` (see
+  [[Career Layer]]).
+- `MissionBriefModal.jsx` — the pre-accept brief, rendering a mission's `blueprint`
+  (segments/links/notes) as a lightweight SVG diagram.
+- `ActiveJobPanel.jsx` / `MissionTaskList.jsx` — the in-progress objective checklist,
+  driven directly by `getMissionRuntime(id).tasks` + live `checkFn()` results (see
+  [[Mission DSL]]).
+- `ActiveContractsPanel.jsx` — open service tickets, their SLA countdown, and
+  per-client `SatisfactionMeter` bars (now a shared component, also used on the
+  [[Admin Laptop and Tools|Admin Laptop dashboard]]).
+- `CompanyDashboard.jsx` — the persistent top-strip business summary (balance,
+  reputation tier, etc.) visible outside the laptop.
+- `ContractClockDriver.jsx` — a headless component whose only job is ticking the SLA
+  clock (see [[Career Layer]]).
+
+## The Admin Laptop
+
+`AdminLaptop.jsx` (tab shell) + `AdminLaptopShared.jsx` (shared `Section`/
+`relativeTime` helpers, extracted specifically to avoid a circular import between
+`AdminLaptop.jsx` and `AdminDashboardTab.jsx`) + `AdminDashboardTab.jsx` (the
+dashboard tab) + `FirewallWebUI.jsx` + `BrowserPanel.jsx` + `WiresharkPanel.jsx`. Full
+detail in [[Admin Laptop and Tools]].
+
+## Other notable components
+
+- `Shop.jsx` / `Inventory.jsx` — buy hardware from `deviceCatalog.js`, then drag from
+  inventory onto the floorplan (or use the "Place" button, which is pan-aware — it
+  lands new devices in the currently-visible area, anchored to `-panOffset`, not a
+  fixed world coordinate that could be scrolled off-screen).
+- `DeviceInspector.jsx` — a read-only live state panel per device (interfaces,
+  routing table, VLANs, etc.) — a GUI window onto the exact same `Device` fields
+  `show running-config` reads, never a second source of truth.
+- `ContextMenu.jsx` — the shared right-click menu (Connect Cable, Power On/Off, Open
+  Terminal, Disconnect, Add Label Here on the background, etc.).
+- `ConfigSummary.jsx`, `MissionBlueprint.jsx` — supporting mission-brief rendering.
+- `DevPanel.jsx` — the dev-mode preset/smoke-test control panel, `import.meta.env.DEV`
+  gated (see [[Dev Mode and QA]]).
+- `SandboxPalette.jsx` — free-build sandbox mode device palette.
+- `WelcomeModal.jsx`, `LoginPage.jsx` — onboarding and the beta login gate
+  (`AuthContext`, bcryptjs-hashed, client-side only).
+
+## Related
+
+[[Architecture Overview]] · [[Career Layer]] ·
+[[Admin Laptop and Tools]]
