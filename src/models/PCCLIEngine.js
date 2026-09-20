@@ -123,6 +123,18 @@ export class PCCLIEngine {
       ]
     }
 
+    // dhclient stays resident to renew its lease, so a second run on a leased interface
+    // is refused (real ISC dhclient: "… is already running - exiting."). To ask again,
+    // release first — `dhclient -r`, then `dhclient`.
+    if (iface.ip && iface.dhcp_assigned) {
+      return [
+        `dhclient(${1000 + (parseInt(String(device.id).replace(/\D/g, ''), 10) || 0)}) is already running - exiting.`,
+        ``,
+        `exiting.`,
+        `  (to request a new lease, release this one first: dhclient -r ${_linuxName(iface.name)})`,
+      ]
+    }
+
     // Acquire lease
     if (iface.ip && !iface.dhcp_assigned) {
       return [
@@ -237,6 +249,7 @@ export class PCCLIEngine {
       const op = tokens[2]?.toLowerCase()
       if (!op || op === 'show' || op === 'list') return this._showRoute(device)
       if (op === 'add')                return this._routeAdd(device, tokens)
+      if (op === 'replace')            return this._routeAdd(device, tokens, true)
       if (op === 'del' || op === 'delete')  return this._routeDel(device, tokens)
     }
     return [`ip: option "${tokens[1] || ''}" is unknown, try "ip help".`]
@@ -285,6 +298,7 @@ export class PCCLIEngine {
     }
     const iface = _resolveIf(device, devArg)
     if (!iface) return [`ip: Cannot find device "${devArg}"`]
+    if (iface.ip === ip && iface.subnet_mask === mask) return ['RTNETLINK answers: File exists']
     const dupDevice = [...this.topology.devices.values()].find(dev =>
       dev !== device && dev.interfaces.some(i => i.ip === ip)
     )
@@ -300,8 +314,18 @@ export class PCCLIEngine {
     if (!cidr || !devArg) return ['Usage: ip addr del <ip>/<prefix> dev <interface>']
     const iface = _resolveIf(device, devArg)
     if (!iface) return [`ip: Cannot find device "${devArg}"`]
+    const [delIp, delPrefix] = cidr.split('/')
+    if (!iface.ip || iface.ip !== delIp || (delPrefix !== undefined && String(maskToPrefixLen(iface.subnet_mask)) !== delPrefix)) {
+      return ['RTNETLINK answers: Cannot assign requested address']
+    }
+    const oldIp = iface.ip, oldMask = iface.subnet_mask
     iface.ip = null
     iface.subnet_mask = null
+    iface.dhcp_assigned = false
+    // Deleting an interface's address takes with it the routes whose next hop was only
+    // reachable through it (the kernel flushes them); routes still reachable via another
+    // interface, or that were already unreachable, are left alone.
+    device.flushRoutesVia(oldIp, oldMask)
     return []
   }
 
@@ -312,24 +336,8 @@ export class PCCLIEngine {
     if (!ifArg || !state) return ['Usage: ip link set <interface> up|down']
     const iface = _resolveIf(device, ifArg)
     if (!iface) return [`ip: Cannot find device "${ifArg}"`]
-    if (state === 'up') {
-      // Check peer state: if the peer is admin_down there is no carrier signal.
-      // Also wake up the peer if it was waiting (peer.status === 'down').
-      if (iface.connected_to) {
-        const remIface = this.topology._resolveIface(iface.connected_to)
-        if (remIface && remIface.status !== 'admin_down') {
-          iface.status = 'up'
-          if (remIface.status === 'down') remIface.status = 'up'
-        } else {
-          iface.status = 'down'
-        }
-      } else {
-        iface.status = 'down'
-      }
-    } else if (state === 'down') {
-      iface.status = 'admin_down'
-      // Propagate carrier-loss to the peer (real hardware drops link signal immediately)
-      if (iface.connected_to) this.topology.shutdownPeer(iface.connected_to)
+    if (state === 'up' || state === 'down') {
+      this.topology.setInterfaceAdmin(`${device.id}:${iface.name}`, state === 'up')
     } else {
       return [`ip: link: Invalid state "${state}"`]
     }
@@ -358,20 +366,25 @@ export class PCCLIEngine {
     return lines
   }
 
-  _routeAdd(device, tokens) {
-    // ip route add <net>/<prefix> via <gw>  OR  ip route add default via <gw>
+  _routeAdd(device, tokens, replace = false) {
+    // ip route add|replace <net>/<prefix> via <gw>  OR  ip route add|replace default via <gw>
     let cidr = tokens[3]
     const viaIdx = tokens.indexOf('via')
     const nextHop = viaIdx >= 0 ? tokens[viaIdx + 1] : null
-    if (!cidr || !nextHop) return ['Usage: ip route add <network>/<prefix> via <gateway>']
+    if (!cidr || !nextHop) return [`Usage: ip route ${replace ? 'replace' : 'add'} <network>/<prefix> via <gateway>`]
     if (cidr === 'default') cidr = '0.0.0.0/0'
     const [network, prefixStr] = cidr.split('/')
     const mask = _prefixToMask(prefixStr ?? '32')
     if (!isValidIp(network)) return [`ip: Error: Invalid network "${network}"`]
     if (!mask) return [`ip: Error: Invalid prefix length "${prefixStr}"`]
     if (!isValidIp(nextHop)) return [`ip: Error: Invalid gateway "${nextHop}"`]
+    // The kernel only accepts a next hop it can reach over a directly connected network —
+    // so an interface needs an address covering the gateway, and must not be switched off.
+    if (!device.nextHopReachable(nextHop)) return ['Error: Nexthop has invalid gateway.', ..._gatewayHint(device, nextHop)]
     const canonical = networkAddress(network, mask)
     const idx = device.routing_table.findIndex(r => r.network === canonical && r.mask === mask)
+    // A route to that destination already exists: `add` refuses, `replace` swaps it.
+    if (idx >= 0 && !replace) return ['RTNETLINK answers: File exists']
     const entry = { network: canonical, mask, next_hop: nextHop }
     if (idx >= 0) device.routing_table[idx] = entry
     else device.routing_table.push(entry)
@@ -386,7 +399,9 @@ export class PCCLIEngine {
     const mask = _prefixToMask(prefixStr ?? '32')
     if (!mask) return ['ip: Error: invalid prefix']
     const canonical = networkAddress(network, mask)
+    const before = device.routing_table.length
     device.routing_table = device.routing_table.filter(r => !(r.network === canonical && r.mask === mask))
+    if (device.routing_table.length === before) return ['RTNETLINK answers: No such process']
     return []
   }
 
@@ -781,6 +796,20 @@ function _commonPrefix(strs) {
 function _bcast(ip, mask) {
   const n = (ipToNum(ip) | (~ipToNum(mask))) >>> 0
   return [(n >>> 24), (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff].join('.')
+}
+
+// The one-line nudge that goes with "Nexthop has invalid gateway" when the cause is
+// the usual beginner one: the interface isn't configured/enabled yet.
+function _gatewayHint(device, nextHop) {
+  const covering = device.interfaces.find(i =>
+    i.ip && i.subnet_mask && networkAddress(i.ip, i.subnet_mask) === networkAddress(nextHop, i.subnet_mask))
+  if (covering && covering.status === 'admin_down') {
+    return [`  (${_linuxName(covering.name)} is down — run: ip link set ${_linuxName(covering.name)} up)`]
+  }
+  if (!device.interfaces.some(i => i.ip)) {
+    return [`  (no interface has an address yet — run: ip addr add <ip>/<prefix> dev ${_linuxName(device.interfaces[0]?.name ?? 'eth0')} first)`]
+  }
+  return [`  (${nextHop} is not on any directly connected network — check the address and mask)`]
 }
 
 // Find the outgoing interface for a given next-hop by connected-route lookup.

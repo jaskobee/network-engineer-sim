@@ -150,7 +150,7 @@ function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 1500,
+      position: 'fixed', inset: 0, zIndex: 2600,   // a modal picker: above windows and the job panel
       background: 'rgba(0,0,0,0.6)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onCancel}>
@@ -333,7 +333,7 @@ function BackgroundContextMenu({ x, y, onAddLabel }) {
   return (
     <div
       style={{
-        position: 'fixed', left: x, top: y, zIndex: 1000,
+        position: 'fixed', left: x, top: y, zIndex: 5000,   // menus always come over everything else
         background: '#1f2a31', border: '1px solid #2f6fbd', borderRadius: 4,
         minWidth: 160, boxShadow: '0 6px 20px rgba(0,0,0,0.6)', overflow: 'hidden', userSelect: 'none',
       }}

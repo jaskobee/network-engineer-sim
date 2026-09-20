@@ -45,8 +45,11 @@ ping-animation layer, all inside one endless, pannable canvas:
 - `MissionPanel.jsx` — the job board / client list, including a `clientCards` view
   sourced from `availableFutureMissionIds` (see
   [[Career Layer]]).
-- `MissionBriefModal.jsx` — the pre-accept brief, rendering a mission's `blueprint`
-  (segments/links/notes) as a lightweight SVG diagram.
+- `MissionBriefModal.jsx` — "View job": **Brief** and **Topology** tabs (the Topology tab is also opened
+  from the active job panel, view-only). `MissionBlueprint.jsx` draws either the real device topology
+  (`blueprint.topology`, `engine/topologyGraph.js`) or the older segment diagram (`engine/blueprintLayout.js`).
+- `NotificationLayer.jsx` — top-centre toasts ("Service restored…") and the new-job offer card
+  (accept / decline for now / view details / hide).
 - `ActiveJobPanel.jsx` / `MissionTaskList.jsx` — the in-progress objective checklist,
   driven directly by `getMissionRuntime(id).tasks` + live `checkFn()` results (see
   [[Mission DSL]]).
@@ -55,8 +58,9 @@ ping-animation layer, all inside one endless, pannable canvas:
   [[Admin Laptop and Tools|Admin Laptop dashboard]]).
 - `CompanyDashboard.jsx` — the persistent top-strip business summary (balance,
   reputation tier, etc.) visible outside the laptop.
-- `ContractClockDriver.jsx` — a headless component whose only job is ticking the SLA
-  clock (see [[Career Layer]]).
+- `ContractClockDriver.jsx` — a headless component whose only job is ticking the ticket engine
+  (SLA clock, pacing, reminders — see [[Career Layer]]).
+- **Layering:** floorplan ≤ 50 · job panel 1500 · windows 1600 · toasts 2400 · dialogs 2500+ · laptop 3000 · menus 5000.
 
 ## The Admin Laptop
 
@@ -97,11 +101,20 @@ See also [[Decisions Log]] §UI design system.
   inventory onto the floorplan (or use the "Place" button, which is pan-aware — it
   lands new devices in the currently-visible area, anchored to `-panOffset`, not a
   fixed world coordinate that could be scrolled off-screen).
-- `DeviceInspector.jsx` — a read-only live state panel per device (interfaces,
-  routing table, VLANs, etc.) — a GUI window onto the exact same `Device` fields
-  `show running-config` reads, never a second source of truth.
+- `DeviceInspector.jsx` — a live state panel per device (interfaces, routing table, VLANs,
+  etc.) — a GUI window onto the exact same `Device` fields `show running-config` reads, never a
+  second source of truth. Its click-to-edit IP goes through the CLI engines, not a field write.
 - `ContextMenu.jsx` — the shared right-click menu (Connect Cable, Power On/Off, Open
-  Terminal, Disconnect, Add Label Here on the background, etc.).
+  Terminal, Configure GUI on hosts, Disconnect, Add Label Here on the background, etc.).
+- `HostConfigPanel.jsx` — the "Configure GUI" window for a powered PC / server / IP phone /
+  laptop. A form over the machine's own shell: `engine/hostConfig.js` (pure) reads an adapter,
+  plans the real commands (`ip` / `dhclient`, or `netsh` / `ipconfig` on a Windows laptop) and
+  runs them through `executeDeviceCommands`, so the GUI can never reach a state the CLI can't.
+  The inspector's click-to-edit IP uses the same path (`engine/interfaceAddress.js`; IOS for
+  routers / firewalls / SVIs). It shows a "Terminal equivalent" before
+  Apply and the transcript after, and the three link states (up / down / disabled).
+  Routers, switches and firewalls deliberately have no such window — they are CLI
+  devices (the firewall has its own console).
 - `ConfigSummary.jsx`, `MissionBlueprint.jsx` — supporting mission-brief rendering.
 - `DevPanel.jsx` — the dev-mode preset/smoke-test control panel, `import.meta.env.DEV`
   gated (see [[Dev Mode and QA]]).

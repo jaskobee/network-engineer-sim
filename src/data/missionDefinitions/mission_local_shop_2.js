@@ -123,6 +123,19 @@ export const mission_local_shop_2 = {
   ],
 
   blueprint: {
+    topology: {
+      nodes: [
+        { id: 'router', label: 'Router',            type: 'router', existing: true },
+        { id: 'switch', label: 'Switch',            type: 'switch', existing: true },
+        { id: 'pc1',    label: 'PC-1 (Register)',   type: 'pc',     existing: true },
+        { id: 'pc2',    label: 'PC-2 (Office)',     type: 'pc',     existing: true },
+        { id: 'pc3',    label: 'PC-3 (Back Room)',  type: 'pc',     existing: true },
+        { id: 'pc4',    label: 'PC-4 (New Hire)',   type: 'pc' },
+        { id: 'server', label: 'POS Server',        type: 'server' },
+      ],
+      cables: [['router', 'switch'], ['switch', 'pc1'], ['switch', 'pc2'], ['switch', 'pc3'], ['switch', 'pc4'], ['switch', 'server']],
+      newNodes: ['pc4', 'server'],
+    },
     segments: [
       {
         id: 'lan',

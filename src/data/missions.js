@@ -75,13 +75,13 @@ export const MISSIONS = [
             { role: 'PC-Clinical', type: 'pc' },
             { role: 'Records Server', type: 'server' },
           ],
-          svgX: 237, svgY: 20,
+          svgX: 259, svgY: 20,
         },
       ],
       links: [
         { from: 'reception', to: 'clinical', label: 'WAN  10.0.0.0/30', type: 'wan' },
       ],
-      svgViewBox: '0 0 400 155',
+      svgViewBox: '0 0 422 155',
       notes: 'Two isolated subnets — static routes on BOTH routers, or return traffic drops.',
     },
   },
@@ -129,7 +129,7 @@ export const MISSIONS = [
           devices: [
             { role: 'Server (192.168.30.10, static)', type: 'server' },
           ],
-          svgX: 8, svgY: 162,
+          svgX: 8, svgY: 182,
         },
         {
           id: 'wan',
@@ -139,14 +139,14 @@ export const MISSIONS = [
             { role: 'R1  (ROAS + NAT, 203.0.113.2)', type: 'router' },
             { role: 'ISP  (pre-placed, 203.0.113.1)', type: 'router' },
           ],
-          svgX: 237, svgY: 20,
+          svgX: 257, svgY: 20,
         },
       ],
       links: [
         { from: 'clients', to: 'wan',  label: 'trunk + NAT', type: 'lan' },
-        { from: 'dmz',    to: 'wan',   label: 'VLAN 30 (pre-DMZ)', type: 'lan' },
+        { from: 'dmz',    to: 'wan',   label: 'VLAN 30 servers', type: 'lan' },
       ],
-      svgViewBox: '0 0 400 240',
+      svgViewBox: '0 0 420 296',
       notes: 'One switch, one router (ROAS). Trunk switch→router. DHCP for VLANs 10/20/40, static for VLAN 30. NAT all private traffic out the WAN. VLAN 30 becomes a true DMZ only when a firewall is added — Mission 005.',
     },
     layout: [
@@ -225,7 +225,7 @@ export const MISSIONS = [
           devices: [
             { role: 'Server  (172.16.1.10, HTTPS)', type: 'server' },
           ],
-          svgX: 8, svgY: 162,
+          svgX: 8, svgY: 211,
         },
         {
           id: 'fw',
@@ -234,7 +234,7 @@ export const MISSIONS = [
           devices: [
             { role: 'FW1  (zone-based, NAT overload)', type: 'firewall' },
           ],
-          svgX: 150, svgY: 80,
+          svgX: 267, svgY: 20,
         },
         {
           id: 'outside',
@@ -243,15 +243,15 @@ export const MISSIONS = [
           devices: [
             { role: 'ISP  (pre-placed, 203.0.113.1)', type: 'router' },
           ],
-          svgX: 280, svgY: 80,
+          svgX: 267, svgY: 169,
         },
       ],
       links: [
-        { from: 'inside', to: 'fw',      label: 'INSIDE  10.0.0.0/30', type: 'lan' },
-        { from: 'dmz',    to: 'fw',      label: 'DMZ  172.16.1.0/24',  type: 'lan' },
-        { from: 'fw',     to: 'outside', label: 'OUTSIDE  203.0.113.0/30', type: 'wan' },
+        { from: 'inside', to: 'fw',      label: 'INSIDE 10.0.0.0/30', type: 'lan' },
+        { from: 'dmz',    to: 'fw',      label: 'DMZ 172.16.1.0/24',  type: 'lan' },
+        { from: 'fw',     to: 'outside', label: 'OUTSIDE',            type: 'wan' },
       ],
-      svgViewBox: '0 0 400 260',
+      svgViewBox: '0 0 430 302',
       notes: 'Three-zone perimeter firewall. Inside uses stateful allow-out. DMZ published on HTTPS only. Guest VLAN explicitly denied to DMZ above the broad INSIDE→DMZ permit — rule order matters.',
     },
     layout: [

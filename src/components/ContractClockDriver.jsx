@@ -7,7 +7,7 @@
  * is, so a ticket can never expire through no fault of the player. Mounted
  * once in AppContent (App.jsx), the one place both useGame() and useCareer()
  * are readily available, this component is just the traffic cop: it calls
- * tickContracts on an interval (and once on mount, to catch time elapsed
+ * the CURRENT tickContracts (via a ref) on an interval (and once on mount, to catch time elapsed
  * while the tab was closed) and applies any newly-issued ticket's real
  * topology fault via GameContext (CareerContext has no topology access at all).
  */
@@ -23,9 +23,13 @@ export default function ContractClockDriver() {
 
   const activeMissionIdRef = useRef(activeMissionId)
   useEffect(() => { activeMissionIdRef.current = activeMissionId })
+  // The interval below is created once, so it must reach the CURRENT tickContracts through a ref —
+  // calling the copy captured on the first render is what used to raise a ticket on every tick.
+  const tickRef = useRef(tickContracts)
+  useEffect(() => { tickRef.current = tickContracts })
 
   useEffect(() => {
-    function check() { tickContracts(activeMissionIdRef.current, Date.now()) }
+    function check() { tickRef.current(activeMissionIdRef.current, Date.now()) }
     check() // catch time elapsed while the tab was closed
     const id = setInterval(check, TICK_INTERVAL_MS)
     return () => clearInterval(id)

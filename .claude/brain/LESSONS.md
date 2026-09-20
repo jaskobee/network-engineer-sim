@@ -32,8 +32,29 @@ Add an entry only when the code/tests don't already make it obvious. Format:
   allow returns; outside→inside needs its own rule.
 - **A `firewall-rule … service tcp/443` doesn't let a ping through** → correct; ICMP is
   a different service. Don't "fix" this.
+- **The host shells used to accept what real ones refuse — and a GUI on top hid it** → a
+  second `dhclient` took a second address and leaked the old binding, `ip route add default`
+  silently replaced, an off-link gateway was accepted, `ip addr del` left routes behind, and a
+  Windows laptop could never enable its adapter (no command) or return a static IP to DHCP.
+  Fixed at the root (server re-offers a client's existing binding; real `RTNETLINK` /
+  `Nexthop` errors; shared `Device.nextHopReachable/flushRoutesVia`; `netsh interface set
+  interface`) → when a GUI plans commands, keep the order real tools need (route delete
+  *before* the last address goes; del + add, never a second `add default`) and assert the exact
+  command lists in tests — don't "simplify" to whatever an engine tolerates.
+- **A shell with no tests hid a dead feature** (`WindowsCLIEngine` had none: the laptop's Windows
+  adapter could never come up) → every shell gets a test file that plays the real setup flow
+  end to end (`winshell.test.js`, `pcshell.test.js`).
+- **Fixing a "lenient" command can expose a missing prerequisite step, not a bug** → hosts boot
+  `admin_down`, so `ip route add default` before `ip link set eth0 up` now fails with the real
+  `Nexthop has invalid gateway` (plus a hint). That is why missions teach addr → up → route.
 
 ## React / state
+- **A `setInterval` in a component acts on old state forever** (the ticket spam: a new ticket + email
+  every 15 s) → the interval was created once and kept calling the *first render's* function, whose
+  `contracts`/`activeTickets` never updated → put the logic in a pure function that takes state as an
+  argument (`engine/ticketEngine.tickTickets`), and have the timer call it through a ref to the latest state.
+- **IDs repeat after a reload** → module-level counters restart at 1 → restore counters from saved
+  data on load (`_restoreIdCounters`) and never let a setter move a counter backwards.
 - **Preset builds render half-applied** → `buildPreset()` deliberately does *not* call
   `ctx.refresh()` so `clearSandbox` + `addSandboxDevice` batch → the caller (DevPanel)
   calls `refresh()` once after.
@@ -63,11 +84,19 @@ Add an entry only when the code/tests don't already make it obvious. Format:
 - **`admin_down` rendered near-invisible** (`#30414d` on graphite) in the tooltip,
   inspector and firewall console → it is a *required* teaching state (Prompt 5), so it
   must stay readable; use `--ink-3` and an unlit LED, not a low-contrast colour.
+- **A floating window slides off the bottom of the screen after it grows** (the transcript
+  appears after Apply) → clamping only at mount isn't enough → re-clamp from a
+  `ResizeObserver` plus window `resize` (`HostConfigPanel`).
 
 ## Tooling / environment
 - **`find` and `grep` in this shell are functions wrapping the Claude binary** and can
   print `error: unknown option '-S'` / `'-G'` → use `command find` / `command grep`
   (or the Grep/Glob tools) when a plain shell call misbehaves.
 - **`npx vite build` warns about chunk size for xterm** → expected, not a failure.
+- **Driving the app from Playwright** → typing into xterm needs a click on `.xterm` first;
+  a terminal opens *over* the device you right-clicked, so close it (title "Close
+  terminal") before the next right-click; IOS `ping` takes ~5.5 s, so poll for its result
+  line instead of a fixed wait; `getByText('Disabled', { exact: true })` misses an element
+  that also holds a child `<span>` — read the container's `innerText`.
 - **Two GitHub Actions call the Anthropic API** (`ai-review.js`, `mission-qa.js`, …) →
   they skip cleanly when `ANTHROPIC_API_KEY` is unset; don't remove that guard.

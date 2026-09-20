@@ -372,10 +372,14 @@ button:focus:not(:focus-visible) { outline: none; }
 
 .rail-btn {
   position: relative;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
+  width: 66px;
+  min-height: 62px;
+  padding: 7px 2px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   color: var(--ink-3);
   background: transparent;
   border: 0;
@@ -389,11 +393,66 @@ button:focus:not(:focus-visible) { outline: none; }
   content: '';
   position: absolute;
   left: -5px;
-  top: 9px;
-  bottom: 9px;
+  top: 12px;
+  bottom: 12px;
   width: 3px;
   border-radius: 2px;
   background: var(--signal);
+}
+.rail-icon { position: relative; display: grid; place-items: center; }
+.rail-label { font-size: 13px; font-weight: 600; line-height: 1.1; letter-spacing: 0.1px; }
+/* "Something needs you" — an amber count on the icon, like a lit port LED. */
+.rail-badge {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: #1a1305;
+  background: var(--led-amber);
+  border-radius: 9px;
+  box-shadow: 0 0 0 2px var(--surface-panel), 0 0 9px 1px rgba(255, 180, 46, 0.55);
+  animation: led-breathe 2.2s ease-in-out infinite;
+}
+
+/* ── Toasts (top centre, above every window) ─────────────────────────────────── */
+.toast-stack {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2400;               /* above windows and the job panel (≤1600), below modals (2500+) and menus (5000) */
+  width: min(500px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 12px 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--rule-strong);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-float);
+  animation: toast-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.toast.success { border-left-color: var(--led-green); }
+.toast.info    { border-left-color: var(--led-amber); }
+.toast.offer   { border-left-color: var(--signal); }
+@keyframes toast-in {
+  from { transform: translateY(-10px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
 }
 
 .dock-head {
@@ -444,6 +503,124 @@ button:focus:not(:focus-visible) { outline: none; }
   user-select: none;
   pointer-events: none;
 }
+
+/* ── Floating window + form fields ────────────────────────────────────────────
+   Used by the host "Configure GUI" window. Fields are mono because what goes in
+   them is data (IPs, masks); labels stay in the UI face. */
+.float-win {
+  position: fixed;
+  z-index: 1600;               /* above the floating job panel (1500) so a window you just opened is never underneath it; below modals (2500+) and menus (5000) */
+  display: flex;
+  flex-direction: column;
+  width: 520px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  background: var(--surface-panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+  animation: terminal-pop-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.float-win:focus { outline: none; }
+.float-win-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  background: var(--surface-well);
+  border-bottom: 1px solid var(--rule);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  flex-shrink: 0;
+}
+.float-win-body { overflow: auto; padding: 12px 16px 16px; }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 3px 12px;
+  align-items: start;
+}
+.field-label { padding-top: 6px; font-size: 14.5px; color: var(--ink-2); }
+.field-note  { grid-column: 2; font-size: 13.5px; line-height: 1.4; color: var(--ink-3); }
+.field-error { grid-column: 2; font-size: 13.5px; line-height: 1.4; color: #ff8078; }
+
+.input {
+  width: 100%;
+  padding: 5px 9px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface-well);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-m);
+}
+.input::placeholder { color: var(--ink-3); font-family: var(--font-ui); }
+.input:hover:not(:disabled) { border-color: #3a4d5b; }
+.input:focus-visible { outline: none; border-color: var(--signal); box-shadow: 0 0 0 1px var(--signal); }
+.input:disabled { color: var(--ink-2); background: transparent; border-style: dashed; cursor: default; }
+.input[aria-invalid='true'] { border-color: var(--led-red); box-shadow: 0 0 0 1px var(--led-red); }
+
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 3px 0;
+  font-size: 15px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.opt input { accent-color: var(--signal); width: 16px; height: 16px; margin: 0; }
+
+.switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  flex-shrink: 0;
+  background: var(--surface-well);
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  transition: transform 0.15s, background 0.15s;
+}
+.switch[aria-checked='true'] { background: var(--signal-deep); border-color: var(--signal-strong); }
+.switch[aria-checked='true']::after { transform: translateX(18px); background: var(--signal); }
+
+/* A terminal transcript inside a GUI: commands the window will run / just ran. */
+.transcript {
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  background: var(--surface-well);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-strong);
+  border-radius: var(--radius-m);
+  overflow-x: auto;
+}
+.transcript.ok   { border-left-color: var(--led-green); }
+.transcript.fail { border-left-color: var(--led-red); }
+/* Lines wrap rather than scroll: this is a GUI, and the reason a command failed (or the tail of
+   a long netsh line) must never sit off-screen. */
+.transcript .cmd { color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.transcript .cmd.bad { color: #ff8078; }
+.transcript .prompt { color: var(--ink-3); user-select: none; }
+.transcript .out { color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; padding-left: 2ch; }
 
 /* Floating terminal "pops out" of the device it was opened from */
 @keyframes terminal-pop-in {

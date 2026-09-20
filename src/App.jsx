@@ -14,9 +14,12 @@ import SandboxPalette from './components/SandboxPalette.jsx'
 import WelcomeModal, { hasSeenTour } from './components/WelcomeModal.jsx'
 import DevPanel from './components/DevPanel.jsx'
 import FirewallConsole from './components/FirewallConsole.jsx'
+import HostConfigPanel from './components/HostConfigPanel.jsx'
 import AdminLaptop from './components/AdminLaptop.jsx'
 import ActiveJobPanel from './components/ActiveJobPanel.jsx'
 import ContractClockDriver from './components/ContractClockDriver.jsx'
+import NotificationLayer from './components/NotificationLayer.jsx'
+import { useJobBoard } from './state/useJobBoard.js'
 import { IconCart, IconBox, IconBriefcase, IconLaptop, IconSliders, IconClose } from './components/icons.jsx'
 
 export default function App() {
@@ -74,7 +77,7 @@ function VerticalResizeDivider({ onDelta }) {
 // (always present, minimal footprint) triggers a dock that slides in over
 // the floorplan and closes again, reclaiming floorplan width by default.
 
-const RAIL_WIDTH = 46
+const RAIL_WIDTH = 76
 const DOCK_WIDTH = 296
 const CAREER_DOCK_WIDTH = 340
 const SANDBOX_PALETTE_WIDTH = 296
@@ -97,10 +100,21 @@ function MenuButton({ children, onClick, danger }) {
   )
 }
 
-function RailButton({ icon, label, active, onClick }) {
+// An icon with its name under it — a bare icon makes people hover to find out what it is.
+// `badge` is a count of things waiting for the player (an amber LED-style number).
+function RailButton({ icon, label, active, onClick, badge = 0, badgeTitle }) {
   return (
-    <button className="rail-btn" onClick={onClick} title={label} aria-label={label} aria-pressed={!!active}>
-      {icon}
+    <button
+      className="rail-btn" onClick={onClick}
+      title={badge > 0 && badgeTitle ? `${label} — ${badgeTitle}` : label}
+      aria-label={badge > 0 && badgeTitle ? `${label}, ${badgeTitle}` : label}
+      aria-pressed={!!active}
+    >
+      <span className="rail-icon">
+        {icon}
+        {badge > 0 && <span className="rail-badge" aria-hidden="true">{badge}</span>}
+      </span>
+      <span className="rail-label">{label}</span>
     </button>
   )
 }
@@ -269,8 +283,16 @@ function LaptopIntroModal({ onClose }) {
 function AppContent() {
   const { user, logout } = useAuth()
   const { devices, placements, placeDevice, movePlacedDevice, saveStatus, newGame, exportSave, importSave, difficulty, setDifficulty, mode, setMode, fwConsoleDeviceId, closeFwConsole, adminLaptopOpen, setAdminLaptopOpen, activeMissionId, activeTicket, panOffset } = useGame()
-  const { company, createCompany, notifications } = useCareer()
+  const { company, createCompany, notifications, activeTickets } = useCareer()
   const unreadNotifications = notifications.filter(n => !n.read).length
+  // What is waiting on the player in Career: open problems to fix + new jobs they haven't answered.
+  const { pendingIds } = useJobBoard()
+  const openProblems = Object.keys(activeTickets).length
+  const careerBadge = openProblems + pendingIds.length
+  const careerBadgeTitle = [
+    openProblems > 0 && `${openProblems} ${openProblems === 1 ? 'problem' : 'problems'} to fix`,
+    pendingIds.length > 0 && `${pendingIds.length} new ${pendingIds.length === 1 ? 'job' : 'jobs'}`,
+  ].filter(Boolean).join(', ')
   const importInputRef = useRef(null)
   const [activeDragId,     setActiveDragId]     = useState(null)
   const [inspectorHeight,  setInspectorHeight]  = useState(220)
@@ -473,7 +495,7 @@ function AppContent() {
                 <div style={{
                   position: 'absolute', top: '100%', right: 0, marginTop: 8,
                   background: 'var(--surface-panel)', border: '1px solid var(--rule-strong)', borderRadius: 8,
-                  padding: 6, zIndex: 200, minWidth: 200,
+                  padding: 6, zIndex: 5000, minWidth: 200,   // above every window and dock, always
                   boxShadow: 'var(--shadow-float)',
                 }}>
                   <MenuButton onClick={() => { exportSave(); setSettingsMenuOpen(false) }}>Export save</MenuButton>
@@ -522,9 +544,9 @@ function AppContent() {
                 <SandboxPalette />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 10 }}>
-                  <RailButton icon={<IconCart />} label="Shop" active={openPanel === 'shop'}
+                  <RailButton icon={<IconCart size={26} />} label="Shop" active={openPanel === 'shop'}
                     onClick={() => setOpenPanel(p => p === 'shop' ? null : 'shop')} />
-                  <RailButton icon={<IconBox />} label="Inventory" active={openPanel === 'inventory'}
+                  <RailButton icon={<IconBox size={26} />} label="Inventory" active={openPanel === 'inventory'}
                     onClick={() => setOpenPanel(p => p === 'inventory' ? null : 'inventory')} />
                 </div>
               )}
@@ -560,7 +582,8 @@ function AppContent() {
             {mode === 'missions' && (
               <aside className="sidebar-right" style={{ width: RAIL_WIDTH }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 10 }}>
-                  <RailButton icon={<IconBriefcase />} label="Career" active={careerOpen}
+                  <RailButton icon={<IconBriefcase size={26} />} label="Career" active={careerOpen}
+                    badge={careerBadge} badgeTitle={careerBadgeTitle}
                     onClick={() => setCareerOpen(v => !v)} />
                 </div>
               </aside>
@@ -600,7 +623,9 @@ function AppContent() {
     )}
     <ActiveJobPanel />
     <ContractClockDriver />
+    <NotificationLayer />
     <TerminalPane />
+    <HostConfigPanel />
     {import.meta.env.DEV && (
       <DevPanel open={devPanelOpen} onClose={() => setDevPanelOpen(false)} />
     )}

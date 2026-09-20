@@ -46,6 +46,17 @@ export const mission_local_shop_1 = {
   ],
 
   blueprint: {
+    // The picture the Topology tab draws: the devices and the cables between them.
+    topology: {
+      nodes: [
+        { id: 'router', label: 'Router',            type: 'router' },
+        { id: 'switch', label: 'Switch',            type: 'switch' },
+        { id: 'pc1',    label: 'PC-1 (Register)',   type: 'pc' },
+        { id: 'pc2',    label: 'PC-2 (Office)',     type: 'pc' },
+        { id: 'pc3',    label: 'PC-3 (Back Room)',  type: 'pc' },
+      ],
+      cables: [['router', 'switch'], ['switch', 'pc1'], ['switch', 'pc2'], ['switch', 'pc3']],
+    },
     segments: [
       {
         id: 'lan',

@@ -1,3 +1,5 @@
+import { isValidIp, networkAddress } from './ipUtils.js'
+
 let _idCounter = 0
 
 export function setIdCounter(n) { if (n > _idCounter) _idCounter = n }
@@ -248,5 +250,23 @@ export class Device {
     if (!name) return null
     const norm = normalizeIfName(name).toLowerCase()
     return this.interfaces.find(iface => iface.name.toLowerCase() === norm) || null
+  }
+
+  // A next hop is usable only over a directly connected network: an interface with an
+  // address whose subnet covers it, and that isn't administratively down (its connected
+  // route disappears when it is). Used by the host shells to accept or refuse a gateway.
+  nextHopReachable(nextHop) {
+    if (!isValidIp(nextHop)) return false
+    return this.interfaces.some(i =>
+      i.ip && i.subnet_mask && i.status !== 'admin_down' &&
+      networkAddress(i.ip, i.subnet_mask) === networkAddress(nextHop, i.subnet_mask))
+  }
+
+  // Drop the routes that were reachable ONLY through an address that has just been removed —
+  // a real host flushes them when an interface loses its address. Routes still reachable
+  // through another interface, or that were already unreachable, stay.
+  flushRoutesVia(oldIp, oldMask) {
+    this.routing_table = this.routing_table.filter(r =>
+      !(networkAddress(r.next_hop, oldMask) === networkAddress(oldIp, oldMask) && !this.nextHopReachable(r.next_hop)))
   }
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  NEW_TICKET_INTERVAL_MS, SLA_DURATION_MS, TICKET_GRACE_MS,
-  msRemaining, ticketUrgency, isTicketExpired, shouldIssueNewTicket,
+  SLA_DURATION_MS, TICKET_GRACE_MS,
+  msRemaining, ticketUrgency, isTicketExpired,
 } from '../contractClock.js'
 
 function makeTicket(overrides = {}) {
@@ -36,40 +36,5 @@ describe('contractClock', () => {
     const t = makeTicket()
     expect(isTicketExpired(t, SLA_DURATION_MS + TICKET_GRACE_MS)).toBe(false)
     expect(isTicketExpired(t, SLA_DURATION_MS + TICKET_GRACE_MS + 1)).toBe(true)
-  })
-
-  describe('shouldIssueNewTicket', () => {
-    const client = { dormant: false }
-
-    it('is false while a ticket is already open', () => {
-      const contract = { active: true, openTicketId: 'ticket-1', lastTicketAt: 0 }
-      expect(shouldIssueNewTicket(contract, client, NEW_TICKET_INTERVAL_MS * 2)).toBe(false)
-    })
-
-    it('is false for a dormant client even with no open ticket', () => {
-      const contract = { active: true, openTicketId: null, lastTicketAt: 0 }
-      expect(shouldIssueNewTicket(contract, { dormant: true }, NEW_TICKET_INTERVAL_MS * 2)).toBe(false)
-    })
-
-    it('is false for an inactive contract', () => {
-      const contract = { active: false, openTicketId: null, lastTicketAt: 0 }
-      expect(shouldIssueNewTicket(contract, client, NEW_TICKET_INTERVAL_MS * 2)).toBe(false)
-    })
-
-    it('is false before the interval has elapsed since the last ticket', () => {
-      const contract = { active: true, openTicketId: null, lastTicketAt: 0 }
-      expect(shouldIssueNewTicket(contract, client, NEW_TICKET_INTERVAL_MS - 1)).toBe(false)
-    })
-
-    it('is true once the interval has elapsed with no open ticket', () => {
-      const contract = { active: true, openTicketId: null, lastTicketAt: 0 }
-      expect(shouldIssueNewTicket(contract, client, NEW_TICKET_INTERVAL_MS)).toBe(true)
-    })
-
-    it('falls back to startedAtMs when no ticket has ever been issued', () => {
-      const contract = { active: true, openTicketId: null, lastTicketAt: null, startedAtMs: 1000 }
-      expect(shouldIssueNewTicket(contract, client, 1000 + NEW_TICKET_INTERVAL_MS - 1)).toBe(false)
-      expect(shouldIssueNewTicket(contract, client, 1000 + NEW_TICKET_INTERVAL_MS)).toBe(true)
-    })
   })
 })

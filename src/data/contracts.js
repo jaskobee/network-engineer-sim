@@ -20,7 +20,7 @@ export const CONTRACT_TYPES = {
 }
 
 let _contractIdCounter = 0
-export function setContractIdCounter(n) { _contractIdCounter = n }
+export function setContractIdCounter(n) { if (n > _contractIdCounter) _contractIdCounter = n }   // never move backwards
 
 /**
  * Creates a contract instance from a contractOutcome descriptor

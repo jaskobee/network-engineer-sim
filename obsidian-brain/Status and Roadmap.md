@@ -21,7 +21,9 @@ live repo for anything you're about to act on.
   `getMissionRuntime()`) — see [[Mission DSL]] and
   [[Mission Catalog]].
 - The career layer: persistent clients, monthly-support contracts, reputation tiers,
-  wall-clock SLA service tickets — see [[Career Layer]].
+  wall-clock SLA service tickets with randomized pacing, an alert ladder, a job board with offers,
+  and a Topology tab on every job — see [[Career Layer]].
+- DNS is designed (strict resolution, name-server lists, GUI for servers) but not built: `docs/DNS_DESIGN.md`.
 - The full networking model: bidirectional `checkPing` with `failureReason`/
   `failurePoint`, strict L2 switch, ROAS, DHCP (DORA/pools/relay/`dhclient`),
   NAT/PAT overload, zone-based stateful firewall with service/port matching, a
@@ -35,6 +37,9 @@ live repo for anything you're about to act on.
   inspector — see [[Dev Mode and QA]].
 - An endless, pannable floorplan (click-drag anywhere to pan, Figma-style) — see
   [[UI Component Map]].
+- A "Configure GUI" window for PCs, servers and IP phones (right-click) that drives the
+  same Linux shell as the terminal — see [[UI Component Map]]. Engine gaps found while
+  building it are listed in `.claude/brain/STATUS.md` → Known rough edges.
 - Autosave to localStorage + Export/Import JSON, reset guard, client-side beta login
   gate (`AuthContext`, bcryptjs).
 - CI: Vitest on PR, GitHub Pages deploy, AI accuracy review (`ai-review.js`), mission

@@ -203,6 +203,8 @@ function GuideTab({ laptopDevice, osType, guideMode }) {
   const cabled  = !!(iface?.connected_to)
   const powered = !!(laptopDevice?.powered)
   const hasGw   = !!(laptopDevice?.routing_table?.find(r => r.network === '0.0.0.0'))
+  // The adapter starts switched off (administratively down) and must be enabled, like an interface.
+  const enabled = !!iface && iface.status !== 'admin_down'
 
   const steps = osType === 'windows'
     ? winSteps(iface, hasIp, hasGw)
@@ -229,8 +231,17 @@ function GuideTab({ laptopDevice, osType, guideMode }) {
         <StepRow done={cabled} num={1} label="Cable connected"
           hint="Right-click the laptop on the floorplan → Connect → pick a switch or router port." />
         <StepRow done={powered} num={2} label="Power on"
-          hint="Right-click the laptop → Power On. The interface link comes up when the peer is also up." />
-        <StepRow done={hasIp} num={3}
+          hint="Right-click the laptop → Power On." />
+        <StepRow done={enabled} num={3} label="Network adapter enabled"
+          hint={osType === 'windows'
+            ? 'The adapter starts switched off. Open Terminal → netsh interface set interface name="Ethernet0" admin=enabled'
+            : 'The adapter starts switched off. Open Terminal → ip link set eth0 up'}
+          cmd={osType === 'windows'
+            ? 'netsh interface set interface name="Ethernet0" admin=enabled'
+            : 'ip link set eth0 up'}
+          guideMode={guideMode}
+        />
+        <StepRow done={hasIp} num={4}
           label={`IP address configured${hasIp && iface?.ip ? ` (${iface.ip})` : ''}`}
           hint={osType === 'windows'
             ? `Open Terminal → netsh interface ip set address "Ethernet0" static <ip> <mask> <gw>`
@@ -240,7 +251,7 @@ function GuideTab({ laptopDevice, osType, guideMode }) {
             : 'ip addr add 192.168.1.50/24 dev eth0'}
           guideMode={guideMode}
         />
-        <StepRow done={hasGw} num={4}
+        <StepRow done={hasGw} num={5}
           label={`Default gateway configured${hasGw ? ` (→ ${laptopDevice?.routing_table?.find(r => r.network === '0.0.0.0')?.next_hop})` : ''}`}
           hint={osType === 'windows'
             ? 'Included in the netsh command above, or: route add 0.0.0.0 mask 0.0.0.0 <gw>'
@@ -318,7 +329,7 @@ function SettingsTab({ osType, guideMode, onSetMode, onSetOs }) {
 // ── Inbox tab ─────────────────────────────────────────────────────────────────
 
 const NOTIFICATION_LED = {
-  'ticket-issued': 'blue', 'sla-warning': 'amber', 'sla-expired': 'red',
+  'ticket-issued': 'blue', 'ticket-reminder': 'amber', 'new-job': 'blue', 'sla-warning': 'amber', 'sla-expired': 'red',
   'ticket-completed': 'green', 'client-dormant': '',
 }
 
@@ -383,10 +394,13 @@ function winSteps(iface, hasIp, hasGw) {
   return [
     { cmd: 'ipconfig',                                                          desc: 'Show IP configuration'             },
     { cmd: 'ipconfig /all',                                                     desc: 'Show detailed IP config + MAC'     },
+    { cmd: 'netsh interface set interface name="Ethernet0" admin=enabled',      desc: 'Enable the network adapter'        },
+    { cmd: 'netsh interface show interface',                                    desc: 'Show adapters: Enabled / Connected' },
     { cmd: 'netsh interface ip set address "Ethernet0" static 192.168.1.50 255.255.255.0 192.168.1.1',
                                                                                 desc: 'Set static IP, mask, and gateway'  },
     { cmd: 'netsh interface ip set address "Ethernet0" dhcp',                   desc: 'Obtain IP via DHCP'                },
     { cmd: 'netsh interface ip show config',                                    desc: 'Show detailed interface settings'  },
+    { cmd: 'netsh interface ip delete address "Ethernet0" 192.168.1.50',        desc: 'Remove a static IP address'        },
     { cmd: 'ipconfig /release',                                                 desc: 'Release DHCP lease'                },
     { cmd: 'ipconfig /renew',                                                   desc: 'Renew DHCP lease'                  },
     { cmd: 'route print',                                                       desc: 'Display routing table'             },

@@ -20,6 +20,7 @@ export const SERVICE_TICKET_TEMPLATES = {
       title: "PC-2's network cable came loose",
       description: 'Sam says the Office PC dropped off the network. Reconnect it to the switch.',
       reward: 60,
+      resolution: 'Cable is connected again and service is restored.',
       fault: { type: 'disconnect', role: 'pc2' },
       deviceRoles: {
         switch: { type: 'switch', match: 'first',  label: 'Switch' },
@@ -39,6 +40,7 @@ export const SERVICE_TICKET_TEMPLATES = {
       title: 'PC-3 lost its IP address',
       description: 'The Back Room PC somehow lost its network configuration. Reassign it an address in the shop LAN.',
       reward: 60,
+      resolution: "PC-3 has its address back and service is restored.",
       fault: { type: 'clearIp', role: 'pc3' },
       deviceRoles: {
         router: { type: 'router', match: 'first', label: 'Router' },
@@ -57,17 +59,66 @@ export const SERVICE_TICKET_TEMPLATES = {
         },
       ],
     },
+    {
+      id: 'ticket_adapter_off_pc1',
+      title: "PC-1's network adapter was switched off",
+      description: 'The Register PC cannot reach anything — its network adapter has been disabled. Switch it back on.',
+      reward: 60,
+      resolution: "PC-1's network adapter is back on and service is restored.",
+      fault: { type: 'adminDown', role: 'pc1' },
+      deviceRoles: {
+        pc1: { type: 'pc', match: 'first', label: 'PC-1 (Register)' },
+      },
+      objectives: [
+        {
+          id: 't1',
+          label: "Switch PC-1's network adapter back on",
+          hint: [
+            'On the PC-1 terminal:',
+            { role: 'pc1', cmd: 'ip link set eth0 up' },
+          ],
+          condition: { type: 'interfaceConfigured', role: 'pc1', requires: ['ip', 'notAdminDown'] },
+        },
+      ],
+    },
+    {
+      id: 'ticket_router_lan_down',
+      title: 'The router LAN port was shut down',
+      description: "Nobody in the shop can reach the router — its LAN interface has been administratively shut down. Bring it back up.",
+      reward: 80,
+      resolution: 'The router LAN port is back up and service is restored.',
+      fault: { type: 'adminDown', role: 'router', ifaceName: 'GigabitEthernet0/0' },
+      deviceRoles: {
+        router: { type: 'router', match: 'first', label: 'Router' },
+      },
+      objectives: [
+        {
+          id: 't1',
+          label: 'Bring the router LAN interface back up',
+          hint: [
+            'On the Router terminal:',
+            'enable', 'configure terminal', 'interface GigabitEthernet0/0', 'no shutdown',
+          ],
+          condition: { type: 'interfaceConfigured', role: 'router', ifaceName: 'GigabitEthernet0/0', requires: ['ip', 'notAdminDown'] },
+        },
+      ],
+    },
   ],
 }
 
-export function pickTicketTemplate(clientId) {
+/**
+ * A random template for the client — never the same one twice in a row (when there is more than
+ * one), so the problems a player sees don't repeat on a loop. `rng` is injectable for tests.
+ */
+export function pickTicketTemplate(clientId, { lastTemplateId = null, rng = Math.random } = {}) {
   const templates = SERVICE_TICKET_TEMPLATES[clientId]
   if (!templates?.length) return null
-  return templates[Math.floor(Math.random() * templates.length)]
+  const pool = templates.length > 1 ? templates.filter(t => t.id !== lastTemplateId) : templates
+  return pool[Math.floor(rng() * pool.length)]
 }
 
 let _ticketIdCounter = 0
-export function setTicketIdCounter(n) { _ticketIdCounter = n }
+export function setTicketIdCounter(n) { if (n > _ticketIdCounter) _ticketIdCounter = n }   // never move backwards
 
 /**
  * Builds a ticket instance from a template. Does NOT apply the fault itself —
@@ -85,6 +136,7 @@ export function createTicketInstance(clientId, contractId, template, now, slaDur
     title: template.title,
     description: template.description,
     reward: template.reward,
+    resolution: template.resolution ?? null,
     fault: template.fault,
     deviceRoles: template.deviceRoles,
     objectives: template.objectives,
@@ -92,6 +144,8 @@ export function createTicketInstance(clientId, contractId, template, now, slaDur
     deadlineAt: now + slaDurationMs,
     pausedMs: 0,
     notifiedStages: [],
+    alertsSent: 1,            // the alert raised with the ticket; reminders follow engine/alertSchedule.js
+    lastAlertAt: now,
     faultApplied: false,
     status: 'open',
   }

@@ -17,7 +17,11 @@ paths:
    in React state.
 3. **GUI tools share state with the CLI** (Firewall Web UI, laptop tools). A rule added
    in the GUI must appear in `show running-config`, and vice versa. `show running-config`
-   is the arbiter.
+   is the arbiter. Pattern to copy: `HostConfigPanel` → `engine/hostConfig.js` (pure
+   planner: form → real commands, per OS) → `executeDeviceCommands`, with successful commands
+   passed to `logExecutedCommand` so the beginner hint ticks follow. **No component assigns
+   device fields directly** — the inspector's quick IP edit uses the same path
+   (`engine/interfaceAddress.js`). Never emit a Linux command for a Windows laptop or the reverse.
 4. **xterm tabs stay mounted**; hide with `display:none`. Never unmount a terminal to
    "switch" devices.
 5. **Two contexts, clear ownership**: `GameContext` = topology/engine/missions;
@@ -55,4 +59,9 @@ paths:
 14. **Terminal**: xterm uses Atkinson Mono 13px and loads it *before* re-measuring
     (see `TerminalPane.jsx`). Keep the default window wide enough (~85 columns) that IOS
     `show` output never wraps — wrapped output misrepresents real gear.
-
+15. **Layering (z-index scale)** — floorplan ≤ 50 · job panel 1500 · terminal / Configure GUI
+    windows 1600 · toasts 2400 · dialogs 2500+ · port-picker 2600 · admin laptop 3000 · **menus 5000**.
+    Menus always come over everything else; never give a window a value that covers a menu.
+16. **A component bug can hide from the build and the unit tests** (an undefined identifier only
+    throws when the component renders). After touching a component, load the app and exercise it
+    (`/verify-in-browser`) — watch the console for `pageerror`.

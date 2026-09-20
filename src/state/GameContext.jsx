@@ -8,7 +8,8 @@ import { serialize, saveToStorage, loadFromStorage, deserialize, exportToFile } 
 import { playPurchase, playMissionComplete, playSave, playCableDisconnect, playCableConnect } from '../utils/sounds.js'
 import { MISSIONS } from '../data/missions.js'
 import { buildMission005Scaffold } from '../data/mission005scaffold.js'
-import { getMissionMeta, resolveMissionRoles } from '../engine/missionEngine.js'
+import { getMissionMeta } from '../engine/missionEngine.js'
+import { applyTicketFault as applyTicketFaultToTopology } from '../engine/ticketFaults.js'
 import { computeRefund } from '../engine/economy.js'
 import { markResetting, isResetting } from '../utils/resetGuard.js'
 
@@ -152,6 +153,10 @@ export function GameProvider({ children }) {
 
   // Firewall console — device-agnostic; works in both missions and sandbox modes
   const [fwConsoleDeviceId,  setFwConsoleDeviceId]  = useState(null)
+
+  // Host "Configure GUI" window (pc/server/phone) — { deviceId, origin } or null.
+  // origin is the right-click point, purely cosmetic (where the window opens).
+  const [hostConfig, setHostConfig] = useState(null)
 
   // Admin Laptop — always-available management panel (WireFish + Browser)
   const [adminLaptopOpen, setAdminLaptopOpen] = useState(false)
@@ -526,19 +531,8 @@ export function GameProvider({ children }) {
   function applyTicketFault(ticket) {
     const entry = clientTopologiesRef.current.get(ticket.clientId)
     if (!entry || !ticket.fault) return
-    const devices = [...entry.topology.devices.values()]
-    const roles = resolveMissionRoles(ticket, devices)
-    const device = roles[ticket.fault.role]
-    if (!device) return
-
-    if (ticket.fault.type === 'disconnect') {
-      const iface = device.interfaces.find(i => i.connected_to)
-      if (iface) entry.topology.disconnect(`${device.id}:${iface.name}`)
-    } else if (ticket.fault.type === 'clearIp') {
-      const iface = device.interfaces.find(i => i.ip)
-      if (iface) { iface.ip = null; iface.subnet_mask = null }
-    }
-    refresh()
+    // The change itself (and its tests) live in engine/ticketFaults.js.
+    if (applyTicketFaultToTopology(entry.topology, ticket)) refresh()
   }
 
   function powerAllDevices() {
@@ -644,7 +638,9 @@ export function GameProvider({ children }) {
     const dev = activeTopoRef.current.devices.get(deviceId)
     if (!dev) return ['Error: device not found']
     const isWindowsLaptop = dev.type === 'laptop' && dev.os_type === 'windows'
-    const isLinuxHost     = dev.type === 'pc' || dev.type === 'server' || (dev.type === 'laptop' && !isWindowsLaptop)
+    // phone: same Linux shell as a PC (TerminalPane's PC_TYPES) — without it the
+    // command would land on the IOS engine.
+    const isLinuxHost     = dev.type === 'pc' || dev.type === 'server' || dev.type === 'phone' || (dev.type === 'laptop' && !isWindowsLaptop)
     const eng = isWindowsLaptop
       ? (isSandbox ? sbWinEngineRef.current : (activeClientEntry ? activeClientEntry.winEngine : winEngineRef.current))
       : isLinuxHost
@@ -906,6 +902,11 @@ export function GameProvider({ children }) {
     fwConsoleDeviceId,
     openFwConsole:  (id) => setFwConsoleDeviceId(id),
     closeFwConsole: ()   => setFwConsoleDeviceId(null),
+
+    // Host network settings window — GUI over the same Linux shell (see engine/hostConfig.js)
+    hostConfig,
+    openHostConfig:  (deviceId, origin) => setHostConfig({ deviceId, origin: origin ?? null }),
+    closeHostConfig: ()                 => setHostConfig(null),
 
     // Admin Laptop — always-visible management panel (WireFish + Browser)
     adminLaptopOpen, setAdminLaptopOpen,

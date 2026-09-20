@@ -196,6 +196,37 @@ export class Topology {
     if (remoteDev?.type === 'router') refreshSubifs(remoteDev)
   }
 
+  // Administratively enable or disable a host-style interface — Linux `ip link set up|down`,
+  // Windows `netsh interface set interface admin=enabled|disabled`. Carrier follows the far
+  // end exactly as on a real link: enabling raises the link only if the peer is enabled too
+  // (and wakes a peer that was waiting), disabling drops the peer's carrier at once. Switch
+  // SVIs and router subinterfaces that depend on either port are refreshed, as connect() does.
+  setInterfaceAdmin(ifaceId, enable) {
+    const iface = this._resolveIface(ifaceId)
+    if (!iface) return
+    const dev = this._getDeviceByIfaceId(ifaceId)
+    if (enable) {
+      if (iface.connected_to) {
+        const rem = this._resolveIface(iface.connected_to)
+        if (rem && rem.status !== 'admin_down') {
+          iface.status = 'up'
+          if (rem.status === 'down') rem.status = 'up'
+        } else {
+          iface.status = 'down'
+        }
+      } else {
+        iface.status = 'down'
+      }
+    } else {
+      iface.status = 'admin_down'
+      if (iface.connected_to) this.shutdownPeer(iface.connected_to)
+    }
+    for (const d of [dev, iface.connected_to ? this._getDeviceByIfaceId(iface.connected_to) : null]) {
+      if (d?.type === 'switch') _refreshSvis(d)
+      if (d?.type === 'router') refreshSubifs(d)
+    }
+  }
+
   // Called by CLI engines when an interface is shut down (IOS `shutdown`) or
   // brought admin_down (Linux `ip link set down`).  Propagates carrier-loss to
   // the directly connected peer interface — real hardware drops carrier to the

@@ -257,6 +257,50 @@ the test suite in `src/models/__tests__/dhcp.test.js`:
     Documented simplification.
 11. **Client-ID**: uses `"devId:ifaceName"` as a stand-in for a real MAC/DUID.
     Documented simplification.
+12. **A server re-offers a client the binding it already holds** (RFC 2131 §4.3.1, matched
+    by client-ID) before choosing a new address. Asking twice renews rather than leaking a
+    second address and an orphan binding. Enforced by `pcshell.test.js` N9 / `winshell.test.js` W6, W8.
+
+---
+
+## Host shell rules (Linux iproute2 and Windows CMD)
+
+Implemented in `src/models/PCCLIEngine.js`, `src/models/WindowsCLIEngine.js`, and the shared
+`Device.nextHopReachable()` / `Device.flushRoutesVia()` / `Topology.setInterfaceAdmin()`.
+Enforced by `src/models/__tests__/pcshell.test.js` (N1–N9) and `winshell.test.js` (W1–W12).
+These follow Prompt 3 (gateway inside the host's own subnet), Prompt 4 (a next hop must be
+reachable over a connected network) and Prompt 5 (interface states) for end hosts.
+
+**Linux (`ip`, `dhclient`)**
+1. A default/static route's gateway must be reachable over a directly connected network: an
+   interface with an address covering it that is not administratively down. Otherwise
+   `Error: Nexthop has invalid gateway.` A cable-less but *enabled* adapter accepts it.
+2. `ip route add` on a destination that already has a route → `RTNETLINK answers: File exists`;
+   `ip route replace` swaps or creates. `ip route del` of a route that isn't there →
+   `RTNETLINK answers: No such process`.
+3. `ip addr add` of the address already present → `File exists`; `ip addr del` must name the
+   configured address (`Cannot assign requested address`). Deleting an interface's address
+   flushes the routes that were reachable only through it.
+4. `dhclient` stays resident: a second run on a leased interface is refused
+   (`dhclient(<pid>) is already running - exiting.`); release (`dhclient -r`) first.
+
+**Windows (`netsh`, `ipconfig`)**
+5. The adapter is enabled/disabled with `netsh interface set interface name="…" admin=enabled|disabled`
+   (or the legacy `"name" enable|disable`); `netsh interface show interface` reports
+   Enabled/Disabled apart from Connected/Disconnected. Same carrier rules as `ip link set`.
+6. `netsh interface ip set address` replaces the whole IPv4 configuration (address, gateway,
+   lease). An invalid mask, gateway, or a gateway outside the subnet is refused — never
+   silently corrected. `… dhcp` on a static adapter switches to DHCP; on a leased adapter →
+   `DHCP is already enabled on this interface.`
+7. `ipconfig /renew` keeps the address; on a static or disabled adapter it fails with
+   `The operation failed as no adapter is in the state permissible for this operation.`
+8. Failure output uses Windows wording only — no Linux commands leak into Windows errors.
+
+### Simplifications (documented, not bugs)
+- Every interface boots administratively down, so a host must be enabled before it can take a
+  gateway (real hosts boot up). `ip link set down/up` keeps static routes (real Linux flushes
+  them on down). One address per interface. One default route per host. No DNS setting on
+  hosts yet — see `docs/DNS_DESIGN.md`.
 
 ---
 

@@ -13,6 +13,7 @@ export const CLIENT_TEMPLATES = [
   {
     id: 'client_local_shop',
     companyName: "Sam's Corner Store",
+    contactName: 'Sam',
     industry: 'retail',
     avatar: '🏪',
     description: "A friend's small corner shop — the player's very first client.",
@@ -21,6 +22,17 @@ export const CLIENT_TEMPLATES = [
     initialMissionIds: ['mission_local_shop_1'],
   },
 ]
+
+/**
+ * The person the player deals with, for messages like "Sam is happy with your service".
+ * Older saves predate `contactName`, so fall back to the owner in "Sam's Corner Store",
+ * then to the company name.
+ */
+export function clientContactName(client) {
+  if (client?.contactName) return client.contactName
+  const owner = /^(.+?)['’]s\b/.exec(client?.companyName ?? '')
+  return owner ? owner[1] : (client?.companyName ?? 'The client')
+}
 
 export function findClientTemplate(templateId) {
   return CLIENT_TEMPLATES.find(c => c.id === templateId) ?? null
@@ -32,6 +44,7 @@ export function createClientInstance(templateId) {
   return {
     id: template.id,
     companyName: template.companyName,
+    contactName: template.contactName ?? null,
     industry: template.industry,
     avatar: template.avatar,
     reputationRelationship: 0,

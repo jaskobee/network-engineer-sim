@@ -1,9 +1,9 @@
 # STATUS — where NetSim is right now
 
-_Last refreshed: 2026-09-20. Keep this describing **now**; remove finished items._
+_Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design). Keep this describing **now**; remove finished items._
 
 ## Health
-- `npm test` → **440 tests / 21 files passing** (Vitest 4).
+- `npm test` → **721 tests / 31 files passing** (Vitest 4).
 - `npx vite build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
 
@@ -28,6 +28,16 @@ _Last refreshed: 2026-09-20. Keep this describing **now**; remove finished items
 - **Admin Laptop** (`components/AdminLaptop*.jsx`) with a real-data Dashboard tab (balance,
   incidents on an SLA timeline, client happiness, earnings), Firewall Web UI, Browser panel,
   Wireshark panel — GUI writes the *same* device state the CLI does.
+- **Host "Configure GUI"** (right-click a powered PC / server / IP phone / laptop →
+  `HostConfigPanel.jsx`): a form over the machine's own shell. `engine/hostConfig.js` (pure)
+  turns it into real commands — `ip` / `dhclient` on Linux, `netsh` / `ipconfig` on a Windows
+  laptop — runs them through the same engine as the terminal (`executeDeviceCommands`), and
+  shows them before and after Apply. Routers and switches are CLI-only on purpose; firewalls
+  keep their own console.
+- **Inspector quick IP edit** goes through the same engines (`engine/interfaceAddress.js`):
+  hosts via the planner above, routers/firewalls/switch SVIs via real IOS (so overlap /
+  duplicate / network-address checks apply, and the terminal's CLI mode is left as it was).
+  The ISP is not editable.
 - **Endless, pannable floorplan** (drag empty background; `panOffset` in `GameContext`).
 - **UI design system** — tokens in `index.css` `:root`, LED-as-signal colour language, two
   self-hosted fonts, SVG icon set; rules in `.claude/rules/ui.md`.
@@ -38,12 +48,26 @@ _Last refreshed: 2026-09-20. Keep this describing **now**; remove finished items
 - **CI** (`.github/`): vitest on PR, GitHub Pages deploy, AI accuracy review
   (`ai-review.js`), mission QA, failure explainer, full accuracy audit.
 
+- **Paced service tickets + alerts** (`engine/ticketScheduler|alertSchedule|ticketEngine|ticketFaults.js`):
+  randomized 10–20 min gaps after a fix, ×2.5 while another job is active, ≤2 open, reminder ladder
+  5/10/20 min, four fault types (loose cable, IP reset, adapter off, router port shut). Fixing one
+  shows a "Service restored" toast + inbox message with reputation and money.
+- **Job board + offers** (`engine/jobBoard.js`, `NotificationLayer`): Career lists only available
+  jobs; new ones pop an accept / decline-for-now card; the Career rail icon carries a badge (open
+  tickets + pending offers). Rail buttons are large with labels.
+- **View job → Brief / Topology tabs** (also from the active job panel). Client jobs draw the real
+  devices (`blueprint.topology`); legacy 003–005 diagrams fixed and covered by a layout test.
+- **Host Configure GUI** (right-click → Configure GUI on PC/server/laptop) writes through the CLI
+  engines; inspector quick IP edit uses the same path.
+
 ## In flight / recently touched
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
   UX UI and gameplay", "fix mission view and visual floor plan", "floor clean up").
 - New mission + narrative type ("full new playstyle") — the client/career layer above.
 
 ## Next up (in priority order)
+0. **DNS** — design agreed (`docs/DNS_DESIGN.md`): strict resolution, name-server *lists*,
+   GUI for server records, `resolvectl` on Linux. Phase 1 (client + resolver) awaits the go-ahead.
 1. **Act 2 — fault-injection / troubleshooting missions**: pre-broken topologies, no
    step-by-step hints, diagnose with `show` commands. Design in
    `docs/NETSIM_FAULTS_AND_FEATURES.md`. Use `/fault-scenario`.
@@ -53,13 +77,16 @@ _Last refreshed: 2026-09-20. Keep this describing **now**; remove finished items
 4. Admin-laptop tool family from `docs/ADMIN_LAPTOP_AND_TOOLS.md` — port scanner and
    WireFish are still spec-only; the Phase 3 packet-engine refactor needs an owner decision.
 5. Backlog: live-network/SLA mode polish, mastery scoring, shop margins,
-   click-to-connect cabling, blueprint diagrams in briefings.
+   click-to-connect cabling.
 
 ## Known rough edges
-- **Mission blueprint diagrams have layout bugs in their data** (`src/data/missions.js`):
-  `mission_005` places three 155-wide segments at x = 8/150/280 in a 400-wide viewBox, so
-  boxes overlap and the ISP box is clipped (and the firewall's long subnet string
-  overflows); `mission_004`'s two link labels overlap. Fix the segment coordinates/viewBox.
+- **Host-shell simplifications still open** (documented, not bugs): every interface boots
+  `admin_down` (real Linux/Windows hosts boot with the adapter up) — fixing it properly means
+  deriving link state from power (a never-powered switch already forwards) *and* rewriting the
+  "bring it up" step in every mission, so it needs its own change and the owner's go-ahead;
+  `ip link set down/up` keeps static routes (real Linux flushes them on down); one address per
+  interface (a second `ip addr add` replaces, real Linux adds a secondary); one default route
+  per host; a Windows adapter can't be given a static DNS. DNS itself: see `docs/DNS_DESIGN.md`.
 - The main game shell is desktop-only (drag-and-drop map, terminals); login and the tour are
   responsive down to phone width.
 - `docs/` filenames are inconsistent in case (`Roas-Sandbox-LAB.md`, `dhcp-sandbox-lab.md`,

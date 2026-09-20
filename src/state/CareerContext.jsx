@@ -27,15 +27,15 @@
  * objects. All `netsim_*` keys are wiped together by GameContext's
  * newGame() reset sweep.
  */
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { createClientInstance, CLIENT_TEMPLATES } from '../data/clients.js'
-import { createContract } from '../data/contracts.js'
-import { scoreAfterMission, tierForScore, scoreAfterTicket, scoreAfterExpiredTicket, satisfactionDelta } from '../engine/reputation.js'
-import { shouldIssueNewTicket, ticketUrgency, isTicketExpired, SLA_DURATION_MS, DORMANCY_THRESHOLD } from '../engine/contractClock.js'
-import { pickTicketTemplate, createTicketInstance } from '../data/serviceTickets.js'
+import { createContract, setContractIdCounter } from '../data/contracts.js'
+import { scoreAfterMission, tierForScore, scoreAfterTicket, satisfactionDelta } from '../engine/reputation.js'
+import { tickTickets, afterTicketFixed } from '../engine/ticketEngine.js'
+import { syncJobOffers as reconcileOffers } from '../engine/jobBoard.js'
+import { setTicketIdCounter } from '../data/serviceTickets.js'
 import {
-  ticketIssuedNotification, slaWarningNotification, slaExpiredNotification,
-  ticketCompletedNotification, clientDormantNotification,
+  ticketCompletedNotification, ticketResolutionMessage, newJobNotification, setNotificationIdCounter,
 } from '../data/notifications.js'
 import { isResetting } from '../utils/resetGuard.js'
 
@@ -60,11 +60,25 @@ function _loadCareer() {
   }
 }
 
+// Ids are counters that start from zero on every page load. Saved tickets, notifications and
+// contracts already hold ids like `ticket-3` / `note-7`, so the counters must resume past them —
+// otherwise a new one reuses a saved id (React key clashes, a new ticket overwriting an open one).
+function _restoreIdCounters(saved) {
+  const maxOf = (ids, re) => ids.reduce((m, id) => { const n = re.exec(String(id))?.[1]; return n ? Math.max(m, +n) : m }, 0)
+  setTicketIdCounter(maxOf(Object.keys(saved?.activeTickets ?? {}), /^ticket-(\d+)$/))
+  setNotificationIdCounter(maxOf((saved?.notifications ?? []).map(n => n.id), /^note-(\d+)$/))
+  setContractIdCounter(maxOf(Object.keys(saved?.contracts ?? {}), /^contract-(\d+)$/))
+}
+
+const MAX_NOTIFICATIONS = 60           // the inbox keeps the newest; old history isn't worth the space
+const TOAST_MS = 10_000
+
 const CareerContext = createContext(null)
 
 export function CareerProvider({ children }) {
   const [company, setCompany] = useState(_loadCompany)
   const savedCareer = _loadCareer()
+  useState(() => { _restoreIdCounters(savedCareer); return null })   // once, before anything can mint an id
   const [reputation, setReputation] = useState(savedCareer?.reputation ?? 0)
   const [clients, setClients]     = useState(savedCareer?.clients ?? {})   // clientId -> Client
   const [contracts, setContracts] = useState(savedCareer?.contracts ?? {}) // contractId -> Contract
@@ -80,6 +94,22 @@ export function CareerProvider({ children }) {
   // mission income. Additive to the unversioned save blob, same pattern as
   // `activeTicket`/floorplan `labels` before it.
   const [ticketHistory, setTicketHistory] = useState(savedCareer?.ticketHistory ?? [])
+  // Job offers: which available jobs the player has been told about and what they did with them
+  // (engine/jobBoard.js). The refs are the source of truth between renders — an effect that runs
+  // twice before a re-render must not offer the same job twice — and the state mirrors them for
+  // rendering and saving.
+  const [jobOffers, setJobOffers] = useState(savedCareer?.jobOffers ?? {})
+  const [jobOffersSeeded, setJobOffersSeeded] = useState(savedCareer?.jobOffersSeeded ?? false)
+  const offersRef = useRef(jobOffers)
+  const seededRef = useRef(jobOffersSeeded)
+  // Transient on-screen messages (not saved): "Service restored…" and the like.
+  const [toasts, setToasts] = useState([])
+
+  // The tick below runs from a long-lived interval, so it must read the LATEST state — never the
+  // state captured when the interval was created (that stale copy is what raised a ticket every tick).
+  const latest = useRef(null)
+  latest.current = { reputation, clients, contracts, activeTickets }
+  const lastTickAtRef = useRef(null)
 
   // Persist reputation/clients/contracts/tickets/notifications as they change.
   // Runs after every render where one of them changed — cheap (small JSON)
@@ -87,9 +117,9 @@ export function CareerProvider({ children }) {
   useEffect(() => {
     if (isResetting()) return
     try {
-      localStorage.setItem(CAREER_KEY, JSON.stringify({ reputation, clients, contracts, activeTickets, notifications, ticketHistory }))
+      localStorage.setItem(CAREER_KEY, JSON.stringify({ reputation, clients, contracts, activeTickets, notifications, ticketHistory, jobOffers, jobOffersSeeded }))
     } catch { /* ignore quota errors */ }
-  }, [reputation, clients, contracts, activeTickets, notifications, ticketHistory])
+  }, [reputation, clients, contracts, activeTickets, notifications, ticketHistory, jobOffers, jobOffersSeeded])
 
   // Seed the game's first client the moment a company exists but has none
   // yet — covers both "just created a company" (Phase 5's onboarding) and
@@ -161,96 +191,27 @@ export function CareerProvider({ children }) {
 
   // ── Background contract tickets (SLA-timed maintenance work) ───────────────
   //
-  // The single orchestration entry point, called from ContractClockDriver.jsx
-  // (mounted once in App.jsx, the one place with both useGame() and
-  // useCareer() readily available) rather than from an internal interval
-  // here — CareerContext has no way to know whether a job-board mission is
-  // currently active (that's GameContext state), and a ticket's SLA clock
-  // must PAUSE while one is, so a ticket can never expire through no fault of
-  // the player. The caller passes that in as `activeMissionId`.
-  // `contractsInput`/`ticketsInput` default to live state, but callers that
-  // just mutated timestamps in the SAME synchronous pass (see
-  // devFastForwardContracts below) must pass the freshly-computed values
-  // directly — setContracts()/setActiveTickets() don't apply until the next
-  // render, so reading the (still-stale) `contracts`/`activeTickets` closure
-  // immediately afterward would evaluate against pre-fast-forward timestamps.
-  // `forceCommit` guarantees contractsInput/ticketsInput get persisted even
-  // when nothing "eventful" happened this pass (no threshold crossed) — the
-  // changed-flags below exist to skip pointless setState calls on the real
-  // ContractClockDriver's frequent no-op polling, but a caller that just
-  // computed genuinely new timestamps (like a fast-forward) must not have
-  // that optimization silently discard them.
-  function tickContracts(activeMissionId, now, contractsInput = contracts, ticketsInput = activeTickets, forceCommit = false) {
-    let nextReputation = reputation
-    const nextClients   = { ...clients }
-    const nextContracts = { ...contractsInput }
-    const nextTickets   = { ...ticketsInput }
-    const newNotifications = []
-    let clientsChanged = false, contractsChanged = forceCommit, ticketsChanged = forceCommit
-
-    for (const contract of Object.values(contractsInput)) {
-      const client = nextClients[contract.clientId]
-      if (!client) continue
-
-      const openTicket = contract.openTicketId ? nextTickets[contract.openTicketId] : null
-
-      if (openTicket) {
-        // Pause the clock entirely while a job-board mission is active —
-        // a ticket can never expire through no fault of the player.
-        if (activeMissionId) {
-          nextTickets[openTicket.id] = { ...openTicket, pausedMs: (openTicket.pausedMs ?? 0) + 15_000 }
-          ticketsChanged = true
-          continue
-        }
-
-        if (isTicketExpired(openTicket, now)) {
-          // Force-closed, unaddressed: reputation/satisfaction penalty,
-          // clear the ticket, track the miss, possibly go dormant.
-          nextReputation = scoreAfterExpiredTicket(nextReputation).newScore
-          const missed = (client.consecutiveMissedTickets ?? 0) + 1
-          const goingDormant = missed >= DORMANCY_THRESHOLD
-          nextClients[contract.clientId] = {
-            ...client,
-            satisfaction: Math.max(0, client.satisfaction + satisfactionDelta('expired')),
-            consecutiveMissedTickets: missed,
-            dormant: goingDormant,
-          }
-          clientsChanged = true
-          nextContracts[contract.id] = { ...contract, openTicketId: null, lastTicketAt: now }
-          contractsChanged = true
-          delete nextTickets[openTicket.id]
-          ticketsChanged = true
-          newNotifications.push(slaExpiredNotification(client, openTicket, now))
-          if (goingDormant) newNotifications.push(clientDormantNotification(client, now))
-          continue
-        }
-
-        const urgency = ticketUrgency(openTicket, now)
-        if (urgency === 'warning' && !openTicket.notifiedStages.includes('warning')) {
-          nextTickets[openTicket.id] = { ...openTicket, notifiedStages: [...openTicket.notifiedStages, 'warning'] }
-          ticketsChanged = true
-          newNotifications.push(slaWarningNotification(client, openTicket, now))
-        }
-        continue
-      }
-
-      if (shouldIssueNewTicket(contract, client, now)) {
-        const template = pickTicketTemplate(contract.clientId)
-        if (!template) continue
-        const ticket = createTicketInstance(contract.clientId, contract.id, template, now, SLA_DURATION_MS)
-        nextTickets[ticket.id] = ticket
-        ticketsChanged = true
-        nextContracts[contract.id] = { ...contract, openTicketId: ticket.id, lastTicketAt: now }
-        contractsChanged = true
-        newNotifications.push(ticketIssuedNotification(client, ticket, now))
-      }
+  // The single orchestration entry point, called from ContractClockDriver.jsx (mounted once in
+  // App.jsx, where both useGame() and useCareer() are available). The policy itself — when a ticket
+  // may appear, the cooldown after a fix, less often while the player is busy, the SLA clock pausing,
+  // the back-off reminders — is engine/ticketEngine.js, a pure function of the state passed in.
+  // `activeMissionId` says whether the player is on a job-board mission (busy).
+  // `contractsInput`/`ticketsInput` let devFastForwardContracts pass values it has just computed
+  // (setState hasn't applied them yet); `forceCommit` saves them even if nothing "eventful" happened.
+  function tickContracts(activeMissionId, now, contractsInput = null, ticketsInput = null, forceCommit = false) {
+    const cur = latest.current
+    const r = tickTickets(
+      { reputation: cur.reputation, clients: cur.clients, contracts: contractsInput ?? cur.contracts, tickets: ticketsInput ?? cur.activeTickets },
+      { now, prevTickAt: lastTickAtRef.current, busy: !!activeMissionId },
+    )
+    lastTickAtRef.current = now
+    if (r.changed.reputation) setReputation(r.reputation)
+    if (r.changed.clients)    setClients(r.clients)
+    if (forceCommit || r.changed.contracts) setContracts(r.contracts)
+    if (forceCommit || r.changed.tickets)   setActiveTickets(r.tickets)
+    if (r.notifications.length > 0) {
+      setNotifications(prev => [...r.notifications.slice().reverse(), ...prev].slice(0, MAX_NOTIFICATIONS))
     }
-
-    if (nextReputation !== reputation) setReputation(nextReputation)
-    if (clientsChanged)   setClients(nextClients)
-    if (contractsChanged) setContracts(nextContracts)
-    if (ticketsChanged)   setActiveTickets(nextTickets)
-    if (newNotifications.length > 0) setNotifications(prev => [...newNotifications.reverse(), ...prev])
   }
 
   /** Applies a newly-issued ticket's real topology fault (GameContext already
@@ -273,9 +234,15 @@ export function CareerProvider({ children }) {
     })
   }
 
-  /** Call once GameContext confirms every objective on the ticket passed. */
+  /**
+   * Call once GameContext confirms every objective on the ticket passed. Pays out reputation and
+   * satisfaction, starts the client's next (randomized, cooled-down) wait, and TELLS the player:
+   * a toast and an inbox message — "Cable is connected again and service is restored. Sam is
+   * happy with your service. You gained 5 reputation and earned $60."
+   */
   function completeTicket(ticket, completedAtMs) {
     const { newScore, kind } = scoreAfterTicket(reputation, ticket, completedAtMs)
+    const gained = newScore - reputation                   // the real change (the floor at 0 can shrink a penalty)
     setReputation(newScore)
     setClients(prev => {
       const client = prev[ticket.clientId]
@@ -292,7 +259,7 @@ export function CareerProvider({ children }) {
     setContracts(prev => {
       const contract = prev[ticket.contractId]
       if (!contract) return prev
-      return { ...prev, [ticket.contractId]: { ...contract, openTicketId: null, lastTicketAt: completedAtMs } }
+      return { ...prev, [ticket.contractId]: afterTicketFixed(contract, ticket, completedAtMs) }
     })
     setActiveTickets(prev => {
       const next = { ...prev }
@@ -300,11 +267,48 @@ export function CareerProvider({ children }) {
       return next
     })
     const client = clients[ticket.clientId]
-    if (client) setNotifications(prev => [ticketCompletedNotification(client, ticket, kind, completedAtMs), ...prev])
+    if (client) {
+      setNotifications(prev => [ticketCompletedNotification(client, ticket, kind, completedAtMs, { gained, reward: ticket.reward }), ...prev].slice(0, MAX_NOTIFICATIONS))
+      const { title, body } = ticketResolutionMessage(client, ticket, kind, gained, ticket.reward)
+      pushToast({ kind: kind === 'late' ? 'info' : 'success', title, body })
+    }
     setTicketHistory(prev => [...prev, {
       clientId: ticket.clientId, title: ticket.title, reward: ticket.reward, kind, completedAt: completedAtMs,
     }])
-    return { kind, newReputation: newScore }
+    return { kind, gained, newReputation: newScore }
+  }
+
+  // ── Toasts ─────────────────────────────────────────────────────────────────
+  let _toastSeq = 0
+  function pushToast({ kind = 'info', title, body }) {
+    const id = `toast-${Date.now()}-${++_toastSeq}`
+    setToasts(prev => [...prev, { id, kind, title, body }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), TOAST_MS)
+  }
+  function dismissToast(id) { setToasts(prev => prev.filter(t => t.id !== id)) }
+
+  // ── Job offers ─────────────────────────────────────────────────────────────
+  /**
+   * Called by JobOfferDriver whenever the set of available jobs may have changed. Jobs that are new
+   * since the last look become offers (and one inbox message each); the very first look is silent.
+   */
+  function syncJobOffers(availableJobs, now = Date.now()) {
+    const ids = availableJobs.map(m => m.id)
+    const r = reconcileOffers(offersRef.current, seededRef.current, ids, now)
+    if (r.offers !== offersRef.current) { offersRef.current = r.offers; setJobOffers(r.offers) }
+    if (r.seeded !== seededRef.current) { seededRef.current = r.seeded; setJobOffersSeeded(r.seeded) }
+    if (r.fresh.length > 0) {
+      const notes = r.fresh.map(id => availableJobs.find(m => m.id === id)).filter(Boolean).map(m => newJobNotification(m, now))
+      setNotifications(prev => [...notes.reverse(), ...prev].slice(0, MAX_NOTIFICATIONS))
+    }
+  }
+
+  /** The player looked at the offer / turned it down for now: it stays on the board, no longer news. */
+  function resolveJobOffer(missionId, status = 'declined') {
+    const cur = offersRef.current[missionId]
+    if (!cur) return
+    offersRef.current = { ...offersRef.current, [missionId]: { ...cur, status } }
+    setJobOffers(offersRef.current)
   }
 
   function markNotificationRead(id) {
@@ -329,6 +333,8 @@ export function CareerProvider({ children }) {
       shiftedContracts[id] = {
         ...c,
         lastTicketAt: c.lastTicketAt != null ? c.lastTicketAt - ms : null,
+        lastTicketIssuedAt: c.lastTicketIssuedAt != null ? c.lastTicketIssuedAt - ms : null,
+        ticketGapStartedAt: c.ticketGapStartedAt != null ? c.ticketGapStartedAt - ms : null,
         startedAtMs: (c.startedAtMs ?? Date.now()) - ms,
       }
     }
@@ -348,6 +354,7 @@ export function CareerProvider({ children }) {
         ...t,
         issuedAt: t.issuedAt - ms,
         deadlineAt: t.deadlineAt - ms,
+        lastAlertAt: t.lastAlertAt != null ? t.lastAlertAt - ms : t.lastAlertAt,
         pausedMs: activeMissionId ? (t.pausedMs ?? 0) + ms : (t.pausedMs ?? 0),
       }
     }
@@ -362,6 +369,8 @@ export function CareerProvider({ children }) {
     activeTickets, notifications, ticketHistory,
     tickContracts, markTicketFaultApplied, acceptTicket, completeTicket, markNotificationRead,
     devFastForwardContracts,
+    jobOffers, syncJobOffers, resolveJobOffer,
+    toasts, pushToast, dismissToast,
   }
 
   return <CareerContext.Provider value={value}>{children}</CareerContext.Provider>

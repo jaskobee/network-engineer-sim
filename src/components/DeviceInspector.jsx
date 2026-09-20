@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useGame } from '../state/GameContext.jsx'
-import { maskToPrefixLen, isValidIp, isHostAddress, networkAddress, broadcastAddress } from '../models/ipUtils.js'
+import { maskToPrefixLen } from '../models/ipUtils.js'
+import { planAddressEdit, runAddressPlan } from '../engine/interfaceAddress.js'
 import ConfigSummary from './ConfigSummary.jsx'
 import { IconCheck, IconClose } from './icons.jsx'
 
 export default function DeviceInspector() {
   const {
     selectedDeviceId, getDevice, devices, topology,
-    connectInterfaces, disconnectInterface, refresh,
+    connectInterfaces, disconnectInterface, executeDeviceCommands, logExecutedCommand,
   } = useGame()
 
   const [fromIface, setFromIface] = useState('')
@@ -44,52 +45,28 @@ export default function DeviceInspector() {
     setIpError(null)
   }
 
+  // A quick edit still goes through the CLI engines (engine/interfaceAddress.js): ip / dhclient
+  // or netsh on a host, real IOS on a router — so every check the terminal makes applies here
+  // too, and a leased host hands its lease back instead of keeping a stale flag.
   function applyEditIp() {
     if (!editingIp) return
     const iface = device.getInterface(editingIp.ifaceName)
     if (!iface) { setEditingIp(null); return }
 
-    const ip = editingIp.ip.trim()
-    const prefixNum = parseInt(editingIp.prefix, 10)
+    const plan = planAddressEdit(topology, device, iface.name, editingIp.ip, editingIp.prefix)
+    const problem = Object.values(plan.errors)[0]
+    if (problem) { setIpError(problem); return }
 
-    if (!ip) {
-      iface.ip = null
-      iface.subnet_mask = null
-      setIpError(null)
-      refresh()
-      setEditingIp(null)
-      return
+    if (plan.commands.length) {
+      const res = runAddressPlan(cmd => executeDeviceCommands(device.id, [cmd]), device, iface.name, plan)
+      for (const s of res.steps) if (s.ok) logExecutedCommand(device.id, s.cmd)   // counts as typed, like the Configure GUI
+      if (!res.ok) {
+        const said = res.steps.at(-1).output.map(l => String(l).replace(/^%\s*/, '').trim()).filter(Boolean).join(' ')
+        setIpError(said || 'The device refused that address.')
+        return
+      }
     }
-
-    if (!isValidIp(ip) || isNaN(prefixNum) || prefixNum < 0 || prefixNum > 32) {
-      setIpError('Invalid IP address or prefix length')
-      return
-    }
-
-    const n    = prefixNum === 0 ? 0 : (0xffffffff << (32 - prefixNum)) >>> 0
-    const mask = [n >>> 24, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff].join('.')
-
-    if (!isHostAddress(ip, mask)) {
-      const net   = networkAddress(ip, mask)
-      const bcast = broadcastAddress(ip, mask)
-      if (ip === net)   { setIpError(`${ip} is the network address — not assignable to a host`); return }
-      if (ip === bcast) { setIpError(`${ip} is the broadcast address — not assignable to a host`); return }
-      setIpError('Invalid host address for this prefix length')
-      return
-    }
-
-    const dup = topology && [...topology.devices.values()].find(d =>
-      d !== device && d.interfaces.some(i => i.ip === ip)
-    )
-    if (dup) {
-      setIpError(`${ip} is already assigned to ${dup.hostname}`)
-      return
-    }
-
     setIpError(null)
-    iface.ip          = ip
-    iface.subnet_mask = mask
-    refresh()
     setEditingIp(null)
   }
 
@@ -185,6 +162,10 @@ export default function DeviceInspector() {
                       <button className="btn icon" onClick={applyEditIp} title="Apply" aria-label="Apply" style={{ width: 26, height: 26 }}><IconCheck size={14} /></button>
                       <button className="btn ghost icon" onClick={cancelEditIp} title="Cancel" aria-label="Cancel" style={{ width: 26, height: 26 }}><IconClose size={14} /></button>
                     </div>
+                  ) : device.type === 'isp' ? (
+                    <span title="The ISP is mission infrastructure — its address can't be edited." style={{ color: 'var(--ink)' }}>
+                      {cidr || '—'}
+                    </span>
                   ) : device.type === 'switch' && !iface.name.startsWith('Vlan') ? (
                     <span
                       title="L2 switchport — no IP. Use 'interface vlan <id>' for management IP."
@@ -245,7 +226,9 @@ export default function DeviceInspector() {
       <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 10 }}>
         {device.type === 'switch'
           ? 'Switchports are L2 only. Use the CLI to configure SVIs (interface vlan <id>).'
-          : 'Click an IP address to edit it. Leave blank to clear.'}
+          : device.type === 'isp'
+            ? 'The ISP is mission infrastructure — its address is fixed.'
+            : 'Click an IP address to edit it. Leave blank to clear.'}
       </div>
 
       {/* Cable connection controls */}

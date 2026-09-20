@@ -89,7 +89,7 @@ export default function TerminalPane() {
   const containerStyle = {
     position: 'fixed', left: floatPos.x, top: floatPos.y,
     width: floatSize.w, height: minimized ? 'auto' : floatSize.h,
-    zIndex: 300, borderRadius: 8, overflow: 'hidden',
+    zIndex: 1600, borderRadius: 8, overflow: 'hidden',   // above the floating job panel (1500): a window you just opened is never underneath it
     boxShadow: '0 8px 40px rgba(0,0,0,0.8)', border: '1px solid #2f6fbd',
     display: 'flex', flexDirection: 'column', background: '#0b0f11',
     transformOrigin: originStyle,

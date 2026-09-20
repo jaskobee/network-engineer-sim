@@ -8,7 +8,6 @@
  * contracts" tool during playtesting, not a final answer.
  */
 
-export const NEW_TICKET_INTERVAL_MS = 5 * 60 * 1000   // gap after a ticket resolves before the next one can fire
 export const SLA_DURATION_MS        = 8 * 60 * 1000   // time from issuance to deadline
 export const SLA_WARNING_RATIO      = 0.6              // urgency turns 'warning' once this fraction of SLA_DURATION_MS has elapsed
 export const TICKET_GRACE_MS        = 6 * 60 * 1000   // extra time past the deadline before a ticket is force-expired
@@ -46,17 +45,8 @@ export function isTicketExpired(ticket, now) {
   return ticketUrgency(ticket, now) === 'expired'
 }
 
-/**
- * A contract is due a new ticket when: it has no open ticket, its client isn't
- * dormant, and enough real time has passed since the last one resolved (or
- * since the contract started, if none has fired yet).
- */
-export function shouldIssueNewTicket(contract, client, now) {
-  if (!contract?.active || client?.dormant) return false
-  if (contract.openTicketId) return false
-  const since = contract.lastTicketAt ?? contract.startedAtMs ?? 0
-  return (now - since) >= NEW_TICKET_INTERVAL_MS
-}
+// When a NEW ticket may appear (randomized gap, cooldown after a fix, busy stretch, global
+// spacing) lives in ticketScheduler.js; how often an open one may nag is in alertSchedule.js.
 
 // ── Future extension point (explicitly out of scope for this phase) ─────────
 // A later "hire staff" system could call the same acceptTicket()/completeTicket()

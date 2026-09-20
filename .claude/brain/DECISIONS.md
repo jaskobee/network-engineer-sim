@@ -62,12 +62,31 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 - **Contract SLA time is real wall-clock** (`Date.now()`), tuned for a 20–60 min
   session; paused while a job-board mission is active.
 
+- **DNS: servers are configured in a GUI (Packet-Tracer style), routers stay CLI; resolution is
+  strict; Linux uses `resolvectl`; a host holds a list of name servers (primary + secondary).**
+  *Why:* Windows DNS Manager and Packet Tracer both use a GUI for server records; CCNA tests the
+  router CLI; a single name server per host would have to be unlearned. Design only — not built yet;
+  see `docs/DNS_DESIGN.md`. (2026-09-20)
+- **Long-term-contract tickets are paced, not periodic.** First ticket 5–9 min after a contract
+  starts, then a rolled 10–20 min gap after each fix or expiry, ×2.5 while a job-board mission is
+  active, never closer than 4 min between any two, max 2 open, alerts at issue then +5 / +10 / +20 min
+  and then silence. *Why:* the old fixed 5-min timer spammed cable/IP tickets and emails.
+  Asked for by the owner; the numbers are tunable constants in `engine/ticketScheduler.js` and
+  `engine/alertSchedule.js`. (2026-09-20)
+- **The Career board lists only available jobs; a newly available job is offered** (accept /
+  decline for now / view). Declined jobs stay listed, marked. A new player's starting jobs are
+  recorded silently, not announced. (2026-09-20)
+
 ## UI design system (2026-09-20)
 
 - **Colour is signal.** A quiet cool-graphite UI where the only saturated colours are
   what a port LED would say (green up/done, amber attention/down, red fault) plus one
   blue for what you can act on. *Why:* it keeps the LED metaphor meaningful — colouring
   a firewall red or a PC green by category makes "green = up" unreadable.
+- **Menus always come over everything else.** z-index scale: floorplan ≤ 50 · job panel 1500 ·
+  terminal / Configure GUI windows 1600 · toasts 2400 · dialogs 2500+ · admin laptop 3000 ·
+  menus (settings, device and background context menus) 5000. *Why:* owner rule; a menu hidden
+  under a window is unusable. New floating UI picks a slot on this scale. (2026-09-20)
 - **Two self-hosted typefaces** (`src/assets/fonts`, SIL OFL): Barlow Semi Condensed for
   UI, Atkinson Hyperlegible Mono for data and the terminal. *Why:* the mono was chosen
   because IPs, interface names and commands must keep `0/O` and `1/l/I` apart; both are
@@ -76,6 +95,20 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   up to the current step. Difficulty is drawn as signal-strength bars, not stars.
 - **Sentence case, no tracked-caps eyebrows, no emoji as controls.** Emoji stay only
   where they are player content (client/company avatars).
+
+## GUI writes (2026-09-20)
+
+- **Every GUI write goes through the CLI engines — including the inspector's quick IP edit.**
+  A GUI plans real commands (`engine/hostConfig.js`, `engine/interfaceAddress.js`) and runs them
+  via `executeDeviceCommands`; it never assigns device fields. *Why:* the CLI is the arbiter, so
+  the GUI can't reach a state the terminal can't, and every check the CLI makes (overlap,
+  duplicate, network/broadcast address, gateway rules) applies to the GUI too. The user kept the
+  inspector edit as a quick tool and asked for it to use this path. (Confirmed 2026-09-20.)
+- **Accuracy fixes to the engines are pre-authorised.** The earlier "don't touch the engine
+  files" guard was lifted for fixes that bring behaviour closer to real gear / the accuracy
+  spec; each still needs tests (asserting the exact real wording) and an accuracy-gate pass.
+  Anything that changes mission *content* or teaching flow (e.g. hosts booting up) is still
+  the owner's call. (Confirmed 2026-09-20.)
 
 ## Tooling
 

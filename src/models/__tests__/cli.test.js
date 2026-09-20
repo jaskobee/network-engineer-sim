@@ -383,10 +383,14 @@ describe('PCCLIEngine — ip route add default / del', () => {
     pcEng = new PCCLIEngine(topo)
     pc    = makePc()
     topo.addDevice(pc)
+    // A gateway is only accepted on a directly connected network (Accuracy Prompt 4):
+    // the host needs an address covering it, on an interface that isn't switched off.
+    pcEng.execute(pc, 'ip addr add 192.168.1.10/24 dev eth0')
+    pcEng.execute(pc, 'ip link set eth0 up')
   })
 
   it('adds a default route and shows it in routing table', () => {
-    pcEng.execute(pc, 'ip route add default via 192.168.1.1')
+    expect(pcEng.execute(pc, 'ip route add default via 192.168.1.1')).toEqual([])
     const entry = pc.routing_table.find(r => r.network === '0.0.0.0')
     expect(entry).toBeTruthy()
     expect(entry.next_hop).toBe('192.168.1.1')
@@ -394,7 +398,8 @@ describe('PCCLIEngine — ip route add default / del', () => {
 
   it('deletes the default route', () => {
     pcEng.execute(pc, 'ip route add default via 192.168.1.1')
-    pcEng.execute(pc, 'ip route del default')
+    expect(pc.routing_table.find(r => r.network === '0.0.0.0')).toBeTruthy()   // really there first
+    expect(pcEng.execute(pc, 'ip route del default')).toEqual([])
     expect(pc.routing_table.find(r => r.network === '0.0.0.0')).toBeUndefined()
   })
 })

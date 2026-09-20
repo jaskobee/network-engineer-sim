@@ -22,7 +22,7 @@ const URGENCY_COLOR = { safe: '#3ee08f', warning: '#ffb42e', overdue: '#ff8a4a',
 const URGENCY_LED = { safe: 'green', warning: 'amber', overdue: 'amber', expired: 'red' }
 // Activity kinds are told apart by the same LED colours used everywhere else.
 const KIND_LED = {
-  'ticket-issued': 'blue', 'sla-warning': 'amber', 'sla-expired': 'red',
+  'ticket-issued': 'blue', 'ticket-reminder': 'amber', 'new-job': 'blue', 'sla-warning': 'amber', 'sla-expired': 'red',
   'ticket-completed': 'green', 'client-dormant': '', mission: 'green',
 }
 const DAY_MS = 24 * 60 * 60 * 1000

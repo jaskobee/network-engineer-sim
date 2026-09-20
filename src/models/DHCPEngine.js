@@ -49,7 +49,7 @@ export function performDHCP(topology, clientDevice, clientIface) {
     if (!rDev.dhcp_pools?.length || !rIface.ip) continue
     const pool = _findLocalPool(rDev, rIface.ip)
     if (!pool) continue
-    const ip = _selectAddress(rDev, pool, rIface.ip)
+    const ip = _selectAddress(rDev, pool, rIface.ip, _clientId(clientDevice, clientIface))
     if (ip === null) return { success: false, reason: 'pool_exhausted', message: 'DHCP pool has no available addresses' }
     _recordBinding(rDev, ip, clientDevice, clientIface, pool.name)
     return { success: true, ip, mask: pool.mask, gateway: pool.default_router, dns: pool.dns_server }
@@ -72,7 +72,7 @@ export function performDHCP(topology, clientDevice, clientIface) {
       const pool = _findPoolByGiaddr(serverDev, giaddr)
       if (!pool) continue
 
-      const ip = _selectAddress(serverDev, pool, giaddr)
+      const ip = _selectAddress(serverDev, pool, giaddr, _clientId(clientDevice, clientIface))
       if (ip === null) return { success: false, reason: 'pool_exhausted', message: 'DHCP pool has no available addresses' }
       _recordBinding(serverDev, ip, clientDevice, clientIface, pool.name)
       return { success: true, ip, mask: pool.mask, gateway: pool.default_router, dns: pool.dns_server }
@@ -213,7 +213,20 @@ function _findPoolByGiaddr(serverDev, giaddr) {
  *   (d) already-bound IPs.
  * Returns null if pool is exhausted.
  */
-function _selectAddress(serverDev, pool, gatewayIp) {
+// RFC 2131 §4.3.1: a server offers a client the address it already holds a binding for
+// (matched by client identifier) before choosing a new one. Without this, a client that
+// asks twice is handed a second address and its first binding is left behind on the server.
+function _existingBinding(serverDev, pool, clientId) {
+  return serverDev.dhcp_bindings.find(b =>
+    b.client_id === clientId && networkAddress(b.ip, pool.mask) === networkAddress(pool.network, pool.mask)) ?? null
+}
+
+function _clientId(clientDevice, clientIface) { return `${clientDevice.id}:${clientIface.name}` }
+
+function _selectAddress(serverDev, pool, gatewayIp, clientId) {
+  const prior = clientId ? _existingBinding(serverDev, pool, clientId) : null
+  if (prior && prior.ip !== gatewayIp && !serverDev.interfaces.some(i => i.ip === prior.ip)) return prior.ip
+
   const netNum   = ipToNum(pool.network)
   const maskNum  = ipToNum(pool.mask)
   const hostBits = (~maskNum) >>> 0
@@ -233,7 +246,8 @@ function _selectAddress(serverDev, pool, gatewayIp) {
 }
 
 function _recordBinding(serverDev, ip, clientDevice, clientIface, poolName) {
-  const clientId = `${clientDevice.id}:${clientIface.name}`
+  const clientId = _clientId(clientDevice, clientIface)
+  if (serverDev.dhcp_bindings.some(b => b.client_id === clientId && b.ip === ip)) return   // renewal, not a new lease
   serverDev.dhcp_bindings.push({
     ip,
     client_id:     clientId,

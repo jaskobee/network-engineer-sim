@@ -41,9 +41,12 @@ export class WindowsCLIEngine {
     const srcIp = device.interfaces.find(i => i.status === 'up' && i.ip)?.ip
     if (!srcIp) {
       const noIp = !device.interfaces.find(i => i.ip)
-      const hint = noIp
-        ? `No IP configured — use: netsh interface ip set address "Ethernet0" static <ip> <mask> <gw>`
-        : `Interface is down`
+      const off  = device.interfaces.find(i => i.status === 'admin_down')
+      const hint = off
+        ? `The adapter is disabled — enable it with: netsh interface set interface name="${_winName(off.name)}" admin=enabled`
+        : noIp
+          ? `No IP configured — use: netsh interface ip set address "Ethernet0" static <ip> <mask> <gw>`
+          : `Media disconnected — check the cable and the device at the other end`
       onStart?.([`Pinging ${targetIp} with 32 bytes of data:`, `PING: transmit failed. General failure.`, `  (${hint})`])
       onDone?.([``, `Ping statistics for ${targetIp}:`, `    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss),`], false)
       return () => {}
@@ -163,13 +166,13 @@ export class WindowsCLIEngine {
         lines.push(`   Media State . . . . . . . . . . . : Media disconnected`)
         lines.push(`   Connection-specific DNS Suffix  . : `)
         lines.push(`   Physical Address. . . . . . . . . : ${mac}`)
-        lines.push(`   DHCP Enabled. . . . . . . . . . . : Yes`, ``)
+        lines.push(`   DHCP Enabled. . . . . . . . . . . : ${_dhcpEnabled(iface) ? 'Yes' : 'No'}`, ``)
         continue
       }
       const gw = device.routing_table.find(r => r.network === '0.0.0.0')?.next_hop ?? ''
       lines.push(`   Connection-specific DNS Suffix  . : `)
       lines.push(`   Physical Address. . . . . . . . . : ${mac}`)
-      lines.push(`   DHCP Enabled. . . . . . . . . . . : ${iface.dhcp_assigned ? 'Yes' : 'No'}`)
+      lines.push(`   DHCP Enabled. . . . . . . . . . . : ${_dhcpEnabled(iface) ? 'Yes' : 'No'}`)
       lines.push(`   Autoconfiguration Enabled . . . . : Yes`)
       lines.push(`   IPv4 Address. . . . . . . . . . . : ${iface.ip}${iface.dhcp_assigned ? '(Preferred)' : ''}`)
       lines.push(`   Subnet Mask . . . . . . . . . . . : ${iface.subnet_mask}`)
@@ -193,36 +196,57 @@ export class WindowsCLIEngine {
         lines.push(`   Default Gateway . . . . . . . . . : `)
       }
     }
-    if (!anyReleased) lines.push(`No operation can be performed on while it has its media disconnected.`)
+    if (!anyReleased) {
+      // Real wording: a cable-less adapter names itself; anything else (disabled, static)
+      // simply isn't in a state to release.
+      const disc = device.interfaces.find(i => i.status === 'down')
+      lines.push(disc
+        ? `No operation can be performed on ${_winName(disc.name)} while it has its media disconnected.`
+        : `The operation failed as no adapter is in the state permissible for this operation.`)
+    }
     return lines
   }
 
   _ipconfigRenew(device) {
     const lines = []
+    let eligible = 0
     for (const iface of device.interfaces) {
-      const result = performDHCP(this.topology, device, iface)
-      if (!result.success) {
-        lines.push(`An error occurred while renewing interface ${_winName(iface.name)} :`)
-        lines.push(`  Unable to contact your DHCP server (${result.message}).`)
+      if (iface.status === 'admin_down') continue         // a disabled adapter isn't in a state to renew
+      if (iface.ip && !iface.dhcp_assigned) continue      // DHCP isn't enabled on a static adapter
+      eligible++
+      const name = _winName(iface.name)
+      if (iface.status !== 'up') {
+        lines.push(`No operation can be performed on ${name} while it has its media disconnected.`)
         continue
       }
-      iface.ip = result.ip
-      iface.subnet_mask = result.mask
-      iface.dhcp_assigned = true
-      if (result.gateway && isValidIp(result.gateway)) {
-        device.routing_table = device.routing_table.filter(r => !(r.network === '0.0.0.0' && r.dhcp_assigned))
-        device.routing_table.push({ network: '0.0.0.0', mask: '0.0.0.0', next_hop: result.gateway, dhcp_assigned: true })
+      // The server re-offers the binding it already holds, so renewing keeps the address.
+      const result = performDHCP(this.topology, device, iface)
+      if (!result.success) {
+        lines.push(`An error occurred while renewing interface ${name} : unable to contact your DHCP server. Request has timed out.`)
+        continue
       }
-      if (result.dns && isValidIp(result.dns)) device.dns_server = result.dns
+      this._applyLease(device, iface, result)
       const gw = device.routing_table.find(r => r.network === '0.0.0.0')?.next_hop ?? ''
-      lines.push(``, `Ethernet adapter ${_winName(iface.name)}:`, ``)
+      lines.push(``, `Ethernet adapter ${name}:`, ``)
       lines.push(`   Connection-specific DNS Suffix  . : `)
       lines.push(`   IPv4 Address. . . . . . . . . . . : ${result.ip}`)
       lines.push(`   Subnet Mask . . . . . . . . . . . : ${result.mask}`)
       lines.push(`   Default Gateway . . . . . . . . . : ${gw}`)
     }
-    if (lines.length === 0) lines.push(`No adapters are DHCP-enabled or have a media connection.`)
+    if (eligible === 0) lines.push(`The operation failed as no adapter is in the state permissible for this operation.`)
     return lines
+  }
+
+  // Apply what a DHCP server handed out: address, mask, default gateway, DNS.
+  _applyLease(device, iface, result) {
+    iface.ip            = result.ip
+    iface.subnet_mask   = result.mask
+    iface.dhcp_assigned = true
+    if (result.gateway && isValidIp(result.gateway)) {
+      device.routing_table = device.routing_table.filter(r => !(r.network === '0.0.0.0' && r.dhcp_assigned))
+      device.routing_table.push({ network: '0.0.0.0', mask: '0.0.0.0', next_hop: result.gateway, dhcp_assigned: true })
+    }
+    if (result.dns && isValidIp(result.dns)) device.dns_server = result.dns
   }
 
   // ── route ─────────────────────────────────────────────────────────────────────
@@ -314,81 +338,157 @@ export class WindowsCLIEngine {
   }
 
   // ── netsh ─────────────────────────────────────────────────────────────────────
-  // netsh interface ip set address "name" static <ip> <mask> [<gw>]
-  // netsh interface ip set address "name" dhcp
+  // netsh interface ip set address "name" static <ip> <mask> [<gw>]      (positional)
+  // netsh interface ip set address name="n" source=static addr=<ip> mask=<m> gateway=<gw>
+  // netsh interface ip set address "name" dhcp   |   … source=dhcp
   // netsh interface ip show config ["name"]
+  // netsh interface set interface name="n" admin=enabled|disabled   (also: "n" enable|disable)
+  // netsh interface show interface
 
   _cmdNetsh(device, tokens) {
-    const s1 = tokens[1]?.toLowerCase()
-    const s2 = tokens[2]?.toLowerCase()
-    const s3 = tokens[3]?.toLowerCase()
-    if (s1 !== 'interface' || s2 !== 'ip') {
-      return [`The following command was not found: netsh ${tokens.slice(1).join(' ')}`]
+    const ctx  = tokens[1]?.toLowerCase()
+    const sub  = tokens[2]?.toLowerCase()
+    const verb = tokens[3]?.toLowerCase()
+    if (ctx !== 'interface') return [`The following command was not found: netsh ${tokens.slice(1).join(' ')}`]
+    if (sub === 'set'  && verb === 'interface') return this._netshSetInterface(device, tokens)
+    if (sub === 'show' && verb === 'interface') return this._netshShowInterface(device)
+    if (sub === 'ip' || sub === 'ipv4') {
+      if (verb === 'set')    return this._netshSet(device, tokens)
+      if (verb === 'show')   return this._netshShow(device, tokens)
+      if (verb === 'delete') return this._netshDelete(device, tokens)
     }
-    if (s3 === 'set')  return this._netshSet(device, tokens)
-    if (s3 === 'show') return this._netshShow(device, tokens)
     return [`The following command was not found: ${tokens.join(' ')}`]
   }
 
   _netshSet(device, tokens) {
-    const s4 = tokens[4]?.toLowerCase()
-    if (s4 !== 'address') {
+    if (tokens[4]?.toLowerCase() !== 'address') {
       return [`The following command was not found: netsh interface ip set ${tokens[4] ?? ''}`]
     }
-    const rawName = tokens[5] ?? ''
-    if (!rawName) {
+    const a = _parseNetshArgs(tokens.slice(5), ['static', 'dhcp'])
+    const usage = name => [
+      `The syntax of this command is:`,
+      `  netsh interface ip set address "${name}" static <ip> <mask> [<gw>]`,
+      `  netsh interface ip set address "${name}" dhcp`,
+    ]
+    if (!a.name) return usage('name')
+    const iface = _resolveWinIf(device, a.name)
+    if (!iface) return [`There is no interface with the specified name "${a.name}".`]
+    const source = (a.named.source ?? a.word)?.toLowerCase()
+    if (source === 'dhcp')   return this._netshDhcp(device, iface, a.name)
+    if (source === 'static') {
+      // Named values win; positional ones fill the remaining slots in ip, mask, gateway order.
+      const v = { ip: a.named.addr ?? a.named.address, mask: a.named.mask, gw: a.named.gateway ?? a.named.gw }
+      for (const k of ['ip', 'mask', 'gw']) if (v[k] === undefined) v[k] = a.pos.shift()
+      return this._netshStatic(device, iface, v)
+    }
+    return usage(a.name)
+  }
+
+  // Switching to DHCP replaces the whole static configuration (address, gateway, routes
+  // through it) — it is not refused because a manual address is present.
+  _netshDhcp(device, iface, name) {
+    if (iface.dhcp_assigned) return [`DHCP is already enabled on this interface.`]
+    if (iface.ip) {
+      const oldIp = iface.ip, oldMask = iface.subnet_mask
+      iface.ip = null
+      iface.subnet_mask = null
+      device.flushRoutesVia(oldIp, oldMask)
+    }
+    const result = performDHCP(this.topology, device, iface)
+    if (!result.success) {
+      // The command itself worked — the adapter is now DHCP-enabled and simply has no lease.
+      return [`Ok.`, `  (DHCP is enabled on "${name}", but there is no lease yet — ${_dhcpWhy(result)})`]
+    }
+    this._applyLease(device, iface, result)
+    return [`Ok.`]
+  }
+
+  // `set address … static` replaces the whole IPv4 configuration: the previous address, the
+  // gateway, and any lease. Bad parameters are refused, never quietly "corrected".
+  _netshStatic(device, iface, { ip, mask, gw }) {
+    if (!ip || !isValidIp(ip)) return [`The parameter is incorrect. Expected a valid IP address after "static".`]
+    if (mask && !isValidMask(mask)) return [`The parameter is incorrect. "${mask}" is not a valid subnet mask.`]
+    const m = mask || '255.255.255.0'
+    if (!isHostAddress(ip, m)) return [`The parameter is incorrect. "${ip}" is not a valid host address in that subnet.`]
+    if (gw) {
+      if (!isValidIp(gw)) return [`The parameter is incorrect. "${gw}" is not a valid gateway address.`]
+      if (networkAddress(gw, m) !== networkAddress(ip, m)) {
+        return [`The parameter is incorrect. The gateway ${gw} is not on the same subnet as ${ip} (${networkAddress(ip, m)}/${maskToPrefixLen(m)}).`]
+      }
+      if (gw === ip || !isHostAddress(gw, m)) return [`The parameter is incorrect. "${gw}" cannot be used as a gateway on this subnet.`]
+    }
+    const dup = [...this.topology.devices.values()].find(d => d !== device && d.interfaces.some(i => i.ip === ip))
+    if (dup) return [`The IP address ${ip} is already assigned to another host.`]
+
+    if (iface.dhcp_assigned) releaseDHCP(this.topology, device, iface)   // gives the lease back
+    const oldIp = iface.ip, oldMask = iface.subnet_mask
+    iface.ip = ip
+    iface.subnet_mask = m
+    iface.dhcp_assigned = false
+    if (oldIp) device.flushRoutesVia(oldIp, oldMask)
+    // The gateway is replaced, not added to: drop this adapter's previous default route.
+    device.routing_table = device.routing_table.filter(r => !(
+      r.network === '0.0.0.0' && r.mask === '0.0.0.0' &&
+      ((oldIp && networkAddress(r.next_hop, oldMask) === networkAddress(oldIp, oldMask)) ||
+        networkAddress(r.next_hop, m) === networkAddress(ip, m))))
+    if (gw) device.routing_table.push({ network: '0.0.0.0', mask: '0.0.0.0', next_hop: gw })
+    return [`Ok.`]
+  }
+
+  // netsh interface ip delete address "name" <ip>   (or name=… addr=…) — the address goes,
+  // and so do the routes that were only reachable through it.
+  _netshDelete(device, tokens) {
+    if (tokens[4]?.toLowerCase() !== 'address') {
+      return [`The following command was not found: netsh interface ip delete ${tokens[4] ?? ''}`]
+    }
+    const a = _parseNetshArgs(tokens.slice(5), [])
+    const ip = a.named.addr ?? a.named.address ?? a.pos.shift()
+    if (!a.name || !ip) {
+      return [`The syntax of this command is:`, `  netsh interface ip delete address "name" <ip>`]
+    }
+    const iface = _resolveWinIf(device, a.name)
+    if (!iface) return [`There is no interface with the specified name "${a.name}".`]
+    if (iface.ip !== ip) return [`The system cannot find the file specified.`]
+    if (iface.dhcp_assigned) {
+      releaseDHCP(this.topology, device, iface)          // a leased address goes back to the server
+    } else {
+      const oldIp = iface.ip, oldMask = iface.subnet_mask
+      iface.ip = null
+      iface.subnet_mask = null
+      device.flushRoutesVia(oldIp, oldMask)
+    }
+    return [`Ok.`]
+  }
+
+  // Enable / disable the adapter — the Windows twin of `ip link set up|down`.
+  _netshSetInterface(device, tokens) {
+    const a = _parseNetshArgs(tokens.slice(4), ['enable', 'enabled', 'disable', 'disabled'])
+    const want = (a.named.admin ?? a.word ?? '').toLowerCase()
+    if (!a.name || !/^(enable|enabled|disable|disabled)$/.test(want)) {
       return [
         `The syntax of this command is:`,
-        `  netsh interface ip set address "name" static <ip> <mask> [<gw>]`,
-        `  netsh interface ip set address "name" dhcp`,
+        `  netsh interface set interface name="<name>" admin=enabled|disabled`,
       ]
     }
-    const iface = _resolveWinIf(device, rawName)
-    if (!iface) return [`There is no interface with the specified name "${rawName}".`]
+    const iface = _resolveWinIf(device, a.name)
+    if (!iface) return [`There is no interface with the specified name "${a.name}".`]
+    this.topology.setInterfaceAdmin(`${device.id}:${iface.name}`, want.startsWith('enable'))
+    return []
+  }
 
-    const mode = tokens[6]?.toLowerCase()
-    if (mode === 'dhcp') {
-      if (iface.ip && !iface.dhcp_assigned) {
-        return [
-          `The interface "${rawName}" has a manually-assigned IP (${iface.ip}).`,
-          `Remove it first with: netsh interface ip set address "${rawName}" static dhcp`,
-        ]
-      }
-      const result = performDHCP(this.topology, device, iface)
-      if (!result.success) return [`DHCP renewal failed: ${result.message}`]
-      iface.ip = result.ip
-      iface.subnet_mask = result.mask
-      iface.dhcp_assigned = true
-      if (result.gateway && isValidIp(result.gateway)) {
-        device.routing_table = device.routing_table.filter(r => !(r.network === '0.0.0.0' && r.dhcp_assigned))
-        device.routing_table.push({ network: '0.0.0.0', mask: '0.0.0.0', next_hop: result.gateway, dhcp_assigned: true })
-      }
-      if (result.dns && isValidIp(result.dns)) device.dns_server = result.dns
-      return [`Ok.`]
-    }
-    if (mode === 'static') {
-      const ip   = tokens[7]
-      const mask = tokens[8]
-      const gw   = tokens[9]
-      if (!ip || !isValidIp(ip))     return [`The parameter is incorrect. Expected a valid IP address after "static".`]
-      const resolvedMask = (mask && isValidMask(mask)) ? mask : '255.255.255.0'
-      if (!isHostAddress(ip, resolvedMask)) return [`The parameter is incorrect. "${ip}" is not a valid host address in that subnet.`]
-      const dup = [...this.topology.devices.values()].find(d => d !== device && d.interfaces.some(i => i.ip === ip))
-      if (dup) return [`The IP address ${ip} is already assigned to another host.`]
-      iface.ip = ip
-      iface.subnet_mask = resolvedMask
-      iface.dhcp_assigned = false
-      if (gw && isValidIp(gw)) {
-        device.routing_table = device.routing_table.filter(r => r.network !== '0.0.0.0')
-        device.routing_table.push({ network: '0.0.0.0', mask: '0.0.0.0', next_hop: gw })
-      }
-      return [`Ok.`]
-    }
-    return [
-      `The syntax of this command is:`,
-      `  netsh interface ip set address "${rawName}" static <ip> <mask> [<gw>]`,
-      `  netsh interface ip set address "${rawName}" dhcp`,
+  _netshShowInterface(device) {
+    const lines = [
+      ``,
+      `Admin State    State          Type             Interface Name`,
+      `-------------------------------------------------------------------------`,
     ]
+    for (const iface of device.interfaces) {
+      const admin = iface.status === 'admin_down' ? 'Disabled' : 'Enabled'
+      const state = iface.status === 'up' ? 'Connected' : 'Disconnected'
+      lines.push(`${admin.padEnd(15)}${state.padEnd(15)}${'Dedicated'.padEnd(17)}${_winName(iface.name)}`)
+    }
+    lines.push(``)
+    return lines
   }
 
   _netshShow(device, tokens) {
@@ -405,7 +505,7 @@ export class WindowsCLIEngine {
       const name = _winName(iface.name)
       const gw   = device.routing_table.find(r => r.network === '0.0.0.0')?.next_hop ?? ''
       lines.push(`Configuration for interface "${name}"`)
-      lines.push(`    DHCP enabled:                         ${iface.dhcp_assigned ? 'Yes' : 'No'}`)
+      lines.push(`    DHCP enabled:                         ${_dhcpEnabled(iface) ? 'Yes' : 'No'}`)
       if (iface.ip) {
         lines.push(`    IP Address:                           ${iface.ip}`)
         lines.push(`    Subnet Prefix:                        ${iface.ip}/${maskToPrefixLen(iface.subnet_mask)} (mask ${iface.subnet_mask})`)
@@ -456,15 +556,18 @@ export class WindowsCLIEngine {
     const tips = this.difficulty === 'beginner' ? [
       ``,
       `Quick setup — static IP:`,
-      `  1. netsh interface ip set address "Ethernet0" static <ip> <mask> <gateway>`,
-      `  2. ping <gateway>`,
+      `  1. netsh interface set interface name="Ethernet0" admin=enabled`,
+      `  2. netsh interface ip set address "Ethernet0" static <ip> <mask> <gateway>`,
+      `  3. ping <gateway>`,
       ``,
       `  Example:`,
+      `    C:\\> netsh interface set interface name="Ethernet0" admin=enabled`,
       `    C:\\> netsh interface ip set address "Ethernet0" static 192.168.1.50 255.255.255.0 192.168.1.1`,
       `    C:\\> ping 192.168.1.1`,
     ] : [
       ``,
-      `Tip: Use "netsh interface ip set address" for static IPs.`,
+      `Tip: "netsh interface set interface" enables or disables the adapter.`,
+      `     "netsh interface ip set address" sets a static IP, or turns DHCP on.`,
       `     Use "ipconfig /renew" when the network has a DHCP server.`,
     ]
     return [...base, ...tips]
@@ -514,6 +617,37 @@ function _resolveWinIf(device, raw) {
   return null
 }
 
+// DHCP is "enabled" on an adapter unless it carries a static address — a fresh adapter,
+// or one waiting on a lease, is DHCP-enabled (that is the Windows default).
+function _dhcpEnabled(iface) { return !iface.ip || iface.dhcp_assigned === true }
+
+// Windows wording for why a DHCP request got no lease (the shared engine's reasons are
+// worded for the Linux shell, so they are not shown as-is).
+function _dhcpWhy(result) {
+  switch (result.reason) {
+    case 'link_down':      return 'the adapter has no link'
+    case 'no_link':        return 'the adapter is not cabled'
+    case 'pool_exhausted': return 'the DHCP server has no free addresses'
+    default:               return 'no DHCP server answered'
+  }
+}
+
+// netsh arguments come positionally ("Ethernet0" static …) or as key=value pairs
+// (name="Ethernet0" source=static …), and may mix the two. Returns the adapter name,
+// the keyword (static / dhcp / enable / …) if given positionally, the named pairs, and
+// what positional values are left over.
+function _parseNetshArgs(rest, keywords) {
+  const named = {}, pos = []
+  for (const t of rest) {
+    const m = /^([a-z]+)=(.*)$/i.exec(t)
+    if (m) named[m[1].toLowerCase()] = m[2]
+    else pos.push(t)
+  }
+  const name = named.name ?? pos.shift()
+  const word = pos.length && keywords.includes(pos[0].toLowerCase()) ? pos.shift() : undefined
+  return { name, word, named, pos }
+}
+
 // Tokenize a Windows command line, stripping quotes but keeping quoted names intact
 function _tokenize(input) {
   const tokens = []
@@ -538,7 +672,7 @@ function _isLocalError(r) {
 function _localErrorHint(r) {
   if (r === 'host_no_gateway') return 'No default gateway — set one with: netsh interface ip set address "Ethernet0" static <ip> <mask> <gw>'
   if (r === 'no_route')        return 'No route to host — verify gateway and routing'
-  if (r === 'admin_down')      return 'Interface is disabled'
+  if (r === 'admin_down')      return 'The adapter is disabled — enable it with: netsh interface set interface name="Ethernet0" admin=enabled'
   if (r === 'link_down')       return 'Cable not connected — attach a cable from the floorplan'
   return null
 }
@@ -578,12 +712,17 @@ function _winTabCandidates(device, tokens, trailingSpace) {
     if (a(1) === 'delete' && depth === 2) return ['<destination>']
   }
   if (a(0) === 'netsh') {
+    const ipCtx = a(2) === 'ip' || a(2) === 'ipv4'
     if (depth === 1) return ['interface']
-    if (a(1) === 'interface' && depth === 2) return ['ip']
-    if (a(1) === 'interface' && a(2) === 'ip' && depth === 3) return ['set', 'show']
-    if (a(1) === 'interface' && a(2) === 'ip' && a(3) === 'set' && depth === 4) return ['address']
-    if (a(1) === 'interface' && a(2) === 'ip' && a(3) === 'show' && depth === 4) return ['config']
-    if (a(1) === 'interface' && a(2) === 'ip' && a(3) === 'set' && a(4) === 'address') {
+    if (a(1) === 'interface' && depth === 2) return ['ip', 'ipv4', 'set', 'show']
+    if (a(1) === 'interface' && (a(2) === 'set' || a(2) === 'show') && depth === 3) return ['interface']
+    if (a(1) === 'interface' && a(2) === 'set' && a(3) === 'interface' && depth === 4) return device.interfaces.map(i => `"${_winName(i.name)}"`)
+    if (a(1) === 'interface' && a(2) === 'set' && a(3) === 'interface' && depth === 5) return ['enable', 'disable']
+    if (a(1) === 'interface' && ipCtx && depth === 3) return ['set', 'show', 'delete']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'delete' && depth === 4) return ['address']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'set' && depth === 4) return ['address']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'show' && depth === 4) return ['config']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'set' && a(4) === 'address') {
       if (depth === 5) return device.interfaces.map(i => `"${_winName(i.name)}"`)
       if (depth === 6) return ['static', 'dhcp']
       if (a(6) === 'static') {

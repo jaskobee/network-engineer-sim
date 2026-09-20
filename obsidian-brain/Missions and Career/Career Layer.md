@@ -59,7 +59,6 @@ a final answer):
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `NEW_TICKET_INTERVAL_MS` | 5 min | gap after a ticket resolves before the next can fire |
 | `SLA_DURATION_MS` | 8 min | time from issuance to deadline |
 | `SLA_WARNING_RATIO` | 0.6 | urgency turns `'warning'` at 60% of the SLA window elapsed |
 | `TICKET_GRACE_MS` | 6 min | extra time past the deadline before force-expiry |
@@ -76,10 +75,27 @@ their own. **Any UI or logic touching ticket time must use this formula, never r
 `now - issuedAt`** — this exact formula is reused for the SLA Gantt-timeline widget
 on the [[Admin Laptop and Tools|Admin Laptop dashboard]].
 
-A contract is due a new ticket (`shouldIssueNewTicket`) when: it's active, its client
-isn't dormant, it has no currently-open ticket, and enough real time has passed since
-the last one resolved (or since the contract started, if none has fired yet). Driven
-by `ContractClockDriver.jsx` on a tick.
+### Ticket pacing (`engine/ticketScheduler.js`, `alertSchedule.js`, `ticketEngine.js`)
+
+The old fixed 5-minute timer is gone — it spammed tickets and emails, because its interval kept
+calling the first render's stale state. `tickTickets(state, ctx)` is now a pure function; the driver
+calls it through a ref to the latest state.
+
+- First ticket 5–9 min after a contract starts; after each fix **or** expiry a gap of 10–20 min is
+  rolled once and stored on the contract (`ticketGapStartedAt`, `ticketGapMs`).
+- While a job-board mission is active the gap stretches ×2.5 (`BUSY_GAP_FACTOR`) and the SLA clock pauses.
+- At most 2 open tickets; at least 4 min between any two new ones; never the same template twice in a row.
+- **Alerts:** one at issue, reminders 5 → 10 → 20 min after the previous alert, then silence; none while
+  busy, while the ticket is being worked (`status: 'active'`) or once expired.
+- **Fixing one** pushes a "Service restored" toast and inbox message (fast / on time / late wording) with
+  the reputation change and the money earned. The Career rail icon shows a badge for open tickets and
+  pending job offers.
+
+### The job board (`engine/jobBoard.js`)
+
+Only *available* jobs are listed (prerequisite done / reputation met / not completed / not active). A job
+that becomes available after the game started is offered: accept, decline for now (it stays listed, marked),
+or view details. The first look at the board is silent, so a new player's starting jobs are not announced.
 
 ### Reputation and satisfaction deltas — distinct from mission rewards
 

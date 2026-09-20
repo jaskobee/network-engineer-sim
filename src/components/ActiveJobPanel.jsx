@@ -5,7 +5,8 @@ import { findMissionById } from '../data/missionDefinitions/index.js'
 import { getMissionRuntime, getMissionMeta, resolveMissionRoles, buildRuntimeFromDefinition } from '../engine/missionEngine.js'
 import { computeRefund } from '../engine/economy.js'
 import { CONTRACT_TYPES } from '../data/contracts.js'
-import { MissionBlueprintSvg, FloorPlanZoneList } from './MissionBlueprint.jsx'
+import { FloorPlanZoneList } from './MissionBlueprint.jsx'
+import MissionBriefModal from './MissionBriefModal.jsx'
 import { MissionProgressBar, MissionTaskRows } from './MissionTaskList.jsx'
 import { IconChevronDown, IconChevronUp, IconDiagram } from './icons.jsx'
 
@@ -159,32 +160,6 @@ function CompletionModal({ mission, refund, onCollect, onAcceptContract, onFinis
   )
 }
 
-// ── Blueprint modal ───────────────────────────────────────────────────────────
-
-function BlueprintModal({ mission, onClose }) {
-  if (!mission.blueprint) return null
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:2000,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={onClose}>
-      <div style={{background:'#0a121a',border:'1px solid #1f3e5b',borderRadius:10,padding:'18px 20px',maxWidth:460,width:'90vw',boxShadow:'0 0 60px #224e7820'}} onClick={e=>e.stopPropagation()}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
-          <div>
-            <div style={{fontSize:13.5,color:'var(--ink-3)',fontWeight:600,marginBottom:2}}>Network blueprint</div>
-            <div style={{fontSize:15.5,fontWeight:700,color:'#b0c1d0'}}>{mission.title}</div>
-          </div>
-          <button onClick={onClose} style={{background:'none',border:'1px solid #212c34',color:'#7291a6',cursor:'pointer',borderRadius:4,padding:'2px 8px',fontSize:14.5}}>✕</button>
-        </div>
-        <MissionBlueprintSvg blueprint={mission.blueprint} />
-        <div style={{textAlign:'center',marginTop:14}}>
-          <button onClick={onClose} style={{background:'#0e1a26',border:'1px solid #23405b',color:'#718fa5',padding:'7px 24px',borderRadius:5,fontSize:14,fontWeight:700,cursor:'pointer'}}
-            onMouseEnter={e=>{e.currentTarget.style.color='#5a96c8';e.currentTarget.style.borderColor='#30567a'}}
-            onMouseLeave={e=>{e.currentTarget.style.color='#718fa5';e.currentTarget.style.borderColor='#23405b'}}
-          >Got it</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Floor plan brief ──────────────────────────────────────────────────────────
 
 function FloorPlanBrief({ layout }) {
@@ -205,6 +180,7 @@ function FloorPlanBrief({ layout }) {
   )
 }
 
+
 // ── Panel root ────────────────────────────────────────────────────────────────
 
 export default function ActiveJobPanel() {
@@ -214,16 +190,16 @@ export default function ActiveJobPanel() {
     completedMissions, completeMission, completeTicket: completeTicketGame,
     executedCommandsRef,
   } = useGame()
-  const { clients, completeClientMission, acceptContractOffer, completeTicket: completeTicketCareer } = useCareer()
+  const { clients, reputation, completeClientMission, acceptContractOffer, completeTicket: completeTicketCareer } = useCareer()
 
   void tick
 
   const [minimized,     setMinimized]     = useState(false)
   const [blueprintOpen, setBlueprintOpen] = useState(false)
-  // Default/clamped x leaves room for the 46px Career rail (App.jsx's
-  // RAIL_WIDTH) at the right edge, so the panel never starts on top of it —
-  // it's the one icon that must always stay reachable.
-  const [pos,           setPos]           = useState({ x: Math.max(0, window.innerWidth - 424), y: 56 })
+  // Default x leaves room for the 76px Career rail (App.jsx's RAIL_WIDTH) at the right
+  // edge, so the panel never starts on top of it — it's the one button that must always
+  // stay reachable (it also carries the "something needs you" badge).
+  const [pos,           setPos]           = useState({ x: Math.max(0, window.innerWidth - 406 - 76 - 12), y: 56 })
 
   const dragging  = useRef(false)
   const dragStart = useRef(null)
@@ -337,7 +313,9 @@ export default function ActiveJobPanel() {
 
       {hasActiveJob && (
       <>
-      {blueprintOpen && activeMission && <BlueprintModal mission={activeMission} onClose={() => setBlueprintOpen(false)} />}
+      {blueprintOpen && activeMission && (
+        <MissionBriefModal mission={activeMission} reputation={reputation} initialTab="topology" onClose={() => setBlueprintOpen(false)} />
+      )}
 
       <div style={{
         position: 'fixed', left: pos.x, top: pos.y, zIndex: 1500,
@@ -376,7 +354,12 @@ export default function ActiveJobPanel() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
-            {activeMission?.blueprint && !minimized && iconBtn(<IconDiagram size={16} />, () => setBlueprintOpen(true), 'View blueprint')}
+            {(activeMission?.blueprint || activeMission?.layout?.length) && !minimized && (
+              <button className="btn ghost" onClick={() => setBlueprintOpen(true)} title="See how the network should look"
+                style={{ padding: '3px 9px', fontSize: 14 }}>
+                <IconDiagram size={16} /> Topology
+              </button>
+            )}
             {iconBtn(minimized ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />, () => setMinimized(v => !v), minimized ? 'Expand' : 'Minimise')}
           </div>
         </div>

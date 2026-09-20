@@ -83,6 +83,14 @@ changing it; never silently work around one. Grouped here the same way as the so
 - **Mission progress is a patch cable; difficulty is signal bars.** Sentence case, no
   emoji as controls.
 
+## GUI writes (2026-09-20)
+
+- **Every GUI write goes through the CLI engines**, including the inspector's quick IP edit —
+  so the GUI can't reach a state the CLI can't, and every CLI check applies to it. See
+  [[UI Component Map]].
+- **Accuracy fixes to the engines are pre-authorised** (tests + accuracy gate still required);
+  changes to mission content or teaching flow remain the owner's call.
+
 ## Tooling
 
 - **Vitest is the test runner**; networking behavior is locked in by tests. Broken
@@ -91,6 +99,15 @@ changing it; never silently work around one. Grouped here the same way as the so
   `/accuracy-gate`, again in CI via `.github/scripts/ai-review.js`.
 - **The brain lives in `.claude/` and is versioned** (committed to git). Only
   `settings.local.json` is git-ignored (personal, per-machine permission overrides).
+
+## Career, DNS and layering (2026-09-20)
+
+- **Tickets are paced, not periodic** — randomized 10–20 min gaps, ×2.5 while another job is active, alert
+  ladder 5/10/20 min. See [[Career Layer]].
+- **The Career board lists only available jobs; new ones are offered** (accept / decline for now).
+- **DNS:** GUI for server records (routers stay CLI), strict resolution, `resolvectl` on Linux, and a *list* of
+  name servers per host (primary + secondary) — one server per host would teach something to unlearn.
+- **Menus always come over everything else** (z-index 5000; scale in [[UI Component Map]]).
 
 ## Related
 

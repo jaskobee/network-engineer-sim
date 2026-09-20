@@ -2,36 +2,40 @@ import { useEffect, useRef, useState } from 'react'
 import { useGame } from '../state/GameContext.jsx'
 import { useCareer } from '../state/CareerContext.jsx'
 import { MISSIONS } from '../data/missions.js'
-import { MISSION_DEFINITIONS, findMissionById } from '../data/missionDefinitions/index.js'
+import { findMissionById } from '../data/missionDefinitions/index.js'
+import { useJobBoard } from '../state/useJobBoard.js'
 import { getMissionRuntime } from '../engine/missionEngine.js'
 import CompanyDashboard from './CompanyDashboard.jsx'
 import MissionBriefModal from './MissionBriefModal.jsx'
 import ActiveContractsPanel from './ActiveContractsPanel.jsx'
 import DifficultyBars from './DifficultyBars.jsx'
-import { IconChevronDown, IconChevronUp, IconLock } from './icons.jsx'
+import { IconChevronDown, IconChevronUp } from './icons.jsx'
 
 // ── Job card ──────────────────────────────────────────────────────────────────
 
-function JobCard({ mission, unlocked, lockedReason, onOpenBrief }) {
+function JobCard({ mission, busy, isNew, declined, onOpenBrief }) {
   const hw = mission.hardware ?? []
   return (
     <div style={{
       margin: '0 0 10px',
       background: 'var(--surface-raised)',
-      border: '1px solid var(--rule)',
+      border: `1px solid ${isNew ? 'var(--signal-strong)' : 'var(--rule)'}`,
       borderRadius: 10,
       overflow: 'hidden',
-      opacity: unlocked ? 1 : 0.6,
       transition: 'border-color 0.15s',
     }}
-      onMouseEnter={e => { if (unlocked) e.currentTarget.style.borderColor = 'var(--rule-strong)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)' }}
+      onMouseEnter={e => { if (!isNew) e.currentTarget.style.borderColor = 'var(--rule-strong)' }}
+      onMouseLeave={e => { if (!isNew) e.currentTarget.style.borderColor = 'var(--rule)' }}
     >
       <div style={{ padding: '12px 14px 0', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <span style={{ fontSize: 28, lineHeight: 1.1, flexShrink: 0 }}>{mission.avatar}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{mission.title}</div>
-          <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 2 }}>{mission.client}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+            {mission.client}
+            {isNew && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--signal)', fontWeight: 600 }}><i className="led blue" style={{ width: 7, height: 7 }} />New</span>}
+            {declined && <span style={{ color: 'var(--ink-3)' }}>Declined for now</span>}
+          </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>${mission.reward.toLocaleString()}</div>
@@ -40,13 +44,7 @@ function JobCard({ mission, unlocked, lockedReason, onOpenBrief }) {
       </div>
 
       <div style={{ padding: '8px 14px 12px' }}>
-        {unlocked ? (
-          <p style={{ fontSize: 14.5, color: 'var(--ink-2)', lineHeight: 1.5, margin: 0 }}>{mission.description}</p>
-        ) : (
-          <p style={{ fontSize: 14, color: 'var(--ink-3)', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <IconLock size={15} /> {lockedReason}
-          </p>
-        )}
+        <p style={{ fontSize: 14.5, color: 'var(--ink-2)', lineHeight: 1.5, margin: 0 }}>{mission.description}</p>
         {hw.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {hw.map((h, i) => (
@@ -57,10 +55,11 @@ function JobCard({ mission, unlocked, lockedReason, onOpenBrief }) {
             ))}
           </div>
         )}
-        {unlocked && (
-          <button className="btn" onClick={onOpenBrief} style={{ width: '100%', marginTop: 12, padding: '7px 0' }}>
-            View job
-          </button>
+        <button className="btn" onClick={onOpenBrief} style={{ width: '100%', marginTop: 12, padding: '7px 0' }}>
+          View job
+        </button>
+        {busy && (
+          <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 7 }}>You can start it once your current job is done.</div>
         )}
       </div>
     </div>
@@ -111,7 +110,8 @@ export default function MissionPanel({ onNavigateAway }) {
     activeTicket,
     budget,
   } = useGame()
-  const { reputation, clients } = useCareer()
+  const { reputation, resolveJobOffer } = useCareer()
+  const { clientJobs, legacyJobs, all: jobBoardMissions, pendingIds, jobOffers } = useJobBoard()
 
   // Auto-collapse the job board list when a mission becomes active, and
   // auto-reopen it when one finishes — otherwise a newly-unlocked follow-up
@@ -138,27 +138,17 @@ export default function MissionPanel({ onNavigateAway }) {
   const allDone         = completedMissions.length === MISSIONS.length
   const totalEarned     = completedMissions.reduce((s, m) => s + m.reward, 0)
 
-  // ── Job board sourcing: legacy MISSIONS (linear prerequisite chain) merged
-  // with declarative client missions (sourced from each client's own
-  // availableFutureMissionIds, gated by reputation instead of a prerequisite).
-  const legacyCards = MISSIONS.filter(m =>
-    !completedMissions.some(c => c.id === m.id) && m.id !== activeMissionId
-  )
-  const clientCards = Object.values(clients).flatMap(client =>
-    client.availableFutureMissionIds
-      .map(id => MISSION_DEFINITIONS[id])
-      .filter(m => m && !completedMissions.some(c => c.id === m.id) && m.id !== activeMissionId)
-  )
-  const jobBoardMissions = [...legacyCards, ...clientCards]
+  // ── Job board: ONLY jobs that are available now (engine/jobBoard.js). Locked and future jobs are not
+  // shown — there will be many more jobs, and a wall of greyed-out ones is just noise. Client jobs
+  // (the career story) lead; the tutorial missions are a separate, secondary group.
+  const clientCards = clientJobs
+  const legacyCards = legacyJobs
+  const busy = !!activeMission || isTicketActive
 
-  function unlockInfo(m) {
-    const somethingActive = !!activeMission || isTicketActive
-    if (m.clientId) {
-      const met = reputation >= (m.requiredReputation ?? 0)
-      return { unlocked: met && !somethingActive, lockedReason: met ? '' : `Requires ${m.requiredReputation} reputation` }
-    }
-    const prereqDone = m.prerequisite ? completedMissions.some(c => c.id === m.prerequisite) : true
-    return { unlocked: prereqDone && !somethingActive, lockedReason: 'Complete the previous job first' }
+  // Looking at a new job is answering the news: it stops being "new" (and stops counting on the Career badge).
+  function openBrief(m) {
+    if (pendingIds.includes(m.id)) resolveJobOffer(m.id, 'seen')
+    setBriefMission(m)
   }
 
   return (
@@ -169,6 +159,7 @@ export default function MissionPanel({ onNavigateAway }) {
           reputation={reputation}
           onClose={() => setBriefMission(null)}
           onStart={() => { acceptMission(briefMission.id); setBriefMission(null) }}
+          startBlockedReason={busy ? 'Finish your current job first.' : ''}
         />
       )}
 
@@ -213,7 +204,7 @@ export default function MissionPanel({ onNavigateAway }) {
           </div>
         )}
 
-        {/* ── Job board: available + locked (collapsible) ──────────────────
+        {/* ── Job board: available jobs only (collapsible) ──────────────────
             Client jobs (the active career story) always lead; legacy tutorial
             missions are a clearly separate, secondary group underneath — so
             a client's own next job never gets buried under unrelated ones. */}
@@ -224,18 +215,13 @@ export default function MissionPanel({ onNavigateAway }) {
                 <div style={{ fontSize: 15, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>
                   {activeMission ? 'Your upcoming work' : 'Your clients'}
                 </div>
-                {clientCards.map(m => {
-                  const { unlocked, lockedReason } = unlockInfo(m)
-                  return (
-                    <JobCard
-                      key={m.id}
-                      mission={m}
-                      unlocked={unlocked}
-                      lockedReason={lockedReason}
-                      onOpenBrief={() => setBriefMission(m)}
-                    />
-                  )
-                })}
+                {clientCards.map(m => (
+                  <JobCard
+                    key={m.id} mission={m} busy={busy}
+                    isNew={pendingIds.includes(m.id)} declined={jobOffers[m.id]?.status === 'declined'}
+                    onOpenBrief={() => openBrief(m)}
+                  />
+                ))}
               </div>
             )}
 
@@ -244,24 +230,20 @@ export default function MissionPanel({ onNavigateAway }) {
                 <div style={{ fontSize: 15, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>
                   Tutorial missions
                 </div>
-                {legacyCards.map(m => {
-                  const { unlocked, lockedReason } = unlockInfo(m)
-                  return (
-                    <JobCard
-                      key={m.id}
-                      mission={m}
-                      unlocked={unlocked}
-                      lockedReason={lockedReason}
-                      onOpenBrief={() => setBriefMission(m)}
-                    />
-                  )
-                })}
+                {legacyCards.map(m => (
+                  <JobCard
+                    key={m.id} mission={m} busy={busy}
+                    isNew={pendingIds.includes(m.id)} declined={jobOffers[m.id]?.status === 'declined'}
+                    onOpenBrief={() => openBrief(m)}
+                  />
+                ))}
               </>
             )}
 
-            {!activeMission && !allDone && jobBoardMissions.length === 0 && (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--ink-3)', fontSize: 14.5 }}>
-                All jobs accepted.
+            {!allDone && jobBoardMissions.length === 0 && (
+              <div style={{ padding: '22px 8px', textAlign: 'center', color: 'var(--ink-3)', fontSize: 14.5, lineHeight: 1.5 }}>
+                <div style={{ color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>No jobs waiting right now</div>
+                {activeMission ? 'Finish your current job — new work shows up here as it becomes available.' : 'New jobs appear here as you finish work and build your reputation.'}
               </div>
             )}
           </div>

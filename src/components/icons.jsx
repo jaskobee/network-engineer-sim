@@ -47,6 +47,14 @@ export const IconSliders = p => (
   </Icon>
 )
 
+// A window with a title bar and two form rows — "configure with a GUI".
+export const IconWindow = p => (
+  <Icon {...p}>
+    <rect x="3" y="4.5" width="18" height="15" rx="2" />
+    <path d="M3 9h18M7 13h4M7 16h7" />
+  </Icon>
+)
+
 export const IconClose = p => (
   <Icon {...p}><path d="M6 6l12 12M18 6 6 18" /></Icon>
 )

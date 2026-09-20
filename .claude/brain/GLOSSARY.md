@@ -75,11 +75,23 @@ objectives`.
   topology across missions (`clientTopologies` in GameContext), can hold a contract.
 - **Contract** — recurring income (`CONTRACT_TYPES['monthly-support']`, $500/mo).
 - **Service ticket** — small point-fault job on a contracted client's existing gear
-  (`fault: { type: 'disconnect' | …, role }`), resolved through the same DSL.
+  (`fault: { type: 'disconnect' | 'clearIp' | 'adminDown', role, ifaceName? }`), resolved through
+  the same DSL. `adminDown` shuts the interface via `Topology.setInterfaceAdmin` (PC adapter off /
+  router port shut). Four templates in `data/serviceTickets.js`; `engine/ticketFaults.js` applies them.
+- **Ticket pacing** — `engine/ticketScheduler.js` (when a contract may raise a ticket),
+  `engine/alertSchedule.js` (reminder ladder 5/10/20 min), `engine/ticketEngine.js`
+  (`tickTickets` — pure: state in, new state + notifications out).
+- **Job offer** — `jobOffers` in `CareerContext`; status `new` / `declined` / `seen` / `accepted`.
+  `engine/jobBoard.js` decides which jobs are available.
+- **Notification kinds** — `ticket` (new request), `ticket-reminder` (still open), `ticket-completed`
+  ("Service restored…"), `new-job`. Toasts are transient (`toasts` in `CareerContext`); the inbox keeps the text.
+- **Mission `blueprint.topology`** — `{ nodes, cables, newNodes }` draws the real devices (client
+  jobs); legacy missions keep `blueprint.segments`. Nodes not in `deviceRoles` must be `existing: true`.
+  `checkBlueprint` / `checkTopology` (tests) reject overlaps and cables that disagree with `cabled` objectives.
 - **Reputation tiers** — Junior 0 / Freelance 100 / Established 300 / Senior 700 /
   Enterprise 1500. Missions gate on the number, not the label.
-- **SLA clock** — `NEW_TICKET_INTERVAL_MS 5m`, `SLA_DURATION_MS 8m`, warning at 60 %,
-  `TICKET_GRACE_MS 6m`, dormant after 2 consecutive expiries.
+- **SLA clock** — `SLA_DURATION_MS 8m`, warning at 60 %, `TICKET_GRACE_MS 6m`, dormant after 2
+  consecutive expiries. Paused (by real elapsed time) while a job-board mission is active.
 
 ## Dev mode
 - **Preset** — `PRESETS[]` metadata (`id, label, category: 'working'|'broken',
@@ -93,4 +105,13 @@ objectives`.
 IOS: `% Invalid input detected at '^' marker.`, `% Incomplete command.`,
 ping chars `!` reply / `.` timeout / `U` unreachable.
 Linux: `Destination Host Unreachable`, `Destination Net Unreachable`,
-`connect: Network is unreachable`, `Request timed out`.
+`connect: Network is unreachable`, `Request timed out`; iproute2: `RTNETLINK answers: File
+exists` (route/address already there), `RTNETLINK answers: No such process` (route to delete
+absent), `RTNETLINK answers: Cannot assign requested address` (`ip addr del` of an address that
+isn't set), `Error: Nexthop has invalid gateway.` (gateway not on a connected network / adapter
+off); dhclient: `dhclient(<pid>) is already running - exiting.`
+Windows: `The operation failed as no adapter is in the state permissible for this operation.`
+(`ipconfig /renew|/release` on a static/disabled adapter), `No operation can be performed on
+Ethernet0 while it has its media disconnected.`, `DHCP is already enabled on this interface.`,
+`The parameter is incorrect.` (bad netsh value), `netsh interface show interface` columns
+`Admin State  State  Type  Interface Name` (Enabled/Disabled · Connected/Disconnected).

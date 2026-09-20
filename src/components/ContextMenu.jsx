@@ -1,15 +1,16 @@
 import { useGame } from '../state/GameContext.jsx'
 import { playPowerOn, playPowerOff } from '../utils/sounds.js'
-import { IconPower, IconPlug, IconShield, IconTerminal, IconClose } from './icons.jsx'
+import { supportsHostGui } from '../engine/hostConfig.js'
+import { IconPower, IconPlug, IconShield, IconTerminal, IconWindow, IconClose } from './icons.jsx'
 
 const MENU = {
-  position: 'fixed', zIndex: 1000,
+  position: 'fixed', zIndex: 5000,   // menus always come over everything else (windows 1600, dialogs 2500+)
   background: 'var(--surface-raised)', border: '1px solid var(--rule-strong)', borderRadius: 8,
   boxShadow: 'var(--shadow-float)', overflow: 'hidden', userSelect: 'none', padding: '4px 0',
 }
 
 export default function ContextMenu({ x, y, deviceId, onClose }) {
-  const { getDevice, setSelectedDeviceId, openTerminal, openFwConsole, removeFromFloorplan, refresh, setWireMode, closeTerminal, terminalSessions, topology } = useGame()
+  const { getDevice, setSelectedDeviceId, openTerminal, openFwConsole, openHostConfig, removeFromFloorplan, refresh, setWireMode, closeTerminal, terminalSessions, topology } = useGame()
   const device = getDevice(deviceId)
   if (!device) return null
 
@@ -42,6 +43,7 @@ export default function ContextMenu({ x, y, deviceId, onClose }) {
   }
 
   function handleOpenTerminal() { openTerminal(deviceId, { x, y }); setSelectedDeviceId(deviceId); onClose() }
+  function handleConfigureGui()  { openHostConfig(deviceId, { x, y }); setSelectedDeviceId(deviceId); onClose() }
 
   function powerOn() {
     device.powered = true
@@ -87,6 +89,9 @@ export default function ContextMenu({ x, y, deviceId, onClose }) {
       ) : (
         <>
           <Item label="Open Terminal" icon={<IconTerminal size={16} />} onClick={handleOpenTerminal} />
+          {supportsHostGui(device) && (
+            <Item label="Configure GUI" icon={<IconWindow size={16} />} onClick={handleConfigureGui} />
+          )}
           {device.type === 'firewall' && (
             <Item label="Open Firewall Console" icon={<IconShield size={16} />} onClick={() => { openFwConsole(deviceId); onClose() }} />
           )}
