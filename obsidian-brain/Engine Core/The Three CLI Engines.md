@@ -30,6 +30,9 @@ read that before touching this file.
   hood (see
   [[Ping Reachability Engine (checkPing)|checkPing]]). Returns a
   `cancel()` closure so a device switch or reset can abort pending timers cleanly.
+- Name resolution (routers and switches): `ip name-server <ip> [<ip>…]`, `[no] ip domain-lookup`, and
+  `ping <name>` with the `Translating "x"...domain server (…)` line — through `models/dns.js`, so the query
+  really has to reach the server (see [[Decisions Log]], DNS).
 - Owns router-on-a-stick subinterface config, VLAN/trunk config, DHCP pool config,
   NAT ACL/overload config, and (on `firewall`-type devices) `nameif`/`firewall-rule`
   zone policy — the full IOS-and-ASA-inspired surface described across the
@@ -38,7 +41,8 @@ read that before touching this file.
 ## `PCCLIEngine` — Linux iproute2 (pc / server, and laptop when `os_type !== 'windows'`)
 
 Real iproute2 idioms: `ip addr add|del <ip>/<prefix> dev eth0`, `ip link set eth0 up/down`,
-`ip route add|replace|del`, `ping`, `dhclient [-r]`. It fails where the real tools fail
+`ip route add|replace|del`, `ping`, `dhclient [-r]`, and DNS the systemd-resolved way: `resolvectl status|dns|revert|query`,
+`nslookup <name> [server]`, `cat /etc/resolv.conf` (which shows only the local stub, as on Ubuntu). It fails where the real tools fail
 (`RTNETLINK answers: File exists` / `No such process` / `Cannot assign requested address`,
 `Error: Nexthop has invalid gateway.` when no enabled interface covers the gateway, `dhclient …
 is already running - exiting.`), and deleting an interface's address flushes the routes that
@@ -54,9 +58,9 @@ matching how Linux actually names NICs.
 A third, distinct idiom set for the one device type that's the player's own machine
 rather than client-purchased gear. See [[Admin Laptop and Tools]].
 
-Commands: `ipconfig [/all|/release|/renew]`, `route print|add|delete`, `ping`, `arp -a`, and
+Commands: `ipconfig [/all|/release|/renew]`, `route print|add|delete`, `ping` (names too), `nslookup`, `arp -a`, and
 `netsh interface …` — `ip set address` (positional or `name= source= addr= mask= gateway=`),
-`ip delete address`, `ip show config`, `set interface name=… admin=enabled|disabled` and
+`ip delete address`, `ip set|add|delete dns`, `ip show config|dnsservers`, `set interface name=… admin=enabled|disabled` and
 `show interface`. Until 2026-09 a Windows laptop could never get link at all (its adapter
 boots administratively down and there was no enable command); the shell now has one, switching
 static ↔ DHCP works, `ipconfig /renew` keeps the address, and bad `netsh` values are refused

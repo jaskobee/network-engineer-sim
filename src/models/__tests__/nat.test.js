@@ -121,8 +121,12 @@ describe('N1 — inside host + NAT configured + default route → reaches 8.8.8.
     expect(result.reachable).toBe(true)
   })
 
-  it('also reachable via DNS-resolved hostname (google.com → 8.8.8.8)', () => {
-    const { topo, engine, router } = buildNatTopology()
+  it('also reachable by name once the router has a name server (google.com → 8.8.8.8)', () => {
+    // Names resolve only through a configured name server (see dns.test.js) — no built-in table.
+    const { engine, router } = buildNatTopology()
+    engine.execute(router, 'configure terminal')
+    engine.execute(router, 'ip name-server 8.8.8.8')
+    engine.execute(router, 'end')
     const out = engine.execute(router, 'ping google.com')
     expect(out.join(' ')).toMatch(/100 percent/)
   })

@@ -33,7 +33,7 @@ import { WindowsCLIEngine } from '../../models/WindowsCLIEngine.js'
 import { createAdminLaptop } from '../../models/Device.js'
 import {
   supportsHostGui, osOf, linuxName, adapterName, prefixToMask, readAdapter, formFromAdapter, sameForm, subnetFacts,
-  validateManual, planApply, planRenew, planLink, planClear, planQuickAddress, applyPlan,
+  validateManual, validateDns, planApply, planRenew, planLink, planClear, planQuickAddress, applyPlan,
 } from '../hostConfig.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -117,15 +117,15 @@ describe('G1 — reading an adapter', () => {
     run(lx, pc, 'ip addr add 192.168.1.10/24 dev eth0', 'ip route add default via 192.168.1.1')
     const a = readAdapter(topo, pc, 'Ethernet0/0')
     expect(a).toMatchObject({ mode: 'manual', ip: '192.168.1.10', mask: '255.255.255.0', prefix: 24, gateway: '192.168.1.1' })
-    expect(formFromAdapter(a)).toEqual(MANUAL)
+    expect(formFromAdapter(a)).toEqual({ ...MANUAL, dnsMode: 'auto', dns1: '', dns2: '' })   // no DNS set by hand
   })
 
   it('a leased address reads back as dhcp and shows the DNS it was handed', () => {
     run(lx, pc, 'dhclient eth0')
     const a = readAdapter(topo, pc, 'Ethernet0/0')
     expect(a.mode).toBe('dhcp')
-    expect(a.dns).toBe('8.8.8.8')
-    expect(formFromAdapter(a)).toEqual(DHCP)   // manual fields stay empty for a lease
+    expect(a.dnsServers).toEqual(['8.8.8.8'])
+    expect(formFromAdapter(a)).toEqual({ ...DHCP, dnsMode: 'auto', dns1: '', dns2: '' })   // manual fields stay empty for a lease
   })
 
   it('usable hosts = 2^hostBits − 2 (network and broadcast address are reserved), for every common prefix', () => {
@@ -280,7 +280,7 @@ describe('G5 — DHCP → manual', () => {
     ])
     expect(result.ok).toBe(true)
     expect(router.dhcp_bindings).toHaveLength(0)
-    expect(pc.dns_server).toBeNull()
+    expect(pc.dhcp_dns_servers).toEqual([])
     const i = pc.getInterface('Ethernet0/0')
     expect(i).toMatchObject({ ip: '192.168.1.50', dhcp_assigned: false })
     expect(pc.routing_table.filter(r => r.network === '0.0.0.0')).toHaveLength(1)
@@ -603,7 +603,7 @@ describe('H-Win — the same window over the Windows shell', () => {
     expect(plan.commands).toEqual(['netsh interface ip set address "Ethernet0" dhcp'])
     expect(result.ok).toBe(true)
     const a = readAdapter(topo, lap, 'Ethernet0/0')
-    expect(a).toMatchObject({ mode: 'dhcp', gateway: '192.168.2.1', dns: '9.9.9.9' })
+    expect(a).toMatchObject({ mode: 'dhcp', gateway: '192.168.2.1', dnsServers: ['9.9.9.9'] })
     expect(router.dhcp_bindings.filter(b => b.pool_name === 'LAP')).toHaveLength(1)
   })
 
@@ -616,7 +616,7 @@ describe('H-Win — the same window over the Windows shell', () => {
     wapply(DHCP)
     wapply({ ...WMANUAL, ip: '192.168.2.77' })
     expect(router.dhcp_bindings.filter(b => b.pool_name === 'LAP')).toHaveLength(0)
-    expect(lap.dns_server).toBeNull()
+    expect(lap.dhcp_dns_servers).toEqual([])
   })
 
   it('no DHCP server: the setting takes, but the result is reported as no lease — never a fake address', () => {
@@ -757,5 +757,113 @@ describe('H-Guard — a Linux gateway needs an enabled adapter', () => {
   it('once enabled the same form goes through', () => {
     run(lx, pc, 'ip link set eth0 down', 'ip link set eth0 up')
     expect(apply(pc, MANUAL).result.ok).toBe(true)
+  })
+})
+
+// ── DNS in the window ─────────────────────────────────────────────────────────
+
+describe('H-DNS — preferred / alternate DNS servers, through the same shells', () => {
+  const manual = (extra = {}) => ({ ...MANUAL, dnsMode: 'manual', dns1: '8.8.8.8', dns2: '', ...extra })
+
+  it('reads what the host asks, in order, and where it came from', () => {
+    run(lx, pc, 'resolvectl dns eth0 8.8.8.8 8.8.4.4')
+    const a = readAdapter(topo, pc, 'Ethernet0/0')
+    expect(a).toMatchObject({ dnsServers: ['8.8.8.8', '8.8.4.4'], dnsMode: 'static', dnsStatic: ['8.8.8.8', '8.8.4.4'] })
+    expect(formFromAdapter(a)).toMatchObject({ dnsMode: 'manual', dns1: '8.8.8.8', dns2: '8.8.4.4' })
+  })
+
+  it('a lease\'s servers read as automatic, not as something typed', () => {
+    run(lx, pc, 'dhclient eth0')
+    const a = readAdapter(topo, pc, 'Ethernet0/0')
+    expect(a).toMatchObject({ dnsServers: ['8.8.8.8'], dnsMode: 'dhcp', dnsStatic: [], dnsDhcp: ['8.8.8.8'] })
+    expect(formFromAdapter(a)).toMatchObject({ dnsMode: 'auto', dns1: '', dns2: '' })
+  })
+
+  it('what "automatic" would use is the lease\'s list, even while a static list is in effect', () => {
+    run(lx, pc, 'dhclient eth0', 'resolvectl dns eth0 1.1.1.1')
+    expect(readAdapter(topo, pc, 'Ethernet0/0')).toMatchObject({ dnsServers: ['1.1.1.1'], dnsMode: 'static', dnsDhcp: ['8.8.8.8'] })
+  })
+
+  it('a form without DNS fields (the inspector quick edit) leaves DNS alone', () => {
+    run(lx, pc, 'resolvectl dns eth0 1.1.1.1')
+    const { plan } = apply(pc, MANUAL)
+    expect(plan.commands.some(c => c.startsWith('resolvectl'))).toBe(false)
+    expect(pc.dns_servers).toEqual(['1.1.1.1'])
+    expect(planQuickAddress(topo, pc, 'Ethernet0/0', '192.168.1.44', 24).commands.some(c => /resolvectl|dns/.test(c))).toBe(false)
+  })
+
+  it('Linux: one systemd-resolved command carries the whole list, and it really lands', () => {
+    const { plan, result } = apply(pc, manual({ dns2: '8.8.4.4' }))
+    expect(plan.commands.at(-1)).toBe('resolvectl dns eth0 8.8.8.8 8.8.4.4')
+    expect(result.ok).toBe(true)
+    expect(pc.dns_servers).toEqual(['8.8.8.8', '8.8.4.4'])
+  })
+
+  it('unchanged DNS plans nothing; back to automatic plans `resolvectl revert`', () => {
+    apply(pc, manual({ dns2: '8.8.4.4' }))
+    const same = planApply(topo, pc, 'Ethernet0/0', manual({ dns2: '8.8.4.4' }))
+    expect(same.commands).toEqual([])
+    const back = apply(pc, { ...MANUAL, dnsMode: 'auto', dns1: '', dns2: '' })
+    expect(back.plan.commands).toEqual(['resolvectl revert eth0'])
+    expect(back.result.ok).toBe(true)
+    expect(pc.dns_servers).toEqual([])
+  })
+
+  it('automatic with nothing set by hand plans nothing at all', () => {
+    expect(planApply(topo, pc, 'Ethernet0/0', { ...MANUAL, dnsMode: 'auto', dns1: '', dns2: '' }).commands.filter(c => /dns|resolvectl/.test(c))).toEqual([])
+  })
+
+  it('validates: needs a preferred server, valid addresses, and an alternate that differs', () => {
+    expect(validateDns({ dnsMode: 'auto', dns1: 'junk' })).toEqual({})
+    expect(validateDns({ dnsMode: 'manual', dns1: '', dns2: '' }).dns1).toMatch(/Enter the preferred DNS server/)
+    expect(validateDns({ dnsMode: 'manual', dns1: '', dns2: '8.8.4.4' }).dns1).toMatch(/preferred DNS server before the alternate/)
+    expect(validateDns({ dnsMode: 'manual', dns1: '8.8.8', dns2: '' }).dns1).toMatch(/not a valid IPv4/)
+    expect(validateDns({ dnsMode: 'manual', dns1: '8.8.8.8', dns2: '8.8.4' }).dns2).toMatch(/not a valid IPv4/)
+    expect(validateDns({ dnsMode: 'manual', dns1: '8.8.8.8', dns2: '8.8.8.8' }).dns2).toMatch(/same as the preferred/)
+    const { plan, result } = apply(pc, manual({ dns1: 'x' }))
+    expect(plan.errors.dns1).toBeTruthy()
+    expect(plan.commands).toEqual([])          // an invalid form runs NOTHING — not even its valid address half
+    expect(result).toBeNull()
+    expect(pc.interfaces[0].ip).toBeNull()
+  })
+
+  it('an address error and a DNS error are reported together', () => {
+    const plan = planApply(topo, pc, 'Ethernet0/0', manual({ ip: 'nope', dns1: '' }))
+    expect(plan.errors.ip).toBeTruthy()
+    expect(plan.errors.dns1).toBeTruthy()
+  })
+
+  it('Windows: set dns (preferred) then add dns … index=2 (alternate) — netsh, never Linux commands', () => {
+    const lap = createAdminLaptop(); lap.os_type = 'windows'; lap.powered = true
+    topo.addDevice(lap)
+    topo.connect(`${router.id}:GigabitEthernet0/1`, `${lap.id}:Ethernet0/0`)
+    const win = new WindowsCLIEngine(topo)
+    run(win, lap, 'netsh interface set interface name="Ethernet0" admin=enabled')
+    const form = { mode: 'dhcp', ip: '', mask: '', gateway: '', dnsMode: 'manual', dns1: '8.8.8.8', dns2: '8.8.4.4' }
+    const plan = planApply(topo, lap, 'Ethernet0/0', form)
+    expect(plan.commands.filter(c => /dns/.test(c))).toEqual([
+      'netsh interface ip set dns "Ethernet0" static 8.8.8.8',
+      'netsh interface ip add dns "Ethernet0" 8.8.4.4 index=2',
+    ])
+    expect(plan.commands.join('\n')).not.toMatch(/resolvectl|ip addr|dhclient/)
+    const res = applyPlan(cmd => win.execute(lap, cmd), lap, 'Ethernet0/0', plan.commands.filter(c => /dns/.test(c)))
+    expect(res.ok).toBe(true)
+    expect(lap.dns_servers).toEqual(['8.8.8.8', '8.8.4.4'])
+    const back = planApply(topo, lap, 'Ethernet0/0', { ...form, dnsMode: 'auto', dns1: '', dns2: '' })
+    expect(back.commands.filter(c => /dns/.test(c))).toEqual(['netsh interface ip set dns "Ethernet0" dhcp'])
+  })
+
+  it('a single preferred server on Windows is one command', () => {
+    const lap = createAdminLaptop(); lap.os_type = 'windows'; lap.powered = true
+    topo.addDevice(lap)
+    const plan = planApply(topo, lap, 'Ethernet0/0', { mode: 'dhcp', ip: '', mask: '', gateway: '', dnsMode: 'manual', dns1: '1.1.1.1', dns2: '' })
+    expect(plan.commands.filter(c => /dns/.test(c))).toEqual(['netsh interface ip set dns "Ethernet0" static 1.1.1.1'])
+  })
+
+  it('sameForm notices a DNS edit (so Revert lights up and the form is not overwritten)', () => {
+    const base = formFromAdapter(readAdapter(topo, pc, 'Ethernet0/0'))
+    expect(sameForm(base, { ...base, dnsMode: 'manual', dns1: '8.8.8.8' })).toBe(false)
+    expect(sameForm(base, { ...base })).toBe(true)
+    expect(sameForm({ mode: 'dhcp', ip: '', mask: '', gateway: '' }, { mode: 'dhcp', ip: '', mask: '', gateway: '', dnsMode: 'auto', dns1: '', dns2: '' })).toBe(true)
   })
 })

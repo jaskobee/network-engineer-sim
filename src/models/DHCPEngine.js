@@ -7,8 +7,8 @@
  *   - Lease expiry: lease_expires is stored as "Infinite" for all bindings.
  *     Real lease timers (T1/T2/expiry) are not simulated.  The `lease` command
  *     stores duration for display only.
- *   - DNS: a single dns-server IP is applied to device.dns_server.
- *     Real DHCP can carry multiple DNS servers (option 6).
+ *   - DNS: the pool's `dns-server` list (option 6) is applied to device.dhcp_dns_servers, in order.
+ *     A name server set by hand on the client (device.dns_servers) still wins over the lease.
  */
 
 import { isValidIp, ipToNum, networkAddress } from './ipUtils.js'
@@ -17,7 +17,7 @@ import { isValidIp, ipToNum, networkAddress } from './ipUtils.js'
 
 /**
  * Perform DHCP DORA exchange for clientIface on clientDevice.
- * Returns { success: true, ip, mask, gateway, dns } on success,
+ * Returns { success: true, ip, mask, gateway, dnsServers } on success,
  *         { success: false, reason, message } on failure.
  *
  * Invariants enforced:
@@ -52,7 +52,7 @@ export function performDHCP(topology, clientDevice, clientIface) {
     const ip = _selectAddress(rDev, pool, rIface.ip, _clientId(clientDevice, clientIface))
     if (ip === null) return { success: false, reason: 'pool_exhausted', message: 'DHCP pool has no available addresses' }
     _recordBinding(rDev, ip, clientDevice, clientIface, pool.name)
-    return { success: true, ip, mask: pool.mask, gateway: pool.default_router, dns: pool.dns_server }
+    return { success: true, ip, mask: pool.mask, gateway: pool.default_router, dnsServers: [...(pool.dns_servers ?? [])] }
   }
 
   // ── Try relay (ip helper-address on a router interface on same segment) ────
@@ -75,7 +75,7 @@ export function performDHCP(topology, clientDevice, clientIface) {
       const ip = _selectAddress(serverDev, pool, giaddr, _clientId(clientDevice, clientIface))
       if (ip === null) return { success: false, reason: 'pool_exhausted', message: 'DHCP pool has no available addresses' }
       _recordBinding(serverDev, ip, clientDevice, clientIface, pool.name)
-      return { success: true, ip, mask: pool.mask, gateway: pool.default_router, dns: pool.dns_server }
+      return { success: true, ip, mask: pool.mask, gateway: pool.default_router, dnsServers: [...(pool.dns_servers ?? [])] }
     }
   }
 
@@ -109,8 +109,8 @@ export function releaseDHCP(topology, clientDevice, clientIface) {
   // Remove the default gateway route that was injected by DHCP
   clientDevice.routing_table = clientDevice.routing_table.filter(r => !r.dhcp_assigned)
 
-  // Clear DNS
-  clientDevice.dns_server = null
+  // Forget the name servers the lease supplied (ones set by hand stay)
+  clientDevice.dhcp_dns_servers = []
 
   return { released: true, ip }
 }

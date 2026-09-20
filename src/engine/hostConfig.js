@@ -20,6 +20,7 @@ import {
   isValidIp, isValidMask, isHostAddress,
   networkAddress, broadcastAddress, maskToPrefixLen, ipToNum,
 } from '../models/ipUtils.js'
+import { effectiveDnsServers, dnsSource } from '../models/dns.js'
 
 // Device types that get the window. Routers, switches and firewalls are CLI devices.
 export const HOST_GUI_TYPES = new Set(['pc', 'server', 'phone', 'laptop'])
@@ -127,7 +128,11 @@ export function readAdapter(topology, device, ifaceName) {
     mode, ip, mask,
     prefix: mask ? maskToPrefixLen(mask) : null,
     gateway,
-    dns: device.dns_server ?? null,
+    // Name servers the host asks, in order, and where they came from ('static' | 'dhcp' | 'none').
+    dnsServers: effectiveDnsServers(device),
+    dnsMode: dnsSource(device),
+    dnsStatic: [...(device.dns_servers ?? [])],
+    dnsDhcp: [...(device.dhcp_dns_servers ?? [])],   // what the lease supplies — what "automatic" would use
     facts: subnetFacts(ip, mask),
   }
 }
@@ -135,16 +140,24 @@ export function readAdapter(topology, device, ifaceName) {
 /** Form values for an adapter. The manual fields are empty unless a manual address is set. */
 export function formFromAdapter(a) {
   const manual = a.mode === 'manual'
+  const staticDns = a.dnsStatic ?? []
   return {
     mode: manual ? 'manual' : 'dhcp',
     ip: manual ? a.ip : '',
     mask: manual ? a.mask : '',
     gateway: manual ? (a.gateway ?? '') : '',
+    // DNS is set apart from the address: 'auto' = whatever the DHCP lease supplies (nothing, on a
+    // manual address); 'manual' = the preferred / alternate servers typed below.
+    dnsMode: staticDns.length ? 'manual' : 'auto',
+    dns1: staticDns[0] ?? '',
+    dns2: staticDns[1] ?? '',
   }
 }
 
 export function sameForm(a, b) {
-  return a.mode === b.mode && a.ip.trim() === b.ip.trim() && a.mask.trim() === b.mask.trim() && a.gateway.trim() === b.gateway.trim()
+  const t = v => (v ?? '').trim()
+  return a.mode === b.mode && t(a.ip) === t(b.ip) && t(a.mask) === t(b.mask) && t(a.gateway) === t(b.gateway) &&
+    (a.dnsMode ?? 'auto') === (b.dnsMode ?? 'auto') && t(a.dns1) === t(b.dns1) && t(a.dns2) === t(b.dns2)
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -211,9 +224,53 @@ export function validateManual(topology, device, form, ifaceName) {
 export function planApply(topology, device, ifaceName, form) {
   const cur = readAdapter(topology, device, ifaceName)
   if (!cur) return { errors: {}, commands: [] }
-  return cur.os === 'windows'
+  const ip = cur.os === 'windows'
     ? planApplyWindows(topology, device, ifaceName, form, cur)
     : planApplyLinux(topology, device, ifaceName, form, cur)
+  // A form without DNS fields (the inspector's quick address edit) leaves DNS alone.
+  const dns = form.dnsMode === undefined ? { errors: {}, commands: [] } : planDns(form, cur)
+  const errors = { ...ip.errors, ...dns.errors }
+  if (Object.keys(errors).length) return { errors, commands: [] }
+  return { errors: {}, commands: [...ip.commands, ...dns.commands] }
+}
+
+/**
+ * Name servers, apart from the address. 'auto' drops what was set by hand so the lease's servers
+ * apply again (`resolvectl revert` / `netsh … set dns … dhcp`); 'manual' sets the preferred server
+ * and, if given, an alternate — the pair CCNA teaches; Windows takes them as `set dns` (preferred)
+ * then `add dns … index=2` (alternate), systemd-resolved as one list.
+ */
+export function validateDns(form) {
+  const errors = {}
+  if (form.dnsMode !== 'manual') return errors
+  const d1 = (form.dns1 ?? '').trim(), d2 = (form.dns2 ?? '').trim()
+  if (!d1 && !d2) errors.dns1 = 'Enter the preferred DNS server, or choose "Obtain DNS server address automatically".'
+  else if (!d1) errors.dns1 = 'Enter a preferred DNS server before the alternate one.'
+  else if (!isValidIp(d1)) errors.dns1 = 'That is not a valid IPv4 address — four numbers from 0 to 255 separated by dots.'
+  if (d2 && !isValidIp(d2)) errors.dns2 = 'That is not a valid IPv4 address — four numbers from 0 to 255 separated by dots.'
+  else if (d1 && d2 && d1 === d2) errors.dns2 = 'The alternate server is the same as the preferred one — it would never help.'
+  return errors
+}
+
+function planDns(form, cur) {
+  const errors = validateDns(form)
+  if (Object.keys(errors).length) return { errors, commands: [] }
+  const windows = cur.os === 'windows'
+  const q = `"${cur.label}"`
+  if (form.dnsMode !== 'manual') {
+    if (!cur.dnsStatic.length) return { errors: {}, commands: [] }
+    return { errors: {}, commands: [windows ? `netsh interface ip set dns ${q} dhcp` : `resolvectl revert ${cur.label}`] }
+  }
+  const servers = [form.dns1.trim(), (form.dns2 ?? '').trim()].filter(Boolean)
+  if (servers.join(' ') === cur.dnsStatic.join(' ')) return { errors: {}, commands: [] }
+  if (!windows) return { errors: {}, commands: [`resolvectl dns ${cur.label} ${servers.join(' ')}`] }
+  return {
+    errors: {},
+    commands: [
+      `netsh interface ip set dns ${q} static ${servers[0]}`,
+      ...(servers[1] ? [`netsh interface ip add dns ${q} ${servers[1]} index=2`] : []),
+    ],
+  }
 }
 
 // Windows: `netsh … set address` replaces the whole IPv4 configuration in one command

@@ -3,7 +3,8 @@ import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useGame } from '../state/GameContext.jsx'
-import { isValidIp, resolveHostname } from '../models/ipUtils.js'
+import { isValidIp } from '../models/ipUtils.js'
+import { pingTargetOf } from '../engine/pingTarget.js'
 
 // Atkinson Hyperlegible Mono keeps 0/O and 1/l/I distinct — which matters when the
 // text on screen is an IP address or a command a learner has to retype exactly.
@@ -393,22 +394,36 @@ function TermSession({ session, isActive }) {
         }
 
         const isPingCmd  = tokens[0].toLowerCase() === 'ping' && tokens.length >= 2
-        const pingTarget = isPingCmd ? tokens[tokens.length - 1] : null
-        // Resolve hostname to IP for both animation and topology checks
-        const resolvedPingTarget = pingTarget && !isValidIp(pingTarget)
-          ? (resolveHostname(pingTarget) ?? null)
-          : pingTarget
+        const pingTarget = isPingCmd ? pingTargetOf(tokens, isWindows ? 'windows' : isPC ? 'linux' : 'ios') : null
 
-        if (pingTarget && resolvedPingTarget && isValidIp(resolvedPingTarget)) {
-          // ── Async ping (IP or resolved hostname) ───────────────────────
-          if (resolvedPingTarget !== pingTarget) {
-            term.writeln(`Translating "${pingTarget}"... [OK] (${resolvedPingTarget})`)
+        // A name is resolved by the device's own resolver — the configured name servers, over the real
+        // network (models/dns.js) — and fails the way that OS fails: no fake "internet" table any more.
+        let resolvedPingTarget = pingTarget
+        let resolveLines = []
+        let resolveFailed = false
+        if (pingTarget && !isValidIp(pingTarget)) {
+          const r = eng.resolveForPing(device, pingTarget)
+          if (r.ok) { resolvedPingTarget = r.ip; resolveLines = r.lines }
+          else {
+            resolveFailed = true
+            r.lines.forEach(l => term.writeln(l))
+            refreshRef.current()
+            writePrompt()
           }
+        }
+
+        if (resolveFailed) {
+          // the failure has been written; nothing else to run
+        } else if (pingTarget && resolvedPingTarget && isValidIp(resolvedPingTarget)) {
+          // ── Async ping (IP or resolved hostname) ───────────────────────
+          // IOS prints its `Translating "x"...domain server (…) [OK]` line; hosts print nothing before the header.
+          resolveLines.forEach(l => term.writeln(l))
           // onDoneFired guards against a race: if executePingAsync fires onDone
           // synchronously (immediate fail / early-exit), pingCancelRef.current = cancel
           // below would overwrite the null that onDone already set, locking the terminal.
           let onDoneFired = false
           const cancel = eng.executePingAsync(device, resolvedPingTarget, {
+            displayName: resolvedPingTarget !== pingTarget ? pingTarget : null,
             onStart: lines => lines.forEach(l => term.writeln(l)),
             onPacket: (i, reachable, _tgt, srcIp, failureReason, ttl, rtt) => {
               const pktSrcIp = srcIp ?? device.interfaces.find(f => f.status === 'up' && f.ip)?.ip

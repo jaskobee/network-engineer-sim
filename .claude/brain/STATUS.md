@@ -3,7 +3,7 @@
 _Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design). Keep this describing **now**; remove finished items._
 
 ## Health
-- `npm test` → **721 tests / 31 files passing** (Vitest 4).
+- `npm test` → **806 tests / 33 files passing** (Vitest 4).
 - `npx vite build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
 
@@ -41,7 +41,7 @@ _Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design
 - **Endless, pannable floorplan** (drag empty background; `panOffset` in `GameContext`).
 - **UI design system** — tokens in `index.css` `:root`, LED-as-signal colour language, two
   self-hosted fonts, SVG icon set; rules in `.claude/rules/ui.md`.
-- **Dev/QA mode** (`src/devMode/`): 14 presets (working + broken), foundation smoke tests,
+- **Dev/QA mode** (`src/devMode/`): 16 presets (working + broken), foundation smoke tests,
   live state inspector. Presets drive the real engine — no state writes.
 - Auto-save to localStorage + Export/Import JSON (`utils/saveLoad.js`), reset guard,
   client-side login gate for beta (`AuthContext`, bcryptjs).
@@ -59,6 +59,12 @@ _Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design
   devices (`blueprint.topology`); legacy 003–005 diagrams fixed and covered by a layout test.
 - **Host Configure GUI** (right-click → Configure GUI on PC/server/laptop) writes through the CLI
   engines; inspector quick IP edit uses the same path.
+- **DNS phase 1** (`models/dns.js`): names resolve only through a configured name server the host can
+  really reach (UDP/53 through routing, NAT, firewall) — no built-in table. Name-server *lists*
+  (`dns_servers` by hand over `dhcp_dns_servers` from the lease), `resolvectl` / `nslookup` / `cat resolv.conf`
+  on Linux, `netsh … dns` / `nslookup` on Windows, `ip name-server` / `ip domain-lookup` on routers and
+  switches, GUI fields in the host window, UDP/53 in the capture, two dev presets (16 total). Only the public
+  resolvers answer; see `docs/NETWORKING_ACCURACY.md` §DNS rules.
 
 ## In flight / recently touched
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
@@ -66,8 +72,9 @@ _Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design
 - New mission + narrative type ("full new playstyle") — the client/career layer above.
 
 ## Next up (in priority order)
-0. **DNS** — design agreed (`docs/DNS_DESIGN.md`): strict resolution, name-server *lists*,
-   GUI for server records, `resolvectl` on Linux. Phase 1 (client + resolver) awaits the go-ahead.
+0. **DNS phase 2** (`docs/DNS_DESIGN.md`): DNS service on servers (Services → DNS record table, Packet-Tracer
+   style) and routers (`ip dns server`, `ip host`, `show hosts`), a LAN-server preset, `resolves` mission condition.
+   Phase 3: forwarders, CNAME, TTL cache (`ipconfig /displaydns|/flushdns`).
 1. **Act 2 — fault-injection / troubleshooting missions**: pre-broken topologies, no
    step-by-step hints, diagnose with `show` commands. Design in
    `docs/NETSIM_FAULTS_AND_FEATURES.md`. Use `/fault-scenario`.
@@ -86,7 +93,8 @@ _Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design
   "bring it up" step in every mission, so it needs its own change and the owner's go-ahead;
   `ip link set down/up` keeps static routes (real Linux flushes them on down); one address per
   interface (a second `ip addr add` replaces, real Linux adds a secondary); one default route
-  per host; a Windows adapter can't be given a static DNS. DNS itself: see `docs/DNS_DESIGN.md`.
+  per host. DNS is per host, not per adapter (hosts have one NIC); `ping -c N` still sends a fixed 4 echoes
+  in the animated terminal ping.
 - The main game shell is desktop-only (drag-and-drop map, terminals); login and the tour are
   responsive down to phone width.
 - `docs/` filenames are inconsistent in case (`Roas-Sandbox-LAB.md`, `dhcp-sandbox-lab.md`,

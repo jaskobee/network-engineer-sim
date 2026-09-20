@@ -57,6 +57,8 @@ const NEW_PRESET_IDS = new Set([
   'admin-laptop-firewall-ui-solved',
   'admin-laptop-crosszone-router-ui-solved',
   'admin-laptop-crosszone-router-ui-broken',
+  'dns-internet-solved',
+  'dns-no-nat-broken',
 ])
 
 describe('devMode presets — firewall + admin-laptop-web-UI presets reach their claimed state via the real engine', () => {
@@ -85,4 +87,28 @@ describe('devMode presets — firewall + admin-laptop-web-UI presets reach their
       }
     })
   }
+})
+
+describe('devMode DNS presets — the symptom the player sees is the real one', () => {
+  const pcOf  = ctx => [...ctx.sbTopology.devices.values()].find(d => d.type === 'pc')
+  const rtrOf = ctx => [...ctx.sbTopology.devices.values()].find(d => d.type === 'router')
+
+  it('dns-internet-solved: the PC and the router resolve names through the ISP\'s resolver', () => {
+    const ctx = makeCtx()
+    expect(buildPreset('dns-internet-solved', ctx)).toMatchObject({ type: 'ping', reachable: true })
+    const out = ctx.sbPcEngine.execute(pcOf(ctx), 'ping -c 1 google.com')
+    expect(out[0]).toBe('PING google.com (8.8.8.8) 56(84) bytes of data.')
+    expect(ctx.sbPcEngine.execute(pcOf(ctx), 'nslookup github.com').join('\n')).toContain('Address: 140.82.121.4')
+    ctx.sbEngine.execute(rtrOf(ctx), 'enable')
+    expect(ctx.sbEngine.execute(rtrOf(ctx), 'ping google.com')[0]).toBe('Translating "google.com"...domain server (8.8.8.8) [OK]')
+  })
+
+  it('dns-no-nat-broken: the query dies with nat_required, so the name does not resolve', () => {
+    const ctx = makeCtx()
+    expect(buildPreset('dns-no-nat-broken', ctx)).toMatchObject({ type: 'ping', reachable: false, failureReason: 'nat_required' })
+    expect(ctx.sbPcEngine.execute(pcOf(ctx), 'ping -c 1 google.com')).toEqual(['ping: google.com: Temporary failure in name resolution'])
+    // the router's own queries use its public WAN address, so IT still resolves — the symptom is the LAN's
+    ctx.sbEngine.execute(rtrOf(ctx), 'enable')
+    expect(ctx.sbEngine.execute(rtrOf(ctx), 'ping google.com')[0]).toMatch(/\[OK\]$/)
+  })
 })

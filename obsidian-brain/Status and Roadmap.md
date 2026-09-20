@@ -23,7 +23,8 @@ live repo for anything you're about to act on.
 - The career layer: persistent clients, monthly-support contracts, reputation tiers,
   wall-clock SLA service tickets with randomized pacing, an alert ladder, a job board with offers,
   and a Topology tab on every job — see [[Career Layer]].
-- DNS is designed (strict resolution, name-server lists, GUI for servers) but not built: `docs/DNS_DESIGN.md`.
+- DNS phase 1: strict resolution through configured name-server lists, in all three shells and the host GUI
+  (`docs/DNS_DESIGN.md`); server-side DNS (phase 2) is next.
 - The full networking model: bidirectional `checkPing` with `failureReason`/
   `failurePoint`, strict L2 switch, ROAS, DHCP (DORA/pools/relay/`dhclient`),
   NAT/PAT overload, zone-based stateful firewall with service/port matching, a

@@ -299,8 +299,69 @@ reachable over a connected network) and Prompt 5 (interface states) for end host
 ### Simplifications (documented, not bugs)
 - Every interface boots administratively down, so a host must be enabled before it can take a
   gateway (real hosts boot up). `ip link set down/up` keeps static routes (real Linux flushes
-  them on down). One address per interface. One default route per host. No DNS setting on
-  hosts yet — see `docs/DNS_DESIGN.md`.
+  them on down). One address per interface. One default route per host. DNS servers are kept per
+  host, not per adapter (these machines have one NIC) — see the DNS rules below.
+
+---
+
+## DNS rules (phase 1: client resolver)
+
+Implemented in `src/models/dns.js` (resolver), the three shells (`PCCLIEngine`, `WindowsCLIEngine`,
+`CLIEngine`) and `src/engine/hostConfig.js` (GUI planner). Enforced by
+`src/models/__tests__/dns.test.js` and `src/engine/__tests__/hostConfig.test.js` (H-DNS).
+Design and phases: `docs/DNS_DESIGN.md`.
+
+1. **A name resolves only through a configured name server the host can really reach.** No name
+   server → no resolution; there is no built-in "internet" table. The query is UDP/53 checked with
+   `checkPing(src, server, { protocol: 'udp', port: 53 })`, so routing, both directions, NAT
+   (`nat_required`) and firewall policy (`blocked_by_firewall`) all apply. A firewall that permits
+   ICMP but not `service DNS` breaks name resolution while `ping 8.8.8.8` still works — the classic
+   "works by IP, not by name" fault.
+2. **Four different failures, four different reasons** (`resolveName().reason`):
+   `dns_no_server` (nothing configured), `dns_unreachable` (no query/answer got through — path,
+   NAT, firewall, dead adapter, or the address is not a DNS server), `dns_refused` (the host is
+   there but nothing listens on UDP/53), `dns_nxdomain` (the server answered: no such name).
+3. **A host holds a list of name servers, tried in order** (Windows preferred + alternate,
+   systemd-resolved link list, IOS `ip name-server` with several addresses). An unreachable or
+   refusing server is skipped; NXDOMAIN from a reachable server ends the search — the alternate is
+   not asked (an authoritative "no" is an answer).
+4. **Static beats lease.** Servers set by hand (`resolvectl dns`, `netsh … set dns`) override the ones
+   a DHCP lease supplied; `resolvectl revert` / `netsh … set dns … dhcp` gives the lease back.
+   Releasing a lease forgets only the lease's servers. A DHCP pool hands out up to eight
+   (`dns-server a b …`), in order.
+5. **Each OS keeps its own idioms and wording.**
+   - Linux (systemd-resolved, stub mode as on Ubuntu): `resolvectl status | dns | revert | query`,
+     `nslookup <name> [server]` (via the stub `127.0.0.53`: NXDOMAIN, or SERVFAIL when the upstream
+     failed; with an explicit server the BIND wording `connection timed out; no servers could be
+     reached` / `communications error … connection refused`), `cat /etc/resolv.conf` shows only
+     the stub, the real servers are in `/run/systemd/resolve/resolv.conf`.
+     `ping`: `Temporary failure in name resolution` (no server / none answered) vs
+     `Name or service not known` (NXDOMAIN).
+   - Windows: `netsh interface ip set dns "Ethernet0" static <ip>` (preferred), `add dns … index=2`
+     (alternate), `delete dns`, `set dns … dhcp`, `show config | dnsservers`, `ipconfig /all`,
+     `nslookup` (`Server:` is the reverse name, `UnKnown` when none; `DNS request timed out`;
+     `Non-existent domain`). `ping`: one message for every failure — `Ping request could not
+     find host <name>. Please check the name and try again.`
+   - IOS (routers and switches): `ip name-server <ip> [<ip>…]`, `[no] ip domain-lookup` (on by
+     default; IOS 15 prints `no ip domain lookup`), `ping <name>` prints `Translating "x"...domain
+     server (<ips>)` (`(255.255.255.255)` with none configured) then `[OK]` or
+     `% Unrecognized host or address, or protocol not running.` With lookup off the name is not
+     translated at all. Firewalls do not take `ip name-server` (real ASA syntax differs).
+6. **The exchange is captured**, so WireFish shows real UDP/53 request/reply frames (or the drop and
+   its reason). Silent resolution (mission validators) records nothing.
+
+### Simplifications (documented, not bugs)
+- **Phase 1 answers only from the public resolvers** (8.8.8.8, 8.8.4.4, 1.1.1.1, 1.0.0.1, 9.9.9.9)
+  reached through the ISP. A LAN device at a configured server address answers `refused`. DNS service
+  on servers and routers (`ip dns server`, `ip host`) is phase 2.
+- **No cache, no TTLs, A records only**, no recursion detail, no TCP fallback, no source ports
+  (`ipconfig /displaydns`, `/flushdns`, `show hosts` wait for the cache).
+- **Servers are per host, not per adapter** (hosts have one NIC).
+- **systemd-resolved's built-in fallback DNS is treated as disabled** — otherwise a host with no DNS
+  setting would still resolve, hiding the very mistake the lesson is about.
+- **`nslookup` interactive mode, `set type=` and reverse (PTR) lookups are not simulated**; the shell
+  says so instead of printing something invented.
+- `resolvectl` needs no `sudo` (same simplification as `ip` on the Linux hosts).
 
 ---
 

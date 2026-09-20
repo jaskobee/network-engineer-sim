@@ -248,7 +248,7 @@ describe('W6 — static → DHCP', () => {
     expect(iface.ip).not.toBe('192.168.1.50')
     expect(defaults(lap)).toHaveLength(1)
     expect(defaults(lap)[0]).toMatchObject({ next_hop: '192.168.1.1', dhcp_assigned: true })
-    expect(lap.dns_server).toBe('8.8.8.8')
+    expect(lap.dhcp_dns_servers).toEqual(['8.8.8.8'])
     expect(router.dhcp_bindings).toHaveLength(1)
   })
 
@@ -284,7 +284,7 @@ describe('W7 — DHCP → static', () => {
     expect(router.dhcp_bindings).toHaveLength(1)
     run(win, lap, 'netsh interface ip set address "Ethernet0" static 192.168.1.77 255.255.255.0 192.168.1.1')
     expect(router.dhcp_bindings).toHaveLength(0)
-    expect(lap.dns_server).toBeNull()
+    expect(lap.dhcp_dns_servers).toEqual([])
     expect(iface).toMatchObject({ ip: '192.168.1.77', dhcp_assigned: false })
     expect(defaults(lap)).toHaveLength(1)
     expect(defaults(lap)[0].dhcp_assigned).toBeUndefined()

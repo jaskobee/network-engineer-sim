@@ -33,6 +33,10 @@ TELNET 23, RDP 3389, SMTP 25).
 | `link_down` | Cable/peer down (down/down) | implemented |
 | `no_return_path` | Request left, no route back | implemented |
 | `host_no_gateway` | Host has no default route | implemented |
+| `dns_no_server` | Name lookup: no name server configured (`resolveName().reason`, not a `checkPing` reason) | implemented |
+| `dns_unreachable` | Name lookup: no query/answer got through — carries the underlying `failureReason` per server in `tried[]` | implemented |
+| `dns_refused` | Name lookup: server reachable but nothing on UDP/53 (a LAN host with no DNS service) | implemented |
+| `dns_nxdomain` | Name lookup: server answered, no such name (ends the search; the alternate is not asked) | implemented |
 | `vlan_isolated` | Wrong VLAN / VLAN not carried on trunk / access-mode ROAS uplink | implemented |
 | `nat_required` | RFC 1918 source egressing to ISP without translation | implemented |
 | `blocked_by_firewall` | Dropped by zone policy (`failurePoint` = firewall id) | implemented |
@@ -40,6 +44,16 @@ TELNET 23, RDP 3389, SMTP 25).
 | `gateway_unreachable` | Gateway set but off-subnet / unreachable | **falls through** |
 | `ip_conflict` | Duplicate IP | **falls through** |
 | `duplex_mismatch` | Up/up but lossy | **falls through** |
+
+## DNS (`src/models/dns.js`)
+- **`device.dns_servers`** — name servers set by hand, in order (`resolvectl dns`, `netsh … set dns`, `ip name-server`).
+  **`device.dhcp_dns_servers`** — what a DHCP lease supplied. `effectiveDnsServers(device)` = the first if non-empty, else the
+  second; `dnsSource(device)` → `'static' | 'dhcp' | 'none'`. **`device.domain_lookup`** (router/switch, default `true`) = IOS `ip domain-lookup`.
+- **`resolveName(topology, device, name, { srcIpFor?, capture?, localNames? })`** → `{ ok, ip, reason, server, servers, tried[], authoritative }`;
+  `queryServer` asks one server. Reasons are the `dns_*` rows in the table above. Pure — a mission condition can call it silently.
+- DHCP pools: `pool.dns_servers` (list; `dns-server a b …`, up to 8). Old saves' single `dns_server` load as a one-element list.
+- Shell hook: each engine has `resolveForPing(device, name)` → `{ ok, ip, lines }` (OS-worded); `TerminalPane` uses it, and
+  `engine/pingTarget.js` `pingTargetOf(tokens, os)` picks the destination.
 
 ## Mission DSL (`src/engine/missionEngine.js`)
 A `MissionDefinition` has `deviceRoles` and `objectives`.

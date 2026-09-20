@@ -19,7 +19,8 @@
  */
 
 import { normalizeIfName, getParentIfName, createSubinterface, refreshSubifs } from './Device.js'
-import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen, resolveHostname } from './ipUtils.js'
+import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen } from './ipUtils.js'
+import { resolveName } from './dns.js'
 
 export class CLIEngine {
   constructor(topology, difficulty = 'beginner') {
@@ -521,14 +522,38 @@ export class CLIEngine {
     return []
   }
 
+  // A hostname given to `ping`, resolved the way IOS does it: only while `ip domain-lookup` is on,
+  // by asking the configured `ip name-server`s over the real network (models/dns.js).
+  // → { ok: true, ip, lines }  lines = what IOS prints before the ping starts
+  //   { ok: false, lines }     lines = the failure, in IOS's words
+  // Also used by TerminalPane, which runs the animated ping once the name is an address.
+  resolveForPing(device, name) {
+    const fail = '% Unrecognized host or address, or protocol not running.'
+    // `no ip domain-lookup`: the name is not looked up at all — nothing to translate it with.
+    if (device.domain_lookup === false) return { ok: false, lines: [fail] }
+
+    const r = resolveName(this.topology, device, name, {
+      capture: true, localNames: [],
+      srcIpFor: (dev, serverIp) => _getSrcIp(this.topology, dev, serverIp),
+    })
+    // IOS lists the servers it asked; with none configured it broadcasts (255.255.255.255).
+    const asked = r.servers.length ? r.servers : ['255.255.255.255']
+    const upTo = r.ok && r.server ? asked.slice(0, asked.indexOf(r.server) + 1) : asked
+    const head = `Translating "${name}"...domain server ${upTo.map(a => `(${a})`).join(' ')}`
+    if (r.ok) return { ok: true, ip: r.ip, lines: [`${head} [OK]`, ''] }
+    return { ok: false, lines: [head, '', fail] }
+  }
+
   // ── ping ───────────────────────────────────────────────────────────────────
   _cmdPing(device, tokens) {
     if (!tokens[1]) return ['% Incomplete command.  Usage: ping <destination>']
     let dstIp = tokens[1]
+    let announce = []
     if (!isValidIp(dstIp)) {
-      const resolved = resolveHostname(dstIp)
-      if (!resolved) return [`% Unknown host: ${dstIp}`]
-      dstIp = resolved
+      const r = this.resolveForPing(device, dstIp)
+      if (!r.ok) return r.lines
+      dstIp = r.ip
+      announce = r.lines
     }
 
     const srcIp = _getSrcIp(this.topology, device, dstIp)
@@ -553,6 +578,7 @@ export class CLIEngine {
       rttLine = `, round-trip min/avg/max = ${rttMin}/${rttAvg}/${rttMax} ms`
     }
     const lines = [
+      ...announce,
       `Type escape sequence to abort.`,
       `Sending 5, 100-byte ICMP Echos to ${dstIp}, timeout is 2 seconds:`,
       result.reachable ? '!!!!!' : '.....',
@@ -674,6 +700,14 @@ export class CLIEngine {
       '!',
     ]
 
+    // Name resolution (routers and switches). IOS 15 prints the lookup switch as `ip domain lookup`.
+    if (device.type === 'router' || device.type === 'switch') {
+      const dnsCfg = []
+      if (device.domain_lookup === false) dnsCfg.push('no ip domain lookup')
+      if (device.dns_servers?.length)     dnsCfg.push(`ip name-server ${device.dns_servers.join(' ')}`)
+      if (dnsCfg.length) L.push(...dnsCfg, '!')
+    }
+
     if (device.type === 'firewall') {
       // Interfaces — show zone, security-level, IP, and admin state
       for (const iface of device.interfaces) {
@@ -761,7 +795,7 @@ export class CLIEngine {
         L.push(`ip dhcp pool ${pool.name}`)
         if (pool.network && pool.mask) L.push(` network ${pool.network} ${pool.mask}`)
         if (pool.default_router)       L.push(` default-router ${pool.default_router}`)
-        if (pool.dns_server)           L.push(` dns-server ${pool.dns_server}`)
+        if (pool.dns_servers?.length)  L.push(` dns-server ${pool.dns_servers.join(' ')}`)
         L.push(` lease ${pool.lease_days} ${pool.lease_hours} ${pool.lease_mins}`)
         L.push('!')
       }
@@ -915,7 +949,7 @@ export class CLIEngine {
       L.push(` Excluded addresses             : ${excluded}`)
       L.push(` Network                        : ${pool.network ?? '(not set)'} ${pool.mask ?? ''}`)
       L.push(` Default router                 : ${pool.default_router ?? '(not set)'}`)
-      L.push(` DNS server                     : ${pool.dns_server ?? '(not set)'}`)
+      L.push(` DNS server                     : ${pool.dns_servers?.length ? pool.dns_servers.join(' ') : '(not set)'}`)
       L.push(` Lease                          : ${lease}`)
     }
     return L
@@ -1031,6 +1065,21 @@ export class CLIEngine {
   _cmdIp(device, tokens) {
     const sub = tokens[1]?.toLowerCase()
 
+    // ── ip name-server / ip domain-lookup (global_config; routers and switches) ─────────
+    // `ip domain-lookup` is ON by default (IOS 15 spells it `ip domain lookup`; both are accepted).
+    if (sub === 'name-server' || sub === 'domain-lookup' || (sub === 'domain' && tokens[2]?.toLowerCase() === 'lookup')) {
+      if (device.config_mode !== 'global_config') return this._invalidInput()
+      if (device.type !== 'router' && device.type !== 'switch') return this._invalidInput()
+      if (sub !== 'name-server') { device.domain_lookup = true; return [] }
+      const ips = tokens.slice(2)
+      if (!ips.length) return ['% Incomplete command.']
+      const bad = ips.find(ip => !isValidIp(ip))
+      if (bad) return [`% Invalid IP address: ${bad}`]
+      // Each `ip name-server` adds to the list (kept in the order entered); a repeat is ignored.
+      for (const ip of ips) if (!device.dns_servers.includes(ip)) device.dns_servers.push(ip)
+      return []
+    }
+
     if (sub === 'address' || sub === 'addr') {
       if (device.config_mode !== 'interface_config' && device.config_mode !== 'subif_config')
         return this._invalidInput()
@@ -1122,7 +1171,7 @@ export class CLIEngine {
         if (!name) return ['% Incomplete command.  Usage: ip dhcp pool <name>']
         let pool = device.dhcp_pools.find(p => p.name === name)
         if (!pool) {
-          pool = { name, network: null, mask: null, default_router: null, dns_server: null, lease_days: 1, lease_hours: 0, lease_mins: 0 }
+          pool = { name, network: null, mask: null, default_router: null, dns_servers: [], lease_days: 1, lease_hours: 0, lease_mins: 0 }
           device.dhcp_pools.push(pool)
         }
         device.active_dhcp_pool = name
@@ -1285,6 +1334,15 @@ export class CLIEngine {
 
     if (sub === 'ip') {
       const sub2 = tokens[2]?.toLowerCase()
+      if (sub2 === 'name-server' || sub2 === 'domain-lookup' || (sub2 === 'domain' && tokens[3]?.toLowerCase() === 'lookup')) {
+        if (mode !== 'global_config') return this._invalidInput()
+        if (device.type !== 'router' && device.type !== 'switch') return this._invalidInput()
+        if (sub2 !== 'name-server') { device.domain_lookup = false; return [] }
+        const ips = tokens.slice(3)
+        // `no ip name-server` clears the list; with addresses it removes just those.
+        device.dns_servers = ips.length ? device.dns_servers.filter(d => !ips.includes(d)) : []
+        return []
+      }
       if (sub2 === 'address') {
         if (mode !== 'interface_config' && mode !== 'subif_config') return this._invalidInput()
         const iface = device.getInterface(device.active_interface)
@@ -1460,7 +1518,7 @@ export class CLIEngine {
     if (cmd === '?' || cmd === 'help') return [
       '  network <network> <mask>     Pool subnet (e.g. network 192.168.1.0 255.255.255.0)',
       '  default-router <ip>          Default gateway for DHCP clients',
-      '  dns-server <ip>              DNS server for DHCP clients',
+      '  dns-server <ip> [<ip> ...]   DNS servers for DHCP clients (up to 8)',
       '  lease <days> [hours] [min]   Lease duration (default: 1 0 0)',
       '  no network                   Clear pool subnet',
       '  no default-router            Clear default gateway',
@@ -1495,10 +1553,14 @@ export class CLIEngine {
       return []
     }
 
+    // dns-server <ip> [<ip> …] — DHCP option 6; up to eight addresses, handed out in this order
     if (cmd === 'dns-server') {
-      const ip = tokens[1]
-      if (!ip || !isValidIp(ip)) return ['% Incomplete command.  Usage: dns-server <ip>']
-      pool.dns_server = ip
+      const ips = tokens.slice(1)
+      if (!ips.length) return ['% Incomplete command.  Usage: dns-server <ip> [<ip> ...]']
+      const bad = ips.find(ip => !isValidIp(ip))
+      if (bad) return [`% Invalid IP address: ${bad}`]
+      if (ips.length > 8) return [`% Invalid input detected at '^' marker.`]
+      pool.dns_servers = [...new Set(ips)]
       return []
     }
 
@@ -1515,7 +1577,7 @@ export class CLIEngine {
       const sub = tokens[1]?.toLowerCase()
       if (sub === 'network')        { pool.network = null; pool.mask = null; return [] }
       if (sub === 'default-router') { pool.default_router = null; return [] }
-      if (sub === 'dns-server')     { pool.dns_server = null; return [] }
+      if (sub === 'dns-server')     { pool.dns_servers = []; return [] }
       return this._invalidInput()
     }
 
@@ -1890,7 +1952,7 @@ function _modesCommands(mode, device) {
     case 'user_exec':        return ['enable', 'ping', 'traceroute', 'show', 'exit', 'help', 'man']
     case 'priv_exec':        return ['configure', 'show', 'ping', 'traceroute', 'write', 'copy', 'disable', 'exit', 'end', 'help', 'man']
     case 'global_config':    return isSw
-        ? ['hostname', 'interface', 'vlan', 'no', 'exit', 'end', 'help', 'man']
+        ? ['hostname', 'interface', 'vlan', 'ip', 'no', 'exit', 'end', 'help', 'man']
         : ['hostname', 'interface', 'ip', 'access-list', 'no', 'exit', 'end', 'help', 'man']
     case 'vlan_config':      return ['name', 'exit', 'end', 'help']
     case 'dhcp_pool_config': return ['network', 'default-router', 'dns-server', 'lease', 'no', 'exit', 'end', 'help']
@@ -1963,12 +2025,13 @@ function _iosSubCandidates(device, mode, cmd, filled) {
     if (isSw) {
       const activeSvi = device.getInterface?.(device.active_interface)?.svi
       if (mode === 'interface_config' && activeSvi) return ['address']
+      if (mode === 'global_config' && depth === 0) return ['name-server', 'domain-lookup']
       return []
     }
     if (depth === 0) {
       if (mode === 'interface_config') return ['address', 'helper-address', 'nat']
       if (mode === 'subif_config') return ['address']
-      return ['route', 'dhcp', 'nat']
+      return ['route', 'dhcp', 'nat', 'name-server', 'domain-lookup']
     }
     if (depth === 1 && a0 === 'dhcp') return ['excluded-address', 'pool']
     if (depth === 1 && a0 === 'helper-address') return ['<ip-address>']
@@ -1992,13 +2055,14 @@ function _iosSubCandidates(device, mode, cmd, filled) {
   }
   if (cmd === 'no') {
     if (depth === 0) {
-      if (isSw) return mode === 'interface_config' ? ['shutdown', 'description'] : ['vlan', 'interface']
+      if (isSw) return mode === 'interface_config' ? ['shutdown', 'description'] : ['vlan', 'interface', 'ip']
       if (mode === 'interface_config' || mode === 'subif_config') return ['shutdown', 'ip', 'description', 'encapsulation']
       return ['ip', 'access-list', 'interface']
     }
     if (depth === 1 && a0 === 'ip') {
+      if (isSw) return ['name-server', 'domain-lookup']
       if (mode === 'interface_config' || mode === 'subif_config') return ['address', 'nat']
-      return ['route', 'dhcp', 'nat']
+      return ['route', 'dhcp', 'nat', 'name-server', 'domain-lookup']
     }
     if (depth === 2 && a0 === 'ip' && filled[1]?.toLowerCase() === 'nat') return ['inside', 'outside']
     if (depth === 1 && a0 === 'access-list') return ['<1-99>']

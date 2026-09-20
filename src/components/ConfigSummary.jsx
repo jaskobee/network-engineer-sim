@@ -100,7 +100,7 @@ export default function ConfigSummary({ device }) {
               <Row label="Pool" value={p.name} />
               <Row label="Network" value={`${p.network}/${maskToPrefixLen(p.mask)}`} />
               {p.default_router && <Row label="Gateway handed out" value={p.default_router} />}
-              {p.dns_server && <Row label="DNS handed out" value={p.dns_server} />}
+              {p.dns_servers?.length > 0 && <Row label="DNS handed out" value={p.dns_servers.join(', ')} />}
             </div>
           ))}
           <Row label="Active leases" value={dhcpBindings.length} />

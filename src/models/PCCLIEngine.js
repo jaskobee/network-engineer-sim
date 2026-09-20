@@ -1,4 +1,5 @@
-import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen, ipToNum, resolveHostname } from './ipUtils.js'
+import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen, ipToNum } from './ipUtils.js'
+import { resolveName, queryServer, effectiveDnsServers, normalizeName } from './dns.js'
 import { performDHCP, releaseDHCP } from './DHCPEngine.js'
 
 // Linux-style CLI for PC and Server device types.
@@ -28,12 +29,14 @@ export class PCCLIEngine {
 
   // Fires onPacket(index, reachable, targetIp, srcIp, failureReason, ttl, rtt) once per echo,
   // ~1100 ms apart.  Returns a cancel() function.
-  executePingAsync(device, targetIp, { onStart, onPacket, onDone } = {}) {
+  // `displayName`: the name the user typed, when targetIp is what it resolved to.
+  executePingAsync(device, targetIp, { onStart, onPacket, onDone, displayName = null } = {}) {
     if (!isValidIp(targetIp)) {
       onStart?.([`ping: ${targetIp}: Name or service not known`])
       onDone?.([], false)
       return () => {}
     }
+    const label = displayName ?? targetIp
     const srcIp = device.interfaces.find(i => i.status === 'up' && i.ip)?.ip
     if (!srcIp) {
       const noIp = !device.interfaces.find(i => i.ip)
@@ -65,14 +68,14 @@ export class PCCLIEngine {
     const { ttl, routerHops } = _pathInfo(this.topology, srcIp, targetIp)
     const rtts = _pingRtts(COUNT, routerHops)
 
-    onStart?.([`PING ${targetIp} (${targetIp}) 56(84) bytes of data.`])
+    onStart?.([`PING ${label} (${targetIp}) 56(84) bytes of data.`])
     let i = 0; const timers = []
     const fire = () => {
       if (i >= COUNT) {
         const recv = result.reachable ? COUNT : 0
         const loss = result.reachable ? 0 : 100
         const timeMs = (COUNT - 1) * 1000 + 3
-      const lines = [``, `--- ${targetIp} ping statistics ---`,
+      const lines = [``, `--- ${label} ping statistics ---`,
           `${COUNT} packets transmitted, ${recv} received, ${loss}% packet loss, time ${timeMs}ms`]
         if (result.reachable) lines.push(_rttStatsLine(rtts))
         onDone?.(lines, result.reachable); return
@@ -87,6 +90,9 @@ export class PCCLIEngine {
   _dispatch(device, cmd, tokens) {
     if (cmd === 'ping')     return this._cmdPing(device, tokens)
     if (cmd === 'dhclient') return this._cmdDhclient(device, tokens)
+    if (cmd === 'nslookup') return this._cmdNslookup(device, tokens)
+    if (cmd === 'resolvectl') return this._cmdResolvectl(device, tokens)
+    if (cmd === 'cat')      return this._cmdCat(device, tokens)
     if (cmd === 'ip')       return this._cmdIp(device, tokens)
     if (cmd === 'ifconfig') return this._cmdIfconfig(device, tokens)
     if (cmd === 'route')    return this._cmdRoute(device)
@@ -173,10 +179,9 @@ export class PCCLIEngine {
       device.routing_table.push({ network: '0.0.0.0', mask: '0.0.0.0', next_hop: result.gateway, dhcp_assigned: true })
     }
 
-    // Apply DNS server
-    if (result.dns && isValidIp(result.dns)) {
-      device.dns_server = result.dns
-    }
+    // Name servers from the lease (DHCP option 6), in the order the server listed them. Ones set by
+    // hand with `resolvectl dns` still take precedence (see dns.js effectiveDnsServers).
+    device.dhcp_dns_servers = (result.dnsServers ?? []).filter(isValidIp)
 
     return lines
   }
@@ -191,27 +196,31 @@ export class PCCLIEngine {
       else { target = tokens[i]; i++ }
     }
     if (!target) return ['Usage: ping [-c count] <destination>']
+    let name = null   // what the user typed, when it was a name
     if (!isValidIp(target)) {
-      const resolved = resolveHostname(target)
-      if (!resolved) return [`ping: ${target}: Name or service not known`]
-      target = resolved
+      const r = this.resolveForPing(device, target)
+      if (!r.ok) return r.lines
+      name = target
+      target = r.ip
     }
+    const label = name ?? target
 
     const srcIp = device.interfaces.find(i => i.status === 'up' && i.ip)?.ip
     if (!srcIp) return ['ping: connect: Network is unreachable']
 
     const result = this.topology.checkPing(srcIp, target)
-    const lines = [`PING ${target} (${target}) 56(84) bytes of data.`]
+    const lines = [`PING ${label} (${target}) 56(84) bytes of data.`]
 
     if (result.reachable) {
       const { ttl, routerHops } = _pathInfo(this.topology, srcIp, target)
       const packetCount = Math.min(count, 5)
       const rtts = _pingRtts(packetCount, routerHops)
+      const from = name ? `${name} (${target})` : target
       for (let n = 0; n < packetCount; n++) {
-        lines.push(`64 bytes from ${target}: icmp_seq=${n + 1} ttl=${ttl} time=${rtts[n].toFixed(3)} ms`)
+        lines.push(`64 bytes from ${from}: icmp_seq=${n + 1} ttl=${ttl} time=${rtts[n].toFixed(3)} ms`)
       }
       lines.push('')
-      lines.push(`--- ${target} ping statistics ---`)
+      lines.push(`--- ${label} ping statistics ---`)
       lines.push(`${packetCount} packets transmitted, ${packetCount} received, 0% packet loss, time ${(packetCount - 1) * 1000 + 3}ms`)
       lines.push(_rttStatsLine(rtts))
     } else if (_isNetworkUnreachable(result.failureReason)) {
@@ -224,10 +233,156 @@ export class PCCLIEngine {
         lines.push(`From ${srcIp} icmp_seq=${n} Destination Host Unreachable`)
       }
       lines.push('')
-      lines.push(`--- ${target} ping statistics ---`)
+      lines.push(`--- ${label} ping statistics ---`)
       lines.push(`${packetCount} packets transmitted, 0 received, +${packetCount} errors, 100% packet loss`)
     }
     return lines
+  }
+
+  // A hostname given to `ping`, resolved through the host's resolver (systemd-resolved).
+  // → { ok: true, ip, lines: [] } | { ok: false, lines } — the failure in Linux's words.
+  //   NXDOMAIN → "Name or service not known"; everything else (no server, none reachable, none
+  //   answering) → "Temporary failure in name resolution". Also used by TerminalPane.
+  resolveForPing(device, name) {
+    const r = resolveName(this.topology, device, name, { capture: true })
+    if (r.ok) return { ok: true, ip: r.ip, lines: [] }
+    return {
+      ok: false,
+      lines: [r.reason === 'dns_nxdomain'
+        ? `ping: ${name}: Name or service not known`
+        : `ping: ${name}: Temporary failure in name resolution`],
+    }
+  }
+
+  // ── nslookup ───────────────────────────────────────────────────────────────
+  // nslookup <name> [server]
+  // Without a server it asks the local stub resolver (127.0.0.53 — systemd-resolved), which itself
+  // walks the configured servers; failures therefore surface as SERVFAIL. With a server it asks THAT
+  // server directly, so an unreachable or non-DNS server shows the classic BIND wording.
+  // SIMPLIFICATION: interactive mode, `set type=` and reverse (PTR) lookups are not simulated.
+  _cmdNslookup(device, tokens) {
+    const args = tokens.slice(1).filter(a => !a.startsWith('-'))
+    if (!args.length) return ['nslookup: interactive mode is not simulated — use: nslookup <name> [server]']
+    const name = args[0]
+    if (isValidIp(name)) return ['nslookup: reverse (PTR) lookups are not simulated — use: nslookup <name> [server]']
+    const asked = normalizeName(name)
+
+    if (args[1]) {
+      const server = args[1]
+      if (!isValidIp(server)) return [`;; couldn't get address for '${server}': not found`, ';; no servers could be reached']
+      const q = queryServer(this.topology, device, server, asked, { capture: true })
+      if (q.outcome === 'refused') {
+        const e = `;; communications error to ${server}#53: connection refused`
+        return [e, e, e, ';; no servers could be reached']
+      }
+      if (q.outcome !== 'answered' && q.outcome !== 'nxdomain') return [';; connection timed out; no servers could be reached']
+      return [...this._nsHeader(server), ...this._nsAnswer(asked, q.outcome === 'answered' ? q.ip : null, 'NXDOMAIN')]
+    }
+
+    const r = resolveName(this.topology, device, asked, { capture: true })
+    return [...this._nsHeader('127.0.0.53'), ...this._nsAnswer(asked, r.ok ? r.ip : null, r.reason === 'dns_nxdomain' ? 'NXDOMAIN' : 'SERVFAIL')]
+  }
+
+  _nsHeader(server) {
+    return [`Server:\t\t${server}`, `Address:\t${server}#53`, '']
+  }
+
+  _nsAnswer(name, ip, failure) {
+    if (!ip) return [`** server can't find ${name}: ${failure}`, '']
+    return ['Non-authoritative answer:', `Name:\t${name}`, `Address: ${ip}`, '']
+  }
+
+  // ── resolvectl (systemd-resolved) ──────────────────────────────────────────
+  //   resolvectl [status]                 per-link DNS settings
+  //   resolvectl dns [<if> [<server>…]]   show, or set, the DNS servers of a link
+  //   resolvectl revert <if>              drop what was set by hand (back to what DHCP supplied)
+  //   resolvectl query <name>             resolve a name through the resolver
+  // SIMPLIFICATION: settings are per host (these hosts have one adapter); real DNS servers are per link.
+  _cmdResolvectl(device, tokens) {
+    const sub = tokens[1]?.toLowerCase() ?? 'status'
+    if (sub === 'status') return this._resolvectlStatus(device)
+    if (sub === 'dns')    return this._resolvectlDns(device, tokens)
+    if (sub === 'revert') {
+      if (!tokens[2]) return ['Failed to parse arguments: Too few arguments.']
+      const iface = _resolveIf(device, tokens[2])
+      if (!iface) return [`Failed to resolve interface "${tokens[2]}": No such device`]
+      device.dns_servers = []
+      return []
+    }
+    if (sub === 'query') return this._resolvectlQuery(device, tokens)
+    return [`Unknown command verb '${tokens[1]}'.`]
+  }
+
+  _linkIndex(device, iface) { return device.interfaces.indexOf(iface) + 2 }   // index 1 is `lo`
+
+  _resolvectlStatus(device) {
+    const servers = effectiveDnsServers(device)
+    const lines = [
+      'Global',
+      '       Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported',
+      'resolv.conf mode: stub',
+      '',
+    ]
+    for (const iface of device.interfaces) {
+      lines.push(`Link ${this._linkIndex(device, iface)} (${_linuxName(iface.name)})`)
+      lines.push(`    Current Scopes: ${servers.length ? 'DNS' : 'none'}`)
+      lines.push(`         Protocols: ${servers.length ? '+' : '-'}DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported`)
+      if (servers.length) {
+        lines.push(`Current DNS Server: ${servers[0]}`)
+        lines.push(`       DNS Servers: ${servers.join(' ')}`)
+      }
+      lines.push('')
+    }
+    return lines
+  }
+
+  _resolvectlDns(device, tokens) {
+    if (!tokens[2]) {
+      return ['Global:', ...device.interfaces.map(i =>
+        `Link ${this._linkIndex(device, i)} (${_linuxName(i.name)}): ${effectiveDnsServers(device).join(' ')}`.trimEnd())]
+    }
+    const iface = _resolveIf(device, tokens[2])
+    if (!iface) return [`Failed to resolve interface "${tokens[2]}": No such device`]
+    const servers = tokens.slice(3)
+    if (!servers.length) {
+      return [`Link ${this._linkIndex(device, iface)} (${_linuxName(iface.name)}): ${effectiveDnsServers(device).join(' ')}`.trimEnd()]
+    }
+    const bad = servers.find(a => !isValidIp(a))
+    if (bad) return [`Failed to parse DNS server address: ${bad}`]
+    device.dns_servers = [...new Set(servers)]
+    return []
+  }
+
+  _resolvectlQuery(device, tokens) {
+    const name = tokens[2]
+    if (!name) return ['Failed to parse arguments: Too few arguments.']
+    const r = resolveName(this.topology, device, name, { capture: true })
+    if (r.ok) {
+      const link = _linuxName(device.interfaces.find(i => i.status === 'up' && i.ip)?.name ?? device.interfaces[0].name)
+      return [
+        `${normalizeName(name)}: ${r.ip}`.padEnd(47) + `-- link: ${link}`,
+        '',
+        '-- Information acquired via protocol DNS in 18.4ms.',
+        '-- Data is authenticated: no; Data is confidential: no',
+      ]
+    }
+    if (r.reason === 'dns_nxdomain') return [`${name}: resolve call failed: '${name}' not found`]
+    if (r.reason === 'dns_no_server') return [`${name}: resolve call failed: No appropriate name servers or networks for name found`]
+    return [`${name}: resolve call failed: All attempts to contact name servers or networks failed`]
+  }
+
+  // ── cat ────────────────────────────────────────────────────────────────────
+  // Only the two resolver files are simulated (systemd-resolved, stub mode — as on Ubuntu):
+  // /etc/resolv.conf points at the local stub 127.0.0.53, and the real upstream servers are in
+  // /run/systemd/resolve/resolv.conf — which is why `resolvectl status` is the tool to use.
+  _cmdCat(device, tokens) {
+    const path = tokens[1]
+    if (!path) return []
+    if (path === '/etc/resolv.conf') return [..._RESOLV_STUB]
+    if (path === '/run/systemd/resolve/resolv.conf') {
+      return [..._RESOLV_UPSTREAM, ...effectiveDnsServers(device).map(a => `nameserver ${a}`), 'search .']
+    }
+    return [`cat: ${path}: No such file or directory`]
   }
 
   // ── ip ─────────────────────────────────────────────────────────────────────
@@ -510,6 +665,9 @@ export class PCCLIEngine {
       '  ip route add default via <gw>        Add default gateway route',
       '  ifconfig [if] [ip] [netmask <mask>]  Configure interface (legacy)',
       '  route                                Show routing table (legacy)',
+      '  nslookup <name> [server]             Query a DNS server',
+      '  resolvectl status                    Show DNS servers (systemd-resolved)',
+      '  resolvectl dns <if> <server> [...]   Set the DNS servers for an interface',
       '  hostname [name]                      Show or set hostname',
       '  man <command>                        Show manual for a command',
     ]
@@ -658,7 +816,7 @@ export class PCCLIEngine {
 
     let candidates
     if (tokens.length === 0 || (!trailingSpace && tokens.length === 1)) {
-      candidates = ['ping', 'dhclient', 'ip', 'ifconfig', 'route', 'hostname', 'clear', 'echo', 'whoami', 'uname', 'help', 'man']
+      candidates = ['ping', 'dhclient', 'ip', 'ifconfig', 'route', 'nslookup', 'resolvectl', 'cat', 'hostname', 'clear', 'echo', 'whoami', 'uname', 'help', 'man']
     } else {
       const cmd = tokens[0].toLowerCase()
       const filled = trailingSpace ? tokens.slice(1) : tokens.slice(1, -1)
@@ -676,6 +834,49 @@ export class PCCLIEngine {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+// systemd-resolved in stub mode, as on Ubuntu. /etc/resolv.conf lists only the local stub; the real
+// upstream servers live in /run/systemd/resolve/resolv.conf and in `resolvectl status`.
+const _RESOLV_COMMON = [
+  '# Third party programs should typically not access this file directly, but only',
+  '# through the symlink at /etc/resolv.conf. To manage man:resolv.conf(5) in a',
+  '# different way, replace this symlink by a static file or a different symlink.',
+  '#',
+  '# See man:systemd-resolved.service(8) for details about the supported modes of',
+  '# operation for /etc/resolv.conf.',
+  '',
+]
+const _RESOLV_STUB = [
+  '# This is /run/systemd/resolve/stub-resolv.conf managed by man:systemd-resolved(8).',
+  '# Do not edit.',
+  '#',
+  "# This file might be symlinked as /etc/resolv.conf. If you're looking at",
+  '# /etc/resolv.conf and seeing this text, you have followed the symlink.',
+  '#',
+  '# This is a dynamic resolv.conf file for connecting local clients to the',
+  '# internal DNS stub resolver of systemd-resolved. This file lists all',
+  '# configured search domains.',
+  '#',
+  '# Run "resolvectl status" to see details about the uplink DNS servers',
+  '# currently in use.',
+  '#',
+  ..._RESOLV_COMMON,
+  'nameserver 127.0.0.53',
+  'options edns0 trust-ad',
+  'search .',
+]
+const _RESOLV_UPSTREAM = [
+  '# This is /run/systemd/resolve/resolv.conf managed by man:systemd-resolved(8).',
+  '# Do not edit.',
+  '#',
+  "# This file might be symlinked as /etc/resolv.conf. If you're looking at",
+  '# /etc/resolv.conf and seeing this text, you have followed the symlink.',
+  '#',
+  '# This is a dynamic resolv.conf file for connecting local clients directly to',
+  '# all known uplink DNS servers. This file lists all configured search domains.',
+  '#',
+  ..._RESOLV_COMMON,
+]
 
 // Returns true for failures where Linux shows "Network is unreachable" (local error,
 // no packets sent) rather than per-packet "Destination Host Unreachable" (ICMP error).
@@ -776,6 +977,18 @@ function _pcSubCandidates(device, cmd, filled) {
   if (cmd === 'ping') {
     if (depth === 0) return ['-c', '<ip-address>']
     if (depth === 1 && a0 === '-c') return ['1', '4', '8']
+  }
+  if (cmd === 'resolvectl') {
+    if (depth === 0) return ['status', 'dns', 'revert', 'query']
+    if ((a0 === 'dns' || a0 === 'revert') && depth === 1) return device.interfaces.map(i => _linuxName(i.name))
+    if (a0 === 'dns' && depth >= 2) return ['<dns-server>']
+  }
+  if (cmd === 'nslookup') {
+    if (depth === 0) return ['<name>']
+    if (depth === 1) return ['<dns-server>']
+  }
+  if (cmd === 'cat') {
+    if (depth === 0) return ['/etc/resolv.conf', '/run/systemd/resolve/resolv.conf']
   }
   if (cmd === 'dhclient') {
     if (depth === 0) return ['-r', ...device.interfaces.map(i => _linuxName(i.name))]

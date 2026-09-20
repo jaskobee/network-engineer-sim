@@ -63,7 +63,7 @@ describe('A1 — a Linux host edits through ip / dhclient', () => {
     expect(result.ok).toBe(true)
     expect(pc.getInterface('Ethernet0/0')).toMatchObject({ ip: '192.168.1.90', dhcp_assigned: false })
     expect(router.dhcp_bindings).toHaveLength(0)
-    expect(pc.dns_server).toBeNull()
+    expect(pc.dhcp_dns_servers).toEqual([])
   })
 
   it('the gateway rides along when still valid, and goes when it is not', () => {

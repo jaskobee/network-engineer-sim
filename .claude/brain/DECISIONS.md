@@ -65,8 +65,9 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 - **DNS: servers are configured in a GUI (Packet-Tracer style), routers stay CLI; resolution is
   strict; Linux uses `resolvectl`; a host holds a list of name servers (primary + secondary).**
   *Why:* Windows DNS Manager and Packet Tracer both use a GUI for server records; CCNA tests the
-  router CLI; a single name server per host would have to be unlearned. Design only — not built yet;
-  see `docs/DNS_DESIGN.md`. (2026-09-20)
+  router CLI; a single name server per host would have to be unlearned. Phase 1 (client resolver, the three
+  shells, host GUI) built 2026-09-20; servers/`ip dns server`/cache are phases 2–3 — see `docs/DNS_DESIGN.md`.
+  A host's name servers are `dns_servers` (by hand) over `dhcp_dns_servers` (lease); static wins. (2026-09-20)
 - **Long-term-contract tickets are paced, not periodic.** First ticket 5–9 min after a contract
   starts, then a rolled 10–20 min gap after each fix or expiry, ×2.5 while a job-board mission is
   active, never closer than 4 min between any two, max 2 open, alerts at issue then +5 / +10 / +20 min

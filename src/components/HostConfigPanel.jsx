@@ -156,8 +156,8 @@ function linkView(a) {
 function AdapterForm({ device, ifaceName }) {
   const { topology, executeDeviceCommands, logExecutedCommand } = useGame()
   const uid = useId()
-  const ids = { ip: `${uid}-ip`, mask: `${uid}-mask`, gw: `${uid}-gw` }
-  const refs = { ip: useRef(null), mask: useRef(null), gateway: useRef(null) }
+  const ids = { ip: `${uid}-ip`, mask: `${uid}-mask`, gw: `${uid}-gw`, dns1: `${uid}-dns1`, dns2: `${uid}-dns2` }
+  const refs = { ip: useRef(null), mask: useRef(null), gateway: useRef(null), dns1: useRef(null), dns2: useRef(null) }
 
   const adapter = readAdapter(topology, device, ifaceName)
   const baseline = formFromAdapter(adapter)
@@ -180,14 +180,16 @@ function AdapterForm({ device, ifaceName }) {
   const plan = planApply(topology, device, ifaceName, form)
   const errors = plan.errors
   const dirty = !sameForm(form, baseline)
-  const fieldErrors = ['ip', 'mask', 'gateway'].some(k => errors[k])
+  const FIELDS = ['ip', 'mask', 'gateway', 'dns1', 'dns2']
+  const fieldErrors = FIELDS.some(k => errors[k])
   const hasWork = plan.commands.length > 0 || fieldErrors
   const dhcp = form.mode === 'dhcp'
   const link = linkView(adapter)
   const prompt = PROMPT[adapter.os]
   const words = adapter.os === 'windows'
-    ? { auto: 'Obtain an IP address automatically', manual: 'Use the following IP address' }
-    : { auto: 'Obtain automatically (DHCP)', manual: 'Set manually' }
+    ? { auto: 'Obtain an IP address automatically', manual: 'Use the following IP address', dnsAuto: 'Obtain DNS server address automatically', dnsManual: 'Use the following DNS server addresses' }
+    : { auto: 'Obtain automatically (DHCP)', manual: 'Set manually', dnsAuto: 'Obtain DNS servers automatically (DHCP)', dnsManual: 'Set DNS servers manually' }
+  const dnsManual = form.dnsMode === 'manual'
 
   function edit(patch) { setResult(null); setForm(f => ({ ...f, ...patch })) }
   function touch(k) { setTouched(t => (t[k] ? t : { ...t, [k]: true })) }
@@ -202,8 +204,8 @@ function AdapterForm({ device, ifaceName }) {
 
   function submit(e) {
     e.preventDefault()
-    setTouched({ ip: true, mask: true, gateway: true })
-    const bad = ['ip', 'mask', 'gateway'].find(k => errors[k])
+    setTouched(Object.fromEntries(FIELDS.map(k => [k, true])))
+    const bad = FIELDS.find(k => errors[k])
     if (bad) { refs[bad].current?.focus(); return }
     if (plan.commands.length) run(plan.commands)
   }
@@ -283,22 +285,54 @@ function AdapterForm({ device, ifaceName }) {
             />
           </Field>
 
-          {dhcp && adapter.mode === 'dhcp' && adapter.dns && (
-            <div className="field-row">
-              <span className="field-label">DNS server</span>
-              <div style={{ paddingTop: 6, fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--ink-2)' }}>
-                {adapter.dns} <span style={{ fontFamily: 'var(--font-ui)', color: 'var(--ink-3)' }}>from DHCP</span>
-              </div>
+        </div>
+      </fieldset>
+
+      {/* Name servers: asked in order — the preferred one first, the alternate only if it doesn't answer. */}
+      <fieldset style={{ border: 0, borderTop: '1px solid var(--rule)', padding: '10px 0 0', margin: '14px 0 0', minWidth: 0 }}>
+        <legend style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', padding: '0 8px 0 0', float: 'left', width: '100%', marginBottom: 4 }}>
+          DNS servers
+        </legend>
+        <label className="opt" style={{ clear: 'both' }}>
+          <input type="radio" name={`${uid}-dns`} checked={!dnsManual} onChange={() => edit({ dnsMode: 'auto' })} />
+          {words.dnsAuto}
+        </label>
+        <label className="opt">
+          <input type="radio" name={`${uid}-dns`} checked={dnsManual} onChange={() => edit({ dnsMode: 'manual' })} />
+          {words.dnsManual}
+        </label>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 10 }}>
+          <Field id={ids.dns1} label="Preferred DNS server" error={showError('dns1')}>
+            <input
+              ref={refs.dns1} id={ids.dns1} className="input" inputMode="decimal" autoComplete="off" spellCheck={false}
+              value={dnsManual ? form.dns1 : (adapter.dnsDhcp[0] ?? '')} disabled={!dnsManual}
+              placeholder={dnsManual ? 'e.g. 8.8.8.8' : 'Assigned by DHCP'}
+              aria-invalid={!!showError('dns1')} aria-describedby={showError('dns1') ? `${ids.dns1}-err` : undefined}
+              onChange={e => edit({ dns1: e.target.value })} onBlur={() => touch('dns1')}
+            />
+          </Field>
+          <Field id={ids.dns2} label="Alternate DNS server" error={showError('dns2')}>
+            <input
+              ref={refs.dns2} id={ids.dns2} className="input" inputMode="decimal" autoComplete="off" spellCheck={false}
+              value={dnsManual ? form.dns2 : (adapter.dnsDhcp[1] ?? '')} disabled={!dnsManual}
+              placeholder={dnsManual ? 'Optional, e.g. 8.8.4.4' : 'Assigned by DHCP'}
+              aria-invalid={!!showError('dns2')} aria-describedby={showError('dns2') ? `${ids.dns2}-err` : undefined}
+              onChange={e => edit({ dns2: e.target.value })} onBlur={() => touch('dns2')}
+            />
+          </Field>
+          <div className="field-row">
+            <span />
+            <div className="field-note" style={{ gridColumn: 'auto' }}>
+              {dnsManual
+                ? 'The preferred server is asked first. The alternate is only asked if the preferred one does not answer.'
+                : adapter.dnsDhcp.length
+                  ? 'These come from the DHCP lease.'
+                  : dhcp
+                    ? 'No DNS server yet — the DHCP lease has not supplied one.'
+                    : 'No DNS server. With a manual address there is no DHCP lease to supply one.'}
             </div>
-          )}
-          {!dhcp && (
-            <div className="field-row">
-              <span />
-              <div className="field-note" style={{ gridColumn: 'auto' }}>
-                DNS can&apos;t be set by hand yet. A host learns its DNS server from DHCP.
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </fieldset>
 

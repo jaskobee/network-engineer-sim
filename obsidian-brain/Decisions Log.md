@@ -107,6 +107,7 @@ changing it; never silently work around one. Grouped here the same way as the so
 - **The Career board lists only available jobs; new ones are offered** (accept / decline for now).
 - **DNS:** GUI for server records (routers stay CLI), strict resolution, `resolvectl` on Linux, and a *list* of
   name servers per host (primary + secondary) — one server per host would teach something to unlearn.
+  Phase 1 (client resolver, shells, host GUI) is built; a static list beats the DHCP lease's.
 - **Menus always come over everything else** (z-index 5000; scale in [[UI Component Map]]).
 
 ## Related

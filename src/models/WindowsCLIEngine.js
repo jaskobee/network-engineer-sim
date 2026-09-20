@@ -3,6 +3,7 @@ import {
   ipToNum, isHostAddress,
 } from './ipUtils.js'
 import { performDHCP, releaseDHCP } from './DHCPEngine.js'
+import { resolveName, queryServer, effectiveDnsServers, dnsSource, reverseName, normalizeName } from './dns.js'
 
 // Windows CMD-style CLI for the Admin Laptop when device.os_type === 'windows'.
 // Commands: ipconfig, route, netsh, ping, arp, hostname, cls, help.
@@ -32,7 +33,9 @@ export class WindowsCLIEngine {
 
   // Fires onPacket(index, reachable, targetIp, srcIp, failureReason, ttl, rtt) once per echo.
   // Returns a cancel() function.
-  executePingAsync(device, targetIp, { onStart, onPacket, onDone } = {}) {
+  // `displayName`: the name the user typed, when targetIp is what it resolved to ("Pinging name [ip]").
+  executePingAsync(device, targetIp, { onStart, onPacket, onDone, displayName = null } = {}) {
+    const who = displayName ? `${displayName} [${targetIp}]` : targetIp
     if (!isValidIp(targetIp)) {
       onStart?.([`Ping request could not find host ${targetIp}. Please check the name and try again.`])
       onDone?.([], false)
@@ -47,7 +50,7 @@ export class WindowsCLIEngine {
         : noIp
           ? `No IP configured — use: netsh interface ip set address "Ethernet0" static <ip> <mask> <gw>`
           : `Media disconnected — check the cable and the device at the other end`
-      onStart?.([`Pinging ${targetIp} with 32 bytes of data:`, `PING: transmit failed. General failure.`, `  (${hint})`])
+      onStart?.([`Pinging ${who} with 32 bytes of data:`, `PING: transmit failed. General failure.`, `  (${hint})`])
       onDone?.([``, `Ping statistics for ${targetIp}:`, `    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss),`], false)
       return () => {}
     }
@@ -59,7 +62,7 @@ export class WindowsCLIEngine {
     // Local failure: show general failure immediately, no per-packet loop
     if (!result.reachable && _isLocalError(result.failureReason)) {
       const hint = _localErrorHint(result.failureReason)
-      const startLines = [`Pinging ${targetIp} with 32 bytes of data:`, `PING: transmit failed. General failure.`]
+      const startLines = [`Pinging ${who} with 32 bytes of data:`, `PING: transmit failed. General failure.`]
       if (hint) startLines.push(`  (${hint})`)
       onStart?.(startLines)
       onDone?.([``, `Ping statistics for ${targetIp}:`, `    Packets: Sent = 4, Received = 0, Lost = 4 (100% loss),`], false)
@@ -69,7 +72,7 @@ export class WindowsCLIEngine {
     const { ttl, routerHops } = _pathInfo(this.topology, srcIp, targetIp)
     const rtts = _pingRtts(COUNT, routerHops)
 
-    onStart?.([`Pinging ${targetIp} with 32 bytes of data:`])
+    onStart?.([`Pinging ${who} with 32 bytes of data:`])
     let i = 0
     const timers = []
     const fire = () => {
@@ -104,6 +107,7 @@ export class WindowsCLIEngine {
     if (cmd === 'ipconfig') return this._cmdIpconfig(device, tokens)
     if (cmd === 'route')    return this._cmdRoute(device, tokens)
     if (cmd === 'netsh')    return this._cmdNetsh(device, tokens)
+    if (cmd === 'nslookup') return this._cmdNslookup(device, tokens)
     if (cmd === 'ping')     return [`Usage: ping [-n count] [-w timeout] <destination>`]
     if (cmd === 'arp')      return this._cmdArp(device, tokens)
     if (cmd === 'hostname') return [device.hostname]
@@ -177,7 +181,10 @@ export class WindowsCLIEngine {
       lines.push(`   IPv4 Address. . . . . . . . . . . : ${iface.ip}${iface.dhcp_assigned ? '(Preferred)' : ''}`)
       lines.push(`   Subnet Mask . . . . . . . . . . . : ${iface.subnet_mask}`)
       lines.push(`   Default Gateway . . . . . . . . . : ${gw}`)
-      if (device.dns_server) lines.push(`   DNS Servers . . . . . . . . . . . : ${device.dns_server}`)
+      const dns = effectiveDnsServers(device)
+      dns.forEach((a, i) => lines.push(i === 0
+        ? `   DNS Servers . . . . . . . . . . . : ${a}`
+        : `                                       ${a}`))
       lines.push(``)
     }
     return lines
@@ -246,7 +253,8 @@ export class WindowsCLIEngine {
       device.routing_table = device.routing_table.filter(r => !(r.network === '0.0.0.0' && r.dhcp_assigned))
       device.routing_table.push({ network: '0.0.0.0', mask: '0.0.0.0', next_hop: result.gateway, dhcp_assigned: true })
     }
-    if (result.dns && isValidIp(result.dns)) device.dns_server = result.dns
+    // DHCP option 6: the lease's name servers. Ones set by hand (netsh … set dns static) still win.
+    device.dhcp_dns_servers = (result.dnsServers ?? []).filter(isValidIp)
   }
 
   // ── route ─────────────────────────────────────────────────────────────────────
@@ -356,11 +364,13 @@ export class WindowsCLIEngine {
       if (verb === 'set')    return this._netshSet(device, tokens)
       if (verb === 'show')   return this._netshShow(device, tokens)
       if (verb === 'delete') return this._netshDelete(device, tokens)
+      if (verb === 'add')    return this._netshAdd(device, tokens)
     }
     return [`The following command was not found: ${tokens.join(' ')}`]
   }
 
   _netshSet(device, tokens) {
+    if (tokens[4]?.toLowerCase() === 'dns' || tokens[4]?.toLowerCase() === 'dnsservers') return this._netshSetDns(device, tokens)
     if (tokens[4]?.toLowerCase() !== 'address') {
       return [`The following command was not found: netsh interface ip set ${tokens[4] ?? ''}`]
     }
@@ -438,6 +448,7 @@ export class WindowsCLIEngine {
   // netsh interface ip delete address "name" <ip>   (or name=… addr=…) — the address goes,
   // and so do the routes that were only reachable through it.
   _netshDelete(device, tokens) {
+    if (tokens[4]?.toLowerCase() === 'dns' || tokens[4]?.toLowerCase() === 'dnsservers') return this._netshDeleteDns(device, tokens)
     if (tokens[4]?.toLowerCase() !== 'address') {
       return [`The following command was not found: netsh interface ip delete ${tokens[4] ?? ''}`]
     }
@@ -457,6 +468,69 @@ export class WindowsCLIEngine {
       iface.subnet_mask = null
       device.flushRoutesVia(oldIp, oldMask)
     }
+    return [`Ok.`]
+  }
+
+  // netsh interface ip set dns "name" static <ip> [primary]      the FIRST server (replaces the list)
+  // netsh interface ip set dns name="n" source=static address=<ip>   (named form)
+  // netsh interface ip set dns "name" dhcp                          back to what the lease supplies
+  // The list is per host here (these machines have one adapter; real Windows keeps it per adapter).
+  _netshSetDns(device, tokens) {
+    const a = _parseNetshArgs(tokens.slice(5), ['static', 'dhcp'])
+    const usage = () => [
+      `The syntax supplied for this command is not valid. Check help for the correct syntax.`,
+      ``,
+      `Usage: set dnsservers [name=]<string> [source=]dhcp|static`,
+      `             [[address=]<IP address>|none]`,
+      `             [[register=]none|primary|both]`,
+      `             [[validate=]yes|no]`,
+    ]
+    if (!a.name) return usage()
+    const iface = _resolveWinIf(device, a.name)
+    if (!iface) return [`There is no interface with the specified name "${a.name}".`]
+    const source = (a.named.source ?? a.word)?.toLowerCase()
+    if (source === 'dhcp') { device.dns_servers = []; return [`Ok.`] }
+    if (source !== 'static') return usage()
+    const addr = a.named.address ?? a.named.addr ?? a.pos.shift()
+    if (addr?.toLowerCase() === 'none') { device.dns_servers = []; return [`Ok.`] }
+    if (!addr || !isValidIp(addr)) return [`The parameter is incorrect. Expected a valid IP address for the DNS server.`]
+    device.dns_servers = [addr]
+    return [`Ok.`]
+  }
+
+  // netsh interface ip add dns "name" <ip> [index=<n>]     — index=1 is the preferred server
+  _netshAdd(device, tokens) {
+    if (tokens[4]?.toLowerCase() !== 'dns' && tokens[4]?.toLowerCase() !== 'dnsservers') {
+      return [`The following command was not found: netsh interface ip add ${tokens[4] ?? ''}`]
+    }
+    const a = _parseNetshArgs(tokens.slice(5), [])
+    const addr = a.named.addr ?? a.named.address ?? a.pos.shift()
+    if (!a.name || !addr) {
+      return [`The syntax supplied for this command is not valid. Check help for the correct syntax.`, ``, `Usage: add dnsservers [name=]<string> [address=]<IP address> [[index=]<integer>]`]
+    }
+    const iface = _resolveWinIf(device, a.name)
+    if (!iface) return [`There is no interface with the specified name "${a.name}".`]
+    if (!isValidIp(addr)) return [`The parameter is incorrect. Expected a valid IP address for the DNS server.`]
+    const list = device.dns_servers
+    if (list.includes(addr)) return [`The object already exists.`]
+    const idx = a.named.index !== undefined ? parseInt(a.named.index, 10) : list.length + 1
+    if (!Number.isInteger(idx) || idx < 1 || idx > list.length + 1) return [`The parameter is incorrect.`]
+    list.splice(idx - 1, 0, addr)
+    return [`Ok.`]
+  }
+
+  // netsh interface ip delete dns "name" all | <ip>
+  _netshDeleteDns(device, tokens) {
+    const a = _parseNetshArgs(tokens.slice(5), [])
+    const which = a.named.addr ?? a.named.address ?? a.pos.shift()
+    if (!a.name || !which) {
+      return [`The syntax supplied for this command is not valid. Check help for the correct syntax.`, ``, `Usage: delete dnsservers [name=]<string> [[address=]<IP address>|all] [[validate=]yes|no]`]
+    }
+    const iface = _resolveWinIf(device, a.name)
+    if (!iface) return [`There is no interface with the specified name "${a.name}".`]
+    if (which.toLowerCase() === 'all') { device.dns_servers = []; return [`Ok.`] }
+    if (!device.dns_servers.includes(which)) return [`The system cannot find the file specified.`]
+    device.dns_servers = device.dns_servers.filter(d => d !== which)
     return [`Ok.`]
   }
 
@@ -493,6 +567,7 @@ export class WindowsCLIEngine {
 
   _netshShow(device, tokens) {
     const s4 = tokens[4]?.toLowerCase()
+    if (s4 === 'dnsservers' || s4 === 'dns') return this._netshShowDns(device, tokens)
     if (s4 !== 'config' && s4 !== 'address' && s4 !== 'addresses') {
       return [`The following command was not found: netsh interface ip show ${tokens[4] ?? ''}`]
     }
@@ -513,11 +588,90 @@ export class WindowsCLIEngine {
         lines.push(`    IP Address:                           (not configured)`)
       }
       if (gw) lines.push(`    Default Gateway:                      ${gw}`)
-      if (device.dns_server) lines.push(`    DNS Servers via DHCP:                 ${device.dns_server}`)
-      lines.push(`    Statically Configured DNS Servers:    None`)
+      lines.push(...this._dnsConfigLines(device))
       lines.push(``)
     }
     return lines
+  }
+
+  // The DNS part of `show config`: servers from the lease, or the ones set by hand (never both —
+  // a static list replaces the lease's).
+  _dnsConfigLines(device) {
+    const pad = ' '.repeat(42)
+    const list = (label, servers) => servers.map((a, i) => i === 0 ? `    ${label}${a}` : `${pad}${a}`)
+    if (dnsSource(device) === 'static') {
+      return [...list('Statically Configured DNS Servers:'.padEnd(38), device.dns_servers), `    Register with which suffix:           Primary only`]
+    }
+    const dhcp = device.dhcp_dns_servers ?? []
+    return [
+      ...(dhcp.length
+        ? list('DNS servers configured through DHCP:'.padEnd(38), dhcp)
+        : [`    Statically Configured DNS Servers:    None`]),
+      `    Register with which suffix:           Primary only`,
+    ]
+  }
+
+  // netsh interface ip show dnsservers ["name"]
+  _netshShowDns(device, tokens) {
+    const rawName = tokens[5]
+    const ifaces = rawName ? [_resolveWinIf(device, rawName)].filter(Boolean) : device.interfaces
+    if (rawName && ifaces.length === 0) return [`There is no interface with the specified name "${rawName}".`]
+    const lines = []
+    for (const iface of ifaces) {
+      lines.push(`Configuration for interface "${_winName(iface.name)}"`, ...this._dnsConfigLines(device), ``)
+    }
+    return lines
+  }
+
+  // ── nslookup ─────────────────────────────────────────────────────────────────
+  // nslookup <name> [server]
+  // Windows prints `Server:` as the NAME the server's address reverse-resolves to — `UnKnown` when
+  // it has none. SIMPLIFICATION: interactive mode, `set type=` and reverse lookups are not simulated.
+  _cmdNslookup(device, tokens) {
+    const args = tokens.slice(1).filter(a => !a.startsWith('-') && !a.startsWith('/'))
+    if (!args.length) return [`nslookup: interactive mode is not simulated — use: nslookup <name> [server]`]
+    const name = args[0]
+    if (isValidIp(name)) return [`nslookup: reverse lookups are not simulated — use: nslookup <name> [server]`]
+    const asked = normalizeName(name)
+    const timedOut = (server) => [
+      `Server:  ${reverseName(server) ?? 'UnKnown'}`, `Address:  ${server}`, ``,
+      `DNS request timed out.`, `    timeout was 2 seconds.`,
+      `DNS request timed out.`, `    timeout was 2 seconds.`,
+      `*** Request to ${reverseName(server) ?? 'UnKnown'} timed-out`,
+    ]
+
+    if (args[1]) {
+      const server = args[1]
+      if (!isValidIp(server)) return [`*** Can't find server name for address ${server}: Non-existent domain`, `*** Default servers are not available`]
+      const q = queryServer(this.topology, device, server, asked, { capture: true })
+      if (q.outcome === 'answered') return [...this._nsHeader(server), ...this._nsAnswer(asked, q.ip)]
+      if (q.outcome === 'nxdomain') return [...this._nsHeader(server), `*** ${reverseName(server) ?? 'UnKnown'} can't find ${asked}: Non-existent domain`]
+      return timedOut(server)
+    }
+
+    const servers = effectiveDnsServers(device)
+    if (!servers.length) return [`*** Default servers are not available`, `Server:  UnKnown`, `Address:  127.0.0.1`, ``, `*** UnKnown can't find ${asked}: No response from server`]
+    const r = resolveName(this.topology, device, asked, { capture: true })
+    if (r.ok) return [...this._nsHeader(r.server), ...this._nsAnswer(asked, r.ip)]
+    if (r.reason === 'dns_nxdomain') return [...this._nsHeader(r.server), `*** ${reverseName(r.server) ?? 'UnKnown'} can't find ${asked}: Non-existent domain`]
+    return timedOut(servers[0])
+  }
+
+  _nsHeader(server) {
+    return [`Server:  ${reverseName(server) ?? 'UnKnown'}`, `Address:  ${server}`, ``]
+  }
+
+  _nsAnswer(name, ip) {
+    return [`Non-authoritative answer:`, `Name:    ${name}`, `Address:  ${ip}`, ``]
+  }
+
+  // A hostname given to `ping`, resolved through the Windows DNS client. Every failure — no server,
+  // none reachable, no such name — reads the same to the user.
+  // → { ok: true, ip, lines: [] } | { ok: false, lines }. Also used by TerminalPane.
+  resolveForPing(device, name) {
+    const r = resolveName(this.topology, device, name, { capture: true })
+    if (r.ok) return { ok: true, ip: r.ip, lines: [] }
+    return { ok: false, lines: [`Ping request could not find host ${name}. Please check the name and try again.`] }
   }
 
   // ── arp ──────────────────────────────────────────────────────────────────────
@@ -547,6 +701,7 @@ export class WindowsCLIEngine {
       `HOSTNAME    Displays the name of the current host.`,
       `IPCONFIG    Display Windows IP configuration.  Flags: /all /release /renew`,
       `NETSH       Network configuration scripting utility.`,
+      `NSLOOKUP    Queries a DNS server for a name.`,
       `PING        Sends ICMP Echo Requests to a network host.`,
       `ROUTE       Manipulates network routing tables.`,
       `VER         Displays the Windows version.`,
@@ -585,7 +740,7 @@ export class WindowsCLIEngine {
 
     let candidates
     if (tokens.length === 0 || (!trailingSpace && tokens.length === 1)) {
-      candidates = ['ipconfig', 'route', 'netsh', 'ping', 'arp', 'hostname', 'cls', 'help', 'ver']
+      candidates = ['ipconfig', 'route', 'netsh', 'nslookup', 'ping', 'arp', 'hostname', 'cls', 'help', 'ver']
     } else {
       candidates = _winTabCandidates(device, tokens, trailingSpace)
     }
@@ -718,10 +873,20 @@ function _winTabCandidates(device, tokens, trailingSpace) {
     if (a(1) === 'interface' && (a(2) === 'set' || a(2) === 'show') && depth === 3) return ['interface']
     if (a(1) === 'interface' && a(2) === 'set' && a(3) === 'interface' && depth === 4) return device.interfaces.map(i => `"${_winName(i.name)}"`)
     if (a(1) === 'interface' && a(2) === 'set' && a(3) === 'interface' && depth === 5) return ['enable', 'disable']
-    if (a(1) === 'interface' && ipCtx && depth === 3) return ['set', 'show', 'delete']
-    if (a(1) === 'interface' && ipCtx && a(3) === 'delete' && depth === 4) return ['address']
-    if (a(1) === 'interface' && ipCtx && a(3) === 'set' && depth === 4) return ['address']
-    if (a(1) === 'interface' && ipCtx && a(3) === 'show' && depth === 4) return ['config']
+    if (a(1) === 'interface' && ipCtx && depth === 3) return ['set', 'add', 'show', 'delete']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'delete' && depth === 4) return ['address', 'dns']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'add' && depth === 4) return ['dns']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'set' && depth === 4) return ['address', 'dns']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'show' && depth === 4) return ['config', 'dnsservers']
+    if (a(1) === 'interface' && ipCtx && a(3) === 'set' && a(4) === 'dns') {
+      if (depth === 5) return device.interfaces.map(i => `"${_winName(i.name)}"`)
+      if (depth === 6) return ['static', 'dhcp']
+      if (depth === 7 && a(6) === 'static') return ['<dns-server>']
+    }
+    if (a(1) === 'interface' && ipCtx && a(3) === 'add' && a(4) === 'dns') {
+      if (depth === 5) return device.interfaces.map(i => `"${_winName(i.name)}"`)
+      if (depth === 6) return ['<dns-server>']
+    }
     if (a(1) === 'interface' && ipCtx && a(3) === 'set' && a(4) === 'address') {
       if (depth === 5) return device.interfaces.map(i => `"${_winName(i.name)}"`)
       if (depth === 6) return ['static', 'dhcp']
@@ -733,6 +898,7 @@ function _winTabCandidates(device, tokens, trailingSpace) {
     }
   }
   if (a(0) === 'ping'    && depth === 1) return ['-n', '<ip-address>']
+  if (a(0) === 'nslookup' && depth === 1) return ['<name>']
   if (a(0) === 'arp'     && depth === 1) return ['-a']
   return []
 }

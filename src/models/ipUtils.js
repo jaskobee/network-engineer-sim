@@ -52,21 +52,3 @@ export function isHostAddress(ip, mask) {
   if (maskToPrefixLen(mask) >= 31) return true   // /31 RFC 3021 and /32 host routes
   return ip !== networkAddress(ip, mask) && ip !== broadcastAddress(ip, mask)
 }
-
-// Static DNS map for simulated internet hostname resolution.
-const _DNS_MAP = {
-  'google.com':       '8.8.8.8',
-  'www.google.com':   '8.8.8.8',
-  'dns.google':       '8.8.8.8',
-  'cloudflare.com':   '1.1.1.1',
-  'one.one.one.one':  '1.1.1.1',
-  'github.com':       '140.82.121.4',
-  'youtube.com':      '142.250.80.46',
-  'reddit.com':       '151.101.65.140',
-  'amazon.com':       '205.251.242.103',
-}
-
-export function resolveHostname(name) {
-  if (!name || typeof name !== 'string') return null
-  return _DNS_MAP[name.toLowerCase()] ?? null
-}

@@ -89,6 +89,21 @@ export const PRESETS = [
     pingCheck: null,
   },
   {
+    id: 'dns-internet-solved',
+    label: 'Internet + DNS (solved)',
+    category: 'working',
+    description: 'LAN behind NAT to the ISP; PC and router have name servers 8.8.8.8 / 8.8.4.4. `ping google.com` and `nslookup google.com` work.',
+    pingCheck: { src: '192.168.1.10', dst: '8.8.8.8', service: { protocol: 'udp', port: 53 } },
+  },
+  {
+    id: 'dns-no-nat-broken',
+    label: 'DNS query blocked — no NAT (broken)',
+    category: 'broken',
+    expectedFailure: 'nat_required',
+    description: 'Same as above but the NAT rule is missing: a private source cannot reach 8.8.8.8, so the name does not resolve ("Temporary failure in name resolution").',
+    pingCheck: { src: '192.168.1.10', dst: '8.8.8.8', service: { protocol: 'udp', port: 53 } },
+  },
+  {
     id: 'firewall-zone-solved',
     label: 'Zone firewall INSIDE→OUTSIDE (solved)',
     category: 'working',
@@ -157,6 +172,8 @@ export function buildPreset(presetId, ctx) {
     'dhcp-local-solved':                          _dhcpLocal,
     'dhcp-relay-solved':                          _dhcpRelay,
     'dhcp-relay-no-helper-broken':                _dhcpRelayNoHelper,
+    'dns-internet-solved':                        ctx => _dnsInternet(ctx, { nat: true }),
+    'dns-no-nat-broken':                          ctx => _dnsInternet(ctx, { nat: false }),
     'firewall-zone-solved':                       _firewallZoneSolved,
     'firewall-default-deny-broken':               _firewallDefaultDenyBroken,
     'firewall-asymmetric-outside-broken':         _firewallAsymmetricBroken,
@@ -340,6 +357,44 @@ function _dhcpLocal({ addSandboxDevice, sbTopology, sbEngine, sbPcEngine, sbConn
     assignedIp: iface?.ip ?? null,
     failureReason: iface?.ip ? null : 'no_dhcp_offer',
   }
+}
+
+// LAN (PC + switch) behind a router that reaches the ISP. `nat` = the overload rule that lets the
+// private LAN out; without it a query to 8.8.8.8 dies with nat_required. The PC's name servers are set
+// with `resolvectl`, the router's with `ip name-server` — the same commands a player types.
+function _dnsInternet({ addSandboxDevice, sbTopology, sbEngine, sbPcEngine, sbConnectInterfaces }, { nat }) {
+  addSandboxDevice(cat('router'))
+  addSandboxDevice(cat('switch'))
+  addSandboxDevice(cat('pc'))
+  addSandboxDevice(ISP_ENTRY)
+
+  const g = byType(sbTopology)
+  const r = g.router[0], sw = g.switch[0], pc = g.pc[0], isp = g.isp[0]
+
+  sbConnectInterfaces(`${r.id}:GigabitEthernet0/0`, `${sw.id}:FastEthernet0/1`)
+  sbConnectInterfaces(`${pc.id}:Ethernet0/0`,        `${sw.id}:FastEthernet0/2`)
+  sbConnectInterfaces(`${r.id}:GigabitEthernet0/1`, `${isp.id}:WAN0/0`)
+
+  exec(sbEngine, r,
+    'enable', 'configure terminal',
+    'interface GigabitEthernet0/0', 'ip address 192.168.1.1 255.255.255.0', 'no shutdown', 'exit',
+    'interface GigabitEthernet0/1', 'ip address 203.0.113.2 255.255.255.252', 'no shutdown', 'exit',
+    'ip route 0.0.0.0 0.0.0.0 203.0.113.1',
+    'ip name-server 8.8.8.8 8.8.4.4',
+  )
+  if (nat) {
+    exec(sbEngine, r,
+      'interface GigabitEthernet0/0', 'ip nat inside', 'exit',
+      'interface GigabitEthernet0/1', 'ip nat outside', 'exit',
+      'access-list 1 permit 192.168.1.0 0.0.0.255',
+      'ip nat inside source list 1 interface GigabitEthernet0/1 overload',
+    )
+  }
+  exec(sbEngine, r, 'end')
+  exec(sbPcEngine, pc,
+    'ip link set eth0 up', 'ip addr add 192.168.1.10/24 dev eth0', 'ip route add default via 192.168.1.1',
+    'resolvectl dns eth0 8.8.8.8 8.8.4.4',
+  )
 }
 
 // Two-router base with bidirectional routes + DHCP pool on R1 for R2's subnet.

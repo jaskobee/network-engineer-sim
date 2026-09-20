@@ -119,7 +119,7 @@ describe('D1 — local DHCP: PC gets IP from router pool on same subnet', () => 
 
   it('PC gets the DNS server', () => {
     lx(pcEng, pc, 'dhclient eth0')
-    expect(pc.dns_server).toBe('8.8.8.8')
+    expect(pc.dhcp_dns_servers).toEqual(['8.8.8.8'])
   })
 
   it('server-side binding is recorded', () => {
@@ -269,7 +269,7 @@ describe('D3 — relay: broadcast-boundary enforcement', () => {
     const iface = pc.getInterface('Ethernet0/0')
     expect(iface.ip).toMatch(/^192\.168\.1\./)
     expect(iface.dhcp_assigned).toBe(true)
-    expect(pc.dns_server).toBe('1.1.1.1')
+    expect(pc.dhcp_dns_servers).toEqual(['1.1.1.1'])
 
     // Binding recorded on the SERVER (not the relay)
     expect(server.dhcp_bindings).toHaveLength(1)

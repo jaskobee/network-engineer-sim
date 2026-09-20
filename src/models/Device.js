@@ -4,6 +4,13 @@ let _idCounter = 0
 
 export function setIdCounter(n) { if (n > _idCounter) _idCounter = n }
 
+// A DHCP pool from a save: `dns_servers` is a list (`dns-server a b` hands out several);
+// older saves kept a single `dns_server`.
+function _poolFromSave(p) {
+  const { dns_server, ...rest } = p
+  return { ...rest, dns_servers: [...(p.dns_servers ?? (dns_server ? [dns_server] : []))] }
+}
+
 // Reconstruct a Device from a save snapshot without calling the constructor
 export function deviceFromSave(raw) {
   const d = Object.create(Device.prototype)
@@ -24,8 +31,12 @@ export function deviceFromSave(raw) {
     vlan_db: { ...(raw.vlan_db || {}) },
     powered: raw.powered ?? false,
     active_vlan: raw.active_vlan ?? null,
-    dns_server: raw.dns_server ?? null,
-    dhcp_pools:       raw.type === 'router' ? (raw.dhcp_pools       || []).map(p => ({ ...p })) : undefined,
+    // Name servers: `dns_servers` are configured by hand (or `ip name-server`), `dhcp_dns_servers` came
+    // from a lease. Saves from before name-server lists kept a single `dns_server` — that was DHCP's.
+    dns_servers: [...(raw.dns_servers ?? [])],
+    dhcp_dns_servers: [...(raw.dhcp_dns_servers ?? (raw.dns_server ? [raw.dns_server] : []))],
+    domain_lookup: (raw.type === 'router' || raw.type === 'switch') ? (raw.domain_lookup ?? true) : undefined,
+    dhcp_pools:       raw.type === 'router' ? (raw.dhcp_pools       || []).map(_poolFromSave) : undefined,
     dhcp_excluded:    raw.type === 'router' ? (raw.dhcp_excluded    || []).map(e => ({ ...e })) : undefined,
     dhcp_bindings:    raw.type === 'router' ? (raw.dhcp_bindings    || []).map(b => ({ ...b })) : undefined,
     nat_acls:         (raw.type === 'router' || raw.type === 'firewall') ? (raw.nat_acls         || []).map(a => ({ ...a, entries: (a.entries || []).map(e => ({ ...e })) })) : undefined,
@@ -159,7 +170,8 @@ export function createAdminLaptop(hostname = 'admin-laptop') {
     interfaces: [createInterface('Ethernet0/0')],
     routing_table: [],
     vlan_db: {},
-    dns_server: null,
+    dns_servers: [],
+    dhcp_dns_servers: [],
   })
   return d
 }
@@ -188,7 +200,8 @@ export function createIspDevice() {
     }],
     routing_table: [],
     vlan_db: {},
-    dns_server: null,
+    dns_servers: [],
+    dhcp_dns_servers: [],
   })
   return d
 }
@@ -206,11 +219,17 @@ export class Device {
     this.interfaces = []
     this.routing_table = []  // [{ network, mask, next_hop, dhcp_assigned? }]
     this.vlan_db = {}        // vlan_id -> { name }
-    this.dns_server = null   // set by DHCP on PC/server; null when not configured/released
+    // Name servers, asked in order (see models/dns.js). `dns_servers` is set by hand — `resolvectl dns`,
+    // `netsh … set dns`, `ip name-server` — and wins; `dhcp_dns_servers` is what the lease supplied and is
+    // emptied when the lease is released.
+    this.dns_servers = []
+    this.dhcp_dns_servers = []
+    // IOS `ip domain-lookup` — on by default, on routers and switches.
+    if (type === 'router' || type === 'switch') this.domain_lookup = true
 
     // DHCP server state — only populated on router devices
     if (type === 'router') {
-      this.dhcp_pools      = []   // [{ name, network, mask, default_router, dns_server, lease_days, lease_hours, lease_mins }]
+      this.dhcp_pools      = []   // [{ name, network, mask, default_router, dns_servers, lease_days, lease_hours, lease_mins }]
       this.dhcp_excluded   = []   // [{ start, end }]  — excluded IP ranges
       this.dhcp_bindings   = []   // [{ ip, client_id, pool_name, lease_expires }]
       // NAT state — only populated on router devices

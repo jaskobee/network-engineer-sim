@@ -1,20 +1,22 @@
-# DNS in NetSim — design (not built yet)
+# DNS in NetSim — design and status
 
-Status: **design agreed, not built.** The owner answered the open questions on 2026-09-20 (see "Decisions" at the end); building phase 1 still needs an explicit go-ahead.
-Written 2026-09-20 after the host Configure GUI shipped without a DNS field, because there
-was no engine behind one and NetSim does not fake settings.
+Status: **phase 1 built (2026-09-20); phases 2 and 3 not started.** The owner answered the open questions and
+approved phase 1 the same day (see "Decisions" at the end). Written after the host Configure GUI shipped without a
+DNS field, because there was no engine behind one and NetSim does not fake settings — now there is, and the window
+has Preferred / Alternate DNS server fields. The rules the shipped code obeys live in
+`docs/NETWORKING_ACCURACY.md` §DNS rules; this file keeps the design and the plan.
 
 Big missions will need DNS (name → address, a DNS server on the LAN, a firewall that must
 let UDP/53 through, "the site works by IP but not by name"). This doc records how Cisco Packet
 Tracer models it, what real gear does that a learner must not have to unlearn, and a phased plan
 that fits the engine we have.
 
-## 1. Where we are today
+## 1. Where we were before phase 1 (history)
 
-- `device.dns_server` exists on hosts but is only ever **filled by DHCP** (`DHCPEngine`,
+- `device.dns_server` existed on hosts but is only ever **filled by DHCP** (`DHCPEngine`,
   `dhclient`, `ipconfig /renew`). Nothing can set it by hand and nothing reads it except
   `ipconfig /all` / `netsh … show config`.
-- Names resolve from a **static table** (`_DNS_MAP` in `models/ipUtils.js`: google.com → 8.8.8.8 …)
+- Names resolved from a **static table** (`_DNS_MAP` in `models/ipUtils.js`: google.com → 8.8.8.8 …) — removed in phase 1; its names are now the public zone in `models/dns.js`
   in `ping <name>` (Linux, IOS) and in `TerminalPane`. It is consulted whether or not the device
   has any DNS server, or can reach one. That is fake data: a host with no DNS configured "resolves"
   google.com.
@@ -61,9 +63,9 @@ PT's client fields are just data; here the resolver must go through the real pat
 ## 4. Proposed model
 
 **Data**
-- Client: `device.dns_servers` — an ordered list (at least primary + secondary, up to 3 on hosts, 6 on routers). Set by DHCP (as now, which today writes the single `dns_server`) **or by hand**; `dns_server` stays as the first entry until the migration lands.
+- Client: `device.dns_servers` — an ordered list set **by hand**, and `device.dhcp_dns_servers` — the list a DHCP lease supplied (`releaseDHCP` empties only this one). The effective list is the manual one if present, else the lease's (`effectiveDnsServers`). The old single `dns_server` is gone; an old save's value loads as the lease's list.
 - Server: `device.dns_service = { enabled, records: [{ name, type: 'A', address }] }` on `server` devices.
-- Router as server: `device.dns_server_enabled` + its `ip host` table (IOS parity: `ip dns server`, `ip host`).
+- Router as server (phase 2): `device.dns_server_enabled` + its `ip host` table (IOS parity: `ip dns server`, `ip host`).
 - The public internet: the addresses of well-known public resolvers (8.8.8.8, 1.1.1.1) are treated as
   reachable virtual DNS servers that answer from the built-in public table (today's `_DNS_MAP`),
   *only if* the packet can actually get there (default route, NAT, firewall) — so `google.com` keeps
@@ -99,11 +101,11 @@ DNS server wrong / service off / record missing / firewall blocking udp/53.
 
 ## 5. Phases (each ends with `npm test` + build clean and an accuracy gate)
 
-1. **Client + resolver.** `models/dns.js`; the three shells' resolution paths, `nslookup`, the
+1. **Client + resolver — DONE 2026-09-20.** `models/dns.js`; the three shells' resolution paths, `nslookup`, the
    set-DNS commands above; DNS field in the host GUI; the public-resolver table replaces the static
    fake; update `nat.test.js` to configure a name server first. Tests: each failure rung, path faults
    (link down, no route, firewall blocking udp/53, NAT missing), OS-specific wording.
-2. **Servers.** `dns_service` on servers with a **Services → DNS** panel (record table, like PT);
+2. **Servers (next).** `dns_service` on servers with a **Services → DNS** panel (record table, like PT);
    router `ip dns server` / `ip host` / `show hosts`; capture frames; save/load; a preset
    "LAN with a DNS server (solved / service off / record missing)".
 3. **Depth.** forwarders (a LAN server forwards misses to 8.8.8.8), CNAME, TTL and a resolver cache with
@@ -111,7 +113,9 @@ DNS server wrong / service off / record missing / firewall blocking udp/53.
 
 ## 6. Simplifications to label in-game
 
-- Hosts are capped at 3 name servers (real Windows allows more under Advanced) — the primary/secondary pair is what is taught.
+- No cap is enforced on the number of name servers (real `resolv.conf` stops at 3, IOS `ip name-server` at 6, Windows allows more under Advanced) — the primary/secondary pair is what is taught.
+- Name servers are per host, not per adapter (hosts have one NIC).
+- systemd-resolved's built-in fallback DNS is treated as disabled, so a host with no DNS setting cannot resolve.
 - Only A records answer queries in phase 1–2 (other types can be *stored*, not served).
 - No recursion until phase 3; no TCP fallback / truncation; no TTLs until phase 3.
 - Source ports aren't tracked (same 4-tuple simplification as the firewall).
@@ -129,3 +133,18 @@ DNS server wrong / service off / record missing / firewall blocking udp/53.
 4. **Name servers are a list (primary + secondary), from phase 1.** My earlier recommendation of one
    server per host was wrong: it would teach a learner something they must unlearn (preferred/alternate,
    `resolv.conf` up to 3, IOS up to 6). **Revised the same day.**
+
+## 8. What phase 1 shipped
+
+- `src/models/dns.js` — `resolveName`, `queryServer`, `effectiveDnsServers`, `dnsSource`; the public zone and resolvers.
+- Linux: `ping <name>`, `nslookup <name> [server]`, `resolvectl status|dns|revert|query`, `cat /etc/resolv.conf`
+  (and the upstream file); `dhclient` fills the lease list.
+- Windows: `netsh interface ip set|add|delete dns`, `show config|dnsservers`, `ipconfig /all` (several servers), `nslookup`,
+  `ping <name>` (`Pinging name [ip]`).
+- IOS (router + switch): `ip name-server`, `[no] ip domain-lookup`, `ping <name>` with the `Translating …` line,
+  running-config lines; DHCP pool `dns-server` takes up to eight addresses.
+- Host Configure GUI: DNS servers section (automatic / manual, preferred + alternate) → the same commands.
+- `TerminalPane` resolves through the device's own engine (no fake table); `engine/pingTarget.js` finds the destination
+  so a flag value (`-c 4`) is never mistaken for a name.
+- Dev presets: "Internet + DNS (solved)" and "DNS query blocked — no NAT (broken)".
+- Tests: `dns.test.js` (65), hostConfig H-DNS, presets, pingTarget.
