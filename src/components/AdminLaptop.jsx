@@ -9,6 +9,7 @@ import BrowserPanel from './BrowserPanel.jsx'
 import AdminDashboardTab from './AdminDashboardTab.jsx'
 import { Section, relativeTime } from './AdminLaptopShared.jsx'
 import { useGame } from '../state/GameContext.jsx'
+import { IconLaptop, IconTerminal, IconDashboard, IconBook, IconPulse, IconGlobe, IconMail, IconSliders, IconCheck } from './icons.jsx'
 import { useCareer } from '../state/CareerContext.jsx'
 
 const INITIAL_W = 900
@@ -87,81 +88,73 @@ export default function AdminLaptop({ onClose }) {
     : { position: 'fixed', left: pos.x, top: pos.y, width: size.w, height: size.h, zIndex: 3000, display: 'flex', flexDirection: 'column' }
 
   const TABS = [
-    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-    { id: 'guide',    icon: '📖', label: 'Guide' },
-    { id: 'wirefish', icon: '🐟', label: 'WireFish' },
-    { id: 'browser',  icon: '🌐', label: 'Browser' },
-    { id: 'inbox',    icon: '📧', label: 'Inbox', badge: unreadCount },
-    { id: 'settings', icon: '⚙️', label: 'Settings' },
+    { id: 'dashboard', icon: <IconDashboard size={17} />, label: 'Dashboard' },
+    { id: 'guide',    icon: <IconBook size={17} />,      label: 'Guide' },
+    { id: 'wirefish', icon: <IconPulse size={17} />,     label: 'WireFish' },
+    { id: 'browser',  icon: <IconGlobe size={17} />,     label: 'Browser' },
+    { id: 'inbox',    icon: <IconMail size={17} />,      label: 'Inbox', badge: unreadCount },
+    { id: 'settings', icon: <IconSliders size={17} />,   label: 'Settings' },
   ]
 
   return (
-    <div style={{ ...windowStyle, borderRadius: maximised ? 0 : 6, overflow: 'hidden',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px #1a2a3e',
-      background: '#0a0f18', fontFamily: 'monospace' }}>
+    <div style={{ ...windowStyle, borderRadius: maximised ? 0 : 12, overflow: 'hidden',
+      boxShadow: '0 24px 70px rgba(0,0,0,0.65), 0 0 0 1px var(--rule-strong)',
+      background: 'var(--surface-ground)', fontFamily: 'var(--font-ui)' }}>
 
       {/* ── Title bar ──────────────────────────────────────────────────────── */}
       <div
         onMouseDown={onTitleMouseDown}
         style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '6px 10px', background: '#0d1520',
-          borderBottom: '1px solid #1a2a3e',
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '7px 12px', background: 'var(--surface-panel)',
+          borderBottom: '1px solid var(--rule)',
           cursor: maximised ? 'default' : 'grab', userSelect: 'none', flexShrink: 0,
         }}
       >
-        {/* Traffic-light buttons */}
-        <button onClick={onClose}                       style={trafficBtn('#ff5f57')} title="Close" />
-        <button onClick={() => {}}                      style={trafficBtn('#febc2e')} title="Minimise (unavailable)" />
-        <button onClick={() => setMaximised(m => !m)}   style={trafficBtn('#28c840')} title={maximised ? 'Restore' : 'Maximise'} />
-
-        {/* Title */}
-        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#8ab4d4', letterSpacing: 1 }}>
-          🖥 ADMIN LAPTOP
+        {/* Window controls — grey until hovered, so colour stays reserved for signal */}
+        <span className="tl-group">
+          <button onClick={onClose} className="tl close" title="Close" aria-label="Close" />
+          <button onClick={() => {}} className="tl min" title="Minimise (unavailable)" aria-label="Minimise (unavailable)" />
+          <button onClick={() => setMaximised(m => !m)} className="tl max" title={maximised ? 'Restore' : 'Maximise'} aria-label={maximised ? 'Restore' : 'Maximise'} />
         </span>
-        <span style={{ fontSize: 9, color: '#334', marginLeft: 2 }}>management console</span>
+
+        <span style={{ marginLeft: 6, display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
+          <IconLaptop size={17} /> Admin laptop
+        </span>
+        <span style={{ fontSize: 14, color: 'var(--ink-3)' }}>Management console</span>
 
         {/* Terminal shortcut — opens the laptop's own real terminal (same
             action right-clicking it on the floorplan does), not a tab with
             its own content pane. Grows from wherever this button sits. */}
         <button
+          className="btn ghost icon"
           onClick={e => openTerminal(laptopDevice?.id, { x: e.clientX, y: e.clientY })}
           onMouseDown={e => e.stopPropagation()}
           disabled={!laptopDevice?.powered}
           title={laptopDevice?.powered ? 'Open Terminal' : 'Power on the laptop first'}
-          style={{
-            marginLeft: 14, width: 30, height: 26, fontSize: 15,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'transparent', border: '1px solid #1a2a3e', borderRadius: 4,
-            cursor: laptopDevice?.powered ? 'pointer' : 'not-allowed',
-            color: laptopDevice?.powered ? '#8ab4d4' : '#334',
-            opacity: laptopDevice?.powered ? 1 : 0.5,
-          }}
-        >⌨</button>
+          aria-label="Open terminal"
+          style={{ marginLeft: 8 }}
+        ><IconTerminal size={17} /></button>
 
-        {/* Tab bar — icon-first, tooltip for the label instead of inline text */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }} onMouseDown={e => e.stopPropagation()}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} title={t.label} style={{
-              position: 'relative',
-              width: 34, height: 26, fontSize: 15,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: 'none', borderRadius: 3, cursor: 'pointer',
-              background: tab === t.id ? '#1a2e4a' : 'transparent',
-              borderBottom: tab === t.id ? '2px solid #4a90e2' : '2px solid transparent',
-            }}>
-              {t.icon}
-              {t.badge > 0 && (
-                <span style={{
-                  position: 'absolute', top: 1, right: 1,
-                  minWidth: 12, height: 12, borderRadius: 6, padding: '0 2px',
-                  background: '#ff5555', color: '#fff', fontSize: 7, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid #0a0f18',
-                }}>{t.badge > 9 ? '9+' : t.badge}</span>
-              )}
-            </button>
-          ))}
+        {/* Tab bar — the active tab names itself; the rest stay icon-only to save room */}
+        <div role="tablist" style={{ marginLeft: 'auto', display: 'flex', gap: 2 }} onMouseDown={e => e.stopPropagation()}>
+          {TABS.map(t => {
+            const on = tab === t.id
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={on}
+                onClick={() => setTab(t.id)}
+                title={t.label}
+                className={`lap-tab${on ? ' on' : ''}`}
+              >
+                {t.icon}
+                {on && <span>{t.label}</span>}
+                {t.badge > 0 && <span className="badge" style={{ top: -4, right: -4, minWidth: 15, height: 15, fontSize: 11, borderWidth: 1 }}>{t.badge > 9 ? '9+' : t.badge}</span>}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -195,7 +188,7 @@ export default function AdminLaptop({ onClose }) {
         <div onMouseDown={onResizeMouseDown} style={{
           position: 'absolute', bottom: 0, right: 0, width: 14, height: 14,
           cursor: 'nwse-resize',
-          background: 'linear-gradient(135deg, transparent 50%, #1a2a3e 50%)',
+          background: 'linear-gradient(135deg, transparent 50%, var(--rule-strong) 50%)',
         }} />
       )}
     </div>
@@ -216,22 +209,22 @@ function GuideTab({ laptopDevice, osType, guideMode }) {
     : linuxSteps(iface, hasIp, hasGw)
 
   return (
-    <div style={{ padding: 24, color: '#8ab', fontFamily: 'monospace', overflowY: 'auto' }}>
+    <div style={{ padding: 24, color: '#88a6bb', fontFamily: 'var(--font-ui)', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#c8d8e8', marginBottom: 4 }}>
-          🖥 Admin Laptop Setup
+        <div style={{ fontSize: 18.5, fontWeight: 700, color: '#c8d9e8', marginBottom: 4 }}>
+          Admin laptop setup
         </div>
-        <div style={{ fontSize: 10, color: '#557', lineHeight: 1.7 }}>
+        <div style={{ fontSize: 14.5, color: '#6f8fa6', lineHeight: 1.7 }}>
           The Admin Laptop is your network engineer&apos;s workstation. It lives on the floorplan
           as a real device — cable it, power it on, and configure an IP before the Browser
-          or WireFish tools can reach anything. Currently set up for <strong style={{ color: '#8ab4d4' }}>{osType === 'windows' ? 'Windows' : 'Linux'}</strong> —
-          change that anytime in ⚙ Settings.
+          or WireFish tools can reach anything. Currently set up for <strong style={{ color: '#8ab3d4' }}>{osType === 'windows' ? 'Windows' : 'Linux'}</strong> —
+          change that anytime in Settings.
         </div>
       </div>
 
       {/* Setup checklist */}
-      <Section title="Setup Checklist">
+      <Section title="Setup checklist">
         <StepRow done={true}   num={0} label="Laptop created" hint="The admin laptop is always present — no purchase needed." />
         <StepRow done={cabled} num={1} label="Cable connected"
           hint="Right-click the laptop on the floorplan → Connect → pick a switch or router port." />
@@ -260,15 +253,15 @@ function GuideTab({ laptopDevice, osType, guideMode }) {
       </Section>
 
       {/* Command reference */}
-      <Section title={`Command Reference — ${osType === 'windows' ? 'Windows CMD' : 'Linux'}`}>
+      <Section title={`Command reference — ${osType === 'windows' ? 'Windows CMD' : 'Linux'}`}>
         <CmdTable rows={steps} />
       </Section>
 
       {/* Using the tools */}
-      <Section title="Using the Tools">
+      <Section title="Using the tools">
         <div style={{ display: 'flex', gap: 12 }}>
-          <ToolCard icon="🌐" name="Browser" desc="Navigate to a device IP to open its web management UI (firewall rules, routing, NAT). The connection goes through the real engine — if the laptop has no route to the device, you get a realistic browser error." />
-          <ToolCard icon="🐟" name="WireFish" desc="Packet capture analyser — coming in Phase 3. Will show real frames emitted by the packet engine hop-by-hop. See the WireFish tab for the build timeline." />
+          <ToolCard icon={<IconGlobe size={16} />} name="Browser" desc="Navigate to a device IP to open its web management UI (firewall rules, routing, NAT). The connection goes through the real engine — if the laptop has no route to the device, you get a realistic browser error." />
+          <ToolCard icon={<IconPulse size={16} />} name="WireFish" desc="Packet capture analyser — coming in Phase 3. Will show real frames emitted by the packet engine hop-by-hop. See the WireFish tab for the build timeline." />
         </div>
       </Section>
     </div>
@@ -283,37 +276,37 @@ function GuideTab({ laptopDevice, osType, guideMode }) {
 
 function SettingsTab({ osType, guideMode, onSetMode, onSetOs }) {
   return (
-    <div style={{ padding: 24, color: '#8ab', fontFamily: 'monospace', overflowY: 'auto' }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#c8d8e8', marginBottom: 16 }}>
-        ⚙ Settings
+    <div style={{ padding: 24, color: '#88a6bb', fontFamily: 'var(--font-ui)', overflowY: 'auto' }}>
+      <div style={{ fontSize: 18.5, fontWeight: 700, color: '#c8d9e8', marginBottom: 16 }}>
+        Settings
       </div>
 
-      <Section title="Operating System">
+      <Section title="Operating system">
         <div style={{ display: 'flex', gap: 12 }}>
           <OsCard
             active={osType === 'linux'} onClick={() => onSetOs('linux')}
-            icon="🐧" name="Linux" sub="Ubuntu / Debian shell"
+            icon={null} name="Linux" sub="Ubuntu / Debian shell"
             cmds={['ip addr add', 'ip route add default via', 'ping', 'dhclient']}
           />
           <OsCard
             active={osType === 'windows'} onClick={() => onSetOs('windows')}
-            icon="🪟" name="Windows" sub="Windows CMD"
+            icon={null} name="Windows" sub="Windows CMD"
             cmds={['ipconfig /all', 'netsh interface ip set address', 'route print', 'ping']}
           />
         </div>
-        <div style={{ fontSize: 9, color: '#446', marginTop: 8 }}>
+        <div style={{ fontSize: 13.5, color: '#7090a6', marginTop: 8 }}>
           The OS choice changes the CLI commands in the terminal tab. Both OSes teach the
           same networking — just different syntax. The choice is saved on the device and
           persists across sessions.
         </div>
       </Section>
 
-      <Section title="Guide Mode">
+      <Section title="Guide mode">
         <div style={{ display: 'flex', gap: 8 }}>
-          <ModeBtn active={guideMode === 'beginner'} onClick={() => onSetMode('beginner')} label="📖 Beginner" />
-          <ModeBtn active={guideMode === 'expert'}   onClick={() => onSetMode('expert')}   label="⚡ Expert" />
+          <ModeBtn active={guideMode === 'beginner'} onClick={() => onSetMode('beginner')} label="Beginner" />
+          <ModeBtn active={guideMode === 'expert'}   onClick={() => onSetMode('expert')}   label="Expert" />
         </div>
-        <div style={{ fontSize: 9, color: '#446', marginTop: 8 }}>
+        <div style={{ fontSize: 13.5, color: '#7090a6', marginTop: 8 }}>
           Beginner mode shows step-by-step hints and example commands in the Guide tab and
           mission task list. Expert mode hides them — you're expected to know your commands.
         </div>
@@ -324,20 +317,17 @@ function SettingsTab({ osType, guideMode, onSetMode, onSetOs }) {
 
 // ── Inbox tab ─────────────────────────────────────────────────────────────────
 
-const NOTIFICATION_ICON = {
-  'ticket-issued':    '🔧',
-  'sla-warning':      '⚠️',
-  'sla-expired':       '⛔',
-  'ticket-completed': '✅',
-  'client-dormant':   '💤',
+const NOTIFICATION_LED = {
+  'ticket-issued': 'blue', 'sla-warning': 'amber', 'sla-expired': 'red',
+  'ticket-completed': 'green', 'client-dormant': '',
 }
 
 function NotificationsTab({ notifications, onMarkRead }) {
   if (notifications.length === 0) {
     return (
-      <div style={{ padding: 24, textAlign: 'center', color: '#446', fontFamily: 'monospace' }}>
-        <div style={{ fontSize: 32, marginBottom: 10, opacity: 0.5 }}>📭</div>
-        <div style={{ fontSize: 11 }}>No messages yet — your clients will reach out here.</div>
+      <div style={{ padding: 24, textAlign: 'center', color: '#7090a6', fontFamily: 'var(--font-ui)' }}>
+        <div style={{ fontSize: 16, color: 'var(--ink-2)', marginBottom: 4 }}>No messages yet</div>
+        <div style={{ fontSize: 15 }}>Your clients will reach out here.</div>
       </div>
     )
   }
@@ -349,22 +339,22 @@ function NotificationsTab({ notifications, onMarkRead }) {
           onClick={() => !n.read && onMarkRead(n.id)}
           style={{
             display: 'flex', gap: 10, padding: '10px 12px', marginBottom: 6, borderRadius: 6,
-            background: n.read ? '#0a0f18' : '#0d1a2a',
-            border: `1px solid ${n.read ? '#141c28' : '#1e3a5c'}`,
+            background: n.read ? '#0e1316' : '#0f1c28',
+            border: `1px solid ${n.read ? '#171f24' : '#233e57'}`,
             cursor: n.read ? 'default' : 'pointer',
           }}
         >
-          <span style={{ fontSize: 18, flexShrink: 0 }}>{NOTIFICATION_ICON[n.kind] ?? '📩'}</span>
+          <i className={`led ${NOTIFICATION_LED[n.kind] ?? ''}`} style={{ marginTop: 6 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: n.read ? 400 : 700, color: n.read ? '#8ab' : '#c8d8e8' }}>
+              <span style={{ fontSize: 15, fontWeight: n.read ? 400 : 700, color: n.read ? '#88a6bb' : '#c8d9e8' }}>
                 {n.subject}
               </span>
-              <span style={{ fontSize: 9, color: '#446', flexShrink: 0 }}>{relativeTime(n.createdAt)}</span>
+              <span style={{ fontSize: 13.5, color: '#7090a6', flexShrink: 0 }}>{relativeTime(n.createdAt)}</span>
             </div>
-            <div style={{ fontSize: 10, color: '#5a7', marginTop: 3, lineHeight: 1.5 }}>{n.body}</div>
+            <div style={{ fontSize: 14.5, color: 'var(--ink-3)', marginTop: 3, lineHeight: 1.5 }}>{n.body}</div>
           </div>
-          {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4a90e2', flexShrink: 0, marginTop: 4 }} />}
+          {!n.read && <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--signal)', flexShrink: 0 }}>New</span>}
         </div>
       ))}
     </div>
@@ -416,20 +406,20 @@ function StepRow({ done, num, label, hint, cmd, guideMode }) {
       <div style={{
         flexShrink: 0, width: 20, height: 20, borderRadius: '50%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 10, fontWeight: 700,
-        background: done ? '#0a2a1a' : '#0d1520',
-        color: done ? '#50fa7b' : '#446',
-        border: `1px solid ${done ? '#1a5a2a' : '#1a2a3e'}`,
+        fontSize: 14.5, fontWeight: 700,
+        background: done ? '#0e261a' : '#12181c',
+        color: done ? '#3ee08f' : '#7090a6',
+        border: `1px solid ${done ? '#204c36' : '#202b33'}`,
       }}>
-        {done ? '✓' : num}
+        {done ? <IconCheck size={13} /> : num}
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 10, color: done ? '#8ab' : '#c8d8e8', fontWeight: done ? 400 : 600 }}>{label}</div>
+        <div style={{ fontSize: 14.5, color: done ? '#88a6bb' : '#c8d9e8', fontWeight: done ? 400 : 600 }}>{label}</div>
         {!done && guideMode === 'beginner' && hint && (
-          <div style={{ fontSize: 9, color: '#557', marginTop: 3, lineHeight: 1.6 }}>{hint}</div>
+          <div style={{ fontSize: 13.5, color: '#6f8fa6', marginTop: 3, lineHeight: 1.6 }}>{hint}</div>
         )}
         {!done && cmd && guideMode === 'beginner' && (
-          <code style={{ display: 'block', marginTop: 4, fontSize: 9, color: '#8be9fd', background: '#0a1520', padding: '3px 8px', borderRadius: 3, border: '1px solid #1a2a3e' }}>
+          <code style={{ fontFamily: 'var(--font-mono)', display: 'block', marginTop: 5, fontSize: 12.5, color: '#66d4ea', background: '#0c151e', padding: '3px 8px', borderRadius: 3, border: '1px solid #202b33' }}>
             {cmd}
           </code>
         )}
@@ -441,14 +431,14 @@ function StepRow({ done, num, label, hint, cmd, guideMode }) {
 function OsCard({ active, onClick, icon, name, sub, cmds }) {
   return (
     <button onClick={onClick} style={{
-      flex: 1, padding: 12, background: active ? '#0d1e35' : '#0a0f18',
-      border: `1px solid ${active ? '#4a90e2' : '#1a2a3e'}`, borderRadius: 6,
-      cursor: 'pointer', textAlign: 'left', color: '#8ab',
+      flex: 1, padding: 12, background: active ? '#102232' : '#0e1316',
+      border: `1px solid ${active ? '#4da6ff' : '#202b33'}`, borderRadius: 6,
+      cursor: 'pointer', textAlign: 'left', color: '#88a6bb',
     }}>
-      <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: active ? '#c8d8e8' : '#668', marginBottom: 2 }}>{name}</div>
-      <div style={{ fontSize: 9, color: '#446', marginBottom: 8 }}>{sub}</div>
-      {cmds.map(c => <code key={c} style={{ display: 'block', fontSize: 8, color: active ? '#8be9fd' : '#334', marginBottom: 2 }}>{c}</code>)}
+      
+      <div style={{ fontSize: 14.5, fontWeight: 700, color: active ? '#c8d9e8' : '#7e8c9e', marginBottom: 2 }}>{name}</div>
+      <div style={{ fontSize: 13.5, color: '#7090a6', marginBottom: 8 }}>{sub}</div>
+      {cmds.map(c => <code key={c} style={{ display: 'block', fontSize: 13, color: active ? '#66d4ea' : '#7291a6', marginBottom: 2 }}>{c}</code>)}
     </button>
   )
 }
@@ -458,10 +448,10 @@ function CmdTable({ rows }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {rows.map(({ cmd, desc }) => (
         <div key={cmd} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
-          <code style={{ flexShrink: 0, fontSize: 9, color: '#8be9fd', background: '#0a1520', padding: '2px 6px', borderRadius: 3, border: '1px solid #1a2a3e', whiteSpace: 'nowrap', maxWidth: 440, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <code style={{ fontFamily: 'var(--font-mono)', flexShrink: 0, fontSize: 12.5, color: '#66d4ea', background: '#0c151e', padding: '2px 6px', borderRadius: 3, border: '1px solid #202b33', whiteSpace: 'nowrap', maxWidth: 440, overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {cmd}
           </code>
-          <span style={{ fontSize: 9, color: '#557', flexShrink: 0 }}>{desc}</span>
+          <span style={{ fontSize: 13.5, color: '#6f8fa6', flexShrink: 0 }}>{desc}</span>
         </div>
       ))}
     </div>
@@ -470,9 +460,9 @@ function CmdTable({ rows }) {
 
 function ToolCard({ icon, name, desc }) {
   return (
-    <div style={{ flex: 1, padding: 12, background: '#0a0f18', border: '1px solid #1a2a3e', borderRadius: 6 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#8ab', marginBottom: 6 }}>{icon} {name}</div>
-      <div style={{ fontSize: 9, color: '#446', lineHeight: 1.7 }}>{desc}</div>
+    <div style={{ flex: 1, padding: 12, background: '#0e1316', border: '1px solid #202b33', borderRadius: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15.5, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>{icon} {name}</div>
+      <div style={{ fontSize: 13.5, color: '#7090a6', lineHeight: 1.7 }}>{desc}</div>
     </div>
   )
 }
@@ -480,17 +470,9 @@ function ToolCard({ icon, name, desc }) {
 function ModeBtn({ active, onClick, label }) {
   return (
     <button onClick={onClick} style={{
-      padding: '3px 10px', fontSize: 9, border: `1px solid ${active ? '#4a90e2' : '#1a2a3e'}`,
-      borderRadius: 3, cursor: 'pointer', background: active ? '#1a2e4a' : 'transparent',
-      color: active ? '#4a90e2' : '#446', fontWeight: active ? 700 : 400,
+      padding: '3px 10px', fontSize: 13.5, border: `1px solid ${active ? '#4da6ff' : '#202b33'}`,
+      borderRadius: 3, cursor: 'pointer', background: active ? '#24313a' : 'transparent',
+      color: active ? '#4da6ff' : '#7090a6', fontWeight: active ? 700 : 400,
     }}>{label}</button>
   )
-}
-
-function trafficBtn(color) {
-  return {
-    width: 12, height: 12, borderRadius: '50%',
-    background: color, border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0,
-    boxShadow: '0 0 0 1px rgba(0,0,0,0.3)',
-  }
 }

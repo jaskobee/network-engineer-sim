@@ -43,23 +43,23 @@ export default function FirewallConsole({ deviceId, onClose }) {
         {/* ── Header ── */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 16px', background: '#060b14',
-          borderBottom: '1px solid #ff6b3540', flexShrink: 0,
+          padding: '10px 16px', background: '#070d13',
+          borderBottom: '1px solid #ff8a4a40', flexShrink: 0,
         }}>
           {/* Shield icon */}
           <svg width="28" height="28" viewBox="0 0 28 28">
-            <path d="M14 2 L24 6 L24 15 Q24 22 14 26 Q4 22 4 15 L4 6 Z" fill="#0d1a30" stroke="#ff6b35" strokeWidth="1.5"/>
-            <line x1="14" y1="9" x2="14" y2="21" stroke="#ff6b35" strokeWidth="1.2" opacity="0.8"/>
-            <line x1="8"  y1="15" x2="20" y2="15" stroke="#ff6b35" strokeWidth="1.2" opacity="0.8"/>
+            <path d="M14 2 L24 6 L24 15 Q24 22 14 26 Q4 22 4 15 L4 6 Z" fill="#101f2d" stroke="#ff8a4a" strokeWidth="1.5"/>
+            <line x1="14" y1="9" x2="14" y2="21" stroke="#ff8a4a" strokeWidth="1.2" opacity="0.8"/>
+            <line x1="8"  y1="15" x2="20" y2="15" stroke="#ff8a4a" strokeWidth="1.2" opacity="0.8"/>
           </svg>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#e0e0e0', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#e8eef2', fontFamily: 'var(--font-mono)' }}>
               {device.hostname}
-              <span style={{ fontSize: 10, color: '#555', fontWeight: 400, marginLeft: 8 }}>{device.model}</span>
+              <span style={{ fontSize: 13, color: '#738ea2', fontWeight: 400, marginLeft: 8 }}>{device.model}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-              <span style={{ fontSize: 10, color: '#aaa', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 12, color: '#a0acb4', fontFamily: 'var(--font-mono)' }}>
                 Mgmt: {mgmtIp}
               </span>
               <StatusChip up={mgmtUp} label={mgmtUp ? 'ONLINE' : 'LINK DOWN'} />
@@ -68,26 +68,26 @@ export default function FirewallConsole({ deviceId, onClose }) {
 
           {/* Summary pills */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Pill label={`${ruleCount} rules`} color="#4a90e2" />
-            {denyCount > 0 && <Pill label={`${denyCount} denied`} color="#ff5555" />}
+            <Pill label={`${ruleCount} rules`} color="#4da6ff" />
+            {denyCount > 0 && <Pill label={`${denyCount} denied`} color="#ff6259" />}
           </div>
 
           <button
             onClick={onClose}
             style={{
-              background: 'none', border: 'none', color: '#555', fontSize: 18,
+              background: 'none', border: 'none', color: '#738ea2', fontSize: 21,
               cursor: 'pointer', lineHeight: 1, padding: '2px 4px', flexShrink: 0,
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ff5555' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ff6259' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#738ea2' }}
             title="Close (Esc)"
           >×</button>
         </div>
 
         {/* ── Tab bar ── */}
         <div style={{
-          display: 'flex', background: '#07090f',
-          borderBottom: '1px solid #1a1a3e', flexShrink: 0,
+          display: 'flex', background: '#0a0d10',
+          borderBottom: '1px solid #202b33', flexShrink: 0,
         }}>
           {[
             { id: 'policy', label: 'POLICY' },
@@ -99,10 +99,10 @@ export default function FirewallConsole({ deviceId, onClose }) {
               onClick={() => setTab(t.id)}
               style={{
                 padding: '8px 20px', border: 'none', cursor: 'pointer',
-                fontSize: 11, fontWeight: 700, letterSpacing: 0.8,
-                background: tab === t.id ? '#0d1226' : 'transparent',
-                color: tab === t.id ? '#ff6b35' : '#444',
-                borderBottom: tab === t.id ? '2px solid #ff6b35' : '2px solid transparent',
+                fontSize: 14, fontWeight: 700, letterSpacing: 0.4,
+                background: tab === t.id ? '#141a1f' : 'transparent',
+                color: tab === t.id ? '#ff8a4a' : '#7490a2',
+                borderBottom: tab === t.id ? '2px solid #ff8a4a' : '2px solid transparent',
               }}
             >{t.label}</button>
           ))}
@@ -134,8 +134,8 @@ function Overlay({ children, onClose }) {
       <div
         style={{
           width: '92vw', maxWidth: 980, height: '82vh',
-          background: '#0d1226',
-          border: '1px solid #ff6b3550',
+          background: '#141a1f',
+          border: '1px solid #ff8a4a50',
           borderRadius: 10, overflow: 'hidden',
           boxShadow: '0 12px 60px rgba(0,0,0,0.85)',
           display: 'flex', flexDirection: 'column',
@@ -155,29 +155,29 @@ function GateScreen({ hostname, onClose }) {
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       height: '100%', gap: 16, padding: 32, textAlign: 'center',
-      background: '#0d1226',
+      background: '#141a1f',
     }}>
       <svg width="52" height="52" viewBox="0 0 28 28" style={{ opacity: 0.35 }}>
-        <path d="M14 2 L24 6 L24 15 Q24 22 14 26 Q4 22 4 15 L4 6 Z" fill="none" stroke="#ff6b35" strokeWidth="2"/>
-        <text x="14" y="19" textAnchor="middle" fill="#ff6b35" fontSize="12" fontFamily="monospace">?</text>
+        <path d="M14 2 L24 6 L24 15 Q24 22 14 26 Q4 22 4 15 L4 6 Z" fill="none" stroke="#ff8a4a" strokeWidth="2"/>
+        <text x="14" y="19" textAnchor="middle" fill="#ff8a4a" fontSize="12" fontFamily="monospace">?</text>
       </svg>
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#555', letterSpacing: 1 }}>
+      <div style={{ fontSize: 15.5, fontWeight: 700, color: '#738ea2', letterSpacing: 0.5 }}>
         MANAGEMENT INTERFACE NOT CONFIGURED
       </div>
-      <div style={{ fontSize: 11, color: '#333355', maxWidth: 380, lineHeight: 1.7 }}>
-        <strong style={{ color: '#4a4a70' }}>{hostname}</strong> has no IP address on any interface.
+      <div style={{ fontSize: 14, color: '#7090a6', maxWidth: 380, lineHeight: 1.7 }}>
+        <strong style={{ color: '#6f8fa5' }}>{hostname}</strong> has no IP address on any interface.
         Configure a management IP via the CLI first:
       </div>
       <pre style={{
-        background: '#060b14', border: '1px solid #1a1a3e',
-        borderRadius: 6, padding: '10px 20px', fontSize: 11,
-        fontFamily: 'monospace', color: '#8be9fd', textAlign: 'left', lineHeight: 1.8,
+        background: '#070d13', border: '1px solid #202b33',
+        borderRadius: 6, padding: '10px 20px', fontSize: 12.5,
+        fontFamily: 'var(--font-mono)', color: '#66d4ea', textAlign: 'left', lineHeight: 1.8,
       }}>{`${hostname}# conf t
 ${hostname}(config)# interface GigabitEthernet0/0
 ${hostname}(config-if)# nameif INSIDE
 ${hostname}(config-if)# ip address 10.0.0.1 255.255.255.0
 ${hostname}(config-if)# no shutdown`}</pre>
-      <div style={{ fontSize: 10, color: '#2a2a50', marginTop: 8 }}>
+      <div style={{ fontSize: 13, color: '#708fa5', marginTop: 8 }}>
         Press Esc or click outside to close
       </div>
     </div>
@@ -237,23 +237,23 @@ function PolicyTab({ device }) {
       {/* Toolbar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 14px', background: '#080f1e',
-        borderBottom: '1px solid #0d0d20', flexShrink: 0,
+        padding: '8px 14px', background: '#0a131c',
+        borderBottom: '1px solid #12181c', flexShrink: 0,
       }}>
-        <span style={{ fontSize: 10, color: '#3a3a60', letterSpacing: 0.5 }}>
+        <span style={{ fontSize: 13, color: '#7291a6', letterSpacing: 0.3 }}>
           {rules.length === 0 ? 'No rules — all traffic blocked by implicit default-deny'
             : `${rules.length} rule${rules.length !== 1 ? 's' : ''} — first match wins · implicit deny at bottom`}
         </span>
         <button
           onClick={() => setShowAdd(s => !s)}
           style={{
-            padding: '5px 14px', fontSize: 11, fontWeight: 700,
-            background: showAdd ? '#1a3060' : '#0a2040',
-            color: '#4a90e2', border: '1px solid #2a4080',
-            borderRadius: 4, cursor: 'pointer', letterSpacing: 0.5,
+            padding: '5px 14px', fontSize: 14, fontWeight: 700,
+            background: showAdd ? '#1f3e5b' : '#0e263c',
+            color: '#4da6ff', border: '1px solid #30567a',
+            borderRadius: 4, cursor: 'pointer', letterSpacing: 0.3,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#1a3060' }}
-          onMouseLeave={e => { e.currentTarget.style.background = showAdd ? '#1a3060' : '#0a2040' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1f3e5b' }}
+          onMouseLeave={e => { e.currentTarget.style.background = showAdd ? '#1f3e5b' : '#0e263c' }}
         >+ ADD RULE</button>
       </div>
 
@@ -267,9 +267,9 @@ function PolicyTab({ device }) {
         {/* Column headers */}
         <div style={{
           display: 'grid', gridTemplateColumns: '36px 1fr 1fr 1fr 1fr 100px 80px 54px 70px',
-          padding: '5px 12px', fontSize: 9, color: '#333355',
-          letterSpacing: 0.6, fontWeight: 700, background: '#07090f',
-          borderBottom: '1px solid #0d0d20', position: 'sticky', top: 0, zIndex: 1,
+          padding: '5px 12px', fontSize: 12, color: '#7090a6',
+          letterSpacing: 0.3, fontWeight: 700, background: '#0a0d10',
+          borderBottom: '1px solid #12181c', position: 'sticky', top: 0, zIndex: 1,
         }}>
           <span>#</span>
           <span>FROM ZONE</span>
@@ -299,24 +299,24 @@ function PolicyTab({ device }) {
         {/* Implicit default-deny */}
         <div style={{
           display: 'grid', gridTemplateColumns: '36px 1fr 1fr 1fr 1fr 100px 80px 54px 70px',
-          padding: '8px 12px', borderTop: rules.length > 0 ? '1px dashed #1a1a30' : 'none',
+          padding: '8px 12px', borderTop: rules.length > 0 ? '1px dashed #1b252c' : 'none',
           opacity: 0.45, userSelect: 'none',
         }}>
-          <span style={{ fontSize: 10, color: '#444', fontFamily: 'monospace' }}>{rules.length + 1}</span>
-          <span style={{ fontSize: 10, color: '#444' }}>ANY</span>
-          <span style={{ fontSize: 10, color: '#444' }}>ANY</span>
-          <span style={{ fontSize: 10, color: '#444' }}>any</span>
-          <span style={{ fontSize: 10, color: '#444' }}>any</span>
-          <span style={{ fontSize: 10, color: '#444' }}>ANY</span>
+          <span style={{ fontSize: 12, color: '#7490a2', fontFamily: 'var(--font-mono)' }}>{rules.length + 1}</span>
+          <span style={{ fontSize: 13, color: '#7490a2' }}>ANY</span>
+          <span style={{ fontSize: 13, color: '#7490a2' }}>ANY</span>
+          <span style={{ fontSize: 13, color: '#7490a2' }}>any</span>
+          <span style={{ fontSize: 13, color: '#7490a2' }}>any</span>
+          <span style={{ fontSize: 13, color: '#7490a2' }}>ANY</span>
           <span>
             <ActionBadge action="deny" />
           </span>
           <span />
-          <span style={{ fontSize: 9, color: '#333', fontStyle: 'italic', alignSelf: 'center' }}>implicit</span>
+          <span style={{ fontSize: 12, color: '#7491a4', fontStyle: 'italic', alignSelf: 'center' }}>implicit</span>
         </div>
 
         {rules.length === 0 && (
-          <div style={{ padding: '24px 16px', fontSize: 11, color: '#2a2a50', textAlign: 'center', lineHeight: 1.8 }}>
+          <div style={{ padding: '24px 16px', fontSize: 14, color: '#708fa5', textAlign: 'center', lineHeight: 1.8 }}>
             No rules configured. All traffic is blocked by the implicit default-deny.<br/>
             Add a rule above to permit traffic between zones.
           </div>
@@ -334,19 +334,19 @@ function RuleRow({ rule, idx, total, onUp, onDown, onDelete, onToggle }) {
       style={{
         display: 'grid', gridTemplateColumns: '36px 1fr 1fr 1fr 1fr 100px 80px 54px 70px',
         padding: '7px 12px', alignItems: 'center',
-        background: hover ? '#0a0f20' : (idx % 2 === 0 ? '#0b1020' : '#09101e'),
-        borderBottom: '1px solid #0d0d1a',
+        background: hover ? '#0c151e' : (idx % 2 === 0 ? '#11171b' : '#0b141c'),
+        borderBottom: '1px solid #101519',
         opacity: enabled ? 1 : 0.38,
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <span style={{ fontSize: 10, color: '#333355', fontFamily: 'monospace' }}>{rule.id}</span>
+      <span style={{ fontSize: 12, color: '#7090a6', fontFamily: 'var(--font-mono)' }}>{rule.id}</span>
       <ZoneBadge zone={rule.fromZone} />
       <ZoneBadge zone={rule.toZone} />
-      <span style={{ fontSize: 11, color: '#8888aa', fontFamily: 'monospace' }}>{rule.src || 'any'}</span>
-      <span style={{ fontSize: 11, color: '#8888aa', fontFamily: 'monospace' }}>{rule.dst || 'any'}</span>
-      <span style={{ fontSize: 11, color: '#8be9fd', fontFamily: 'monospace' }}>
+      <span style={{ fontSize: 12.5, color: '#8897aa', fontFamily: 'var(--font-mono)' }}>{rule.src || 'any'}</span>
+      <span style={{ fontSize: 12.5, color: '#8897aa', fontFamily: 'var(--font-mono)' }}>{rule.dst || 'any'}</span>
+      <span style={{ fontSize: 12.5, color: '#66d4ea', fontFamily: 'var(--font-mono)' }}>
         {SERVICE_LABEL[rule.service] ?? rule.service ?? 'ANY'}
       </span>
       <ActionBadge action={rule.action} />
@@ -356,12 +356,12 @@ function RuleRow({ rule, idx, total, onUp, onDown, onDelete, onToggle }) {
         title={enabled ? 'Disable rule (rule stays but is skipped)' : 'Enable rule'}
         style={{
           background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
-          fontSize: 14, lineHeight: 1,
-          color: enabled ? '#50fa7b' : '#333355',
+          fontSize: 16.5, lineHeight: 1,
+          color: enabled ? '#3ee08f' : '#7090a6',
           transition: 'color 0.1s',
         }}
-        onMouseEnter={e => { e.currentTarget.style.color = enabled ? '#ff5555' : '#50fa7b' }}
-        onMouseLeave={e => { e.currentTarget.style.color = enabled ? '#50fa7b' : '#333355' }}
+        onMouseEnter={e => { e.currentTarget.style.color = enabled ? '#ff6259' : '#3ee08f' }}
+        onMouseLeave={e => { e.currentTarget.style.color = enabled ? '#3ee08f' : '#30414d' }}
       >{enabled ? '●' : '○'}</button>
       <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', opacity: hover ? 1 : 0, transition: 'opacity 0.1s' }}>
         <RowBtn title="Move up"   disabled={idx === 0}           onClick={onUp}>↑</RowBtn>
@@ -393,8 +393,8 @@ function AddRuleForm({ zones, onAdd, onCancel }) {
   }
 
   const inputStyle = {
-    background: '#060b14', border: '1px solid #1a2a50', borderRadius: 3,
-    color: '#d0d0d0', fontSize: 11, fontFamily: 'monospace',
+    background: '#070d13', border: '1px solid #1e364c', borderRadius: 3,
+    color: '#d9e2e8', fontSize: 12.5, fontFamily: 'var(--font-mono)',
     padding: '4px 8px', width: '100%', boxSizing: 'border-box',
   }
   const selStyle = { ...inputStyle, cursor: 'pointer' }
@@ -403,7 +403,7 @@ function AddRuleForm({ zones, onAdd, onCancel }) {
     <form
       onSubmit={submit}
       style={{
-        background: '#07091a', borderBottom: '1px solid #1a1a3e',
+        background: '#081119', borderBottom: '1px solid #202b33',
         padding: '12px 16px', flexShrink: 0,
       }}
     >
@@ -453,17 +453,17 @@ function AddRuleForm({ zones, onAdd, onCancel }) {
         </div>
       </div>
 
-      {error && <div style={{ fontSize: 11, color: '#ff5555', marginBottom: 6 }}>⚠ {error}</div>}
+      {error && <div style={{ fontSize: 14, color: '#ff6259', marginBottom: 6 }}>⚠ {error}</div>}
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button type="button" onClick={onCancel} style={{
-          padding: '4px 14px', fontSize: 11, background: 'transparent',
-          color: '#444', border: '1px solid #222240', borderRadius: 3, cursor: 'pointer',
+          padding: '4px 14px', fontSize: 14, background: 'transparent',
+          color: '#7490a2', border: '1px solid #243039', borderRadius: 3, cursor: 'pointer',
         }}>Cancel</button>
         <button type="submit" style={{
-          padding: '4px 18px', fontSize: 11, fontWeight: 700,
-          background: '#1a3060', color: '#4a90e2',
-          border: '1px solid #2a4080', borderRadius: 3, cursor: 'pointer',
+          padding: '4px 18px', fontSize: 14, fontWeight: 700,
+          background: '#1f3e5b', color: '#4da6ff',
+          border: '1px solid #30567a', borderRadius: 3, cursor: 'pointer',
         }}>Add Rule</button>
       </div>
     </form>
@@ -489,7 +489,7 @@ function ZonesTab({ device }) {
     refresh()
   }
 
-  const STATUS_COLOR = { up: '#50fa7b', down: '#ffb86c', admin_down: '#333355' }
+  const STATUS_COLOR = { up: '#3ee08f', down: '#ffb42e', admin_down: '#7d9aae' }
   const STATUS_LABEL = { up: 'up/up', down: 'down/down', admin_down: 'admin down' }
 
   return (
@@ -497,9 +497,9 @@ function ZonesTab({ device }) {
       {/* Column headers */}
       <div style={{
         display: 'grid', gridTemplateColumns: '180px 100px 1fr 160px 120px',
-        padding: '6px 14px', fontSize: 9, color: '#333355',
-        letterSpacing: 0.6, fontWeight: 700, background: '#07090f',
-        borderBottom: '1px solid #0d0d20', position: 'sticky', top: 0, zIndex: 1,
+        padding: '6px 14px', fontSize: 12, color: '#7090a6',
+        letterSpacing: 0.3, fontWeight: 700, background: '#0a0d10',
+        borderBottom: '1px solid #12181c', position: 'sticky', top: 0, zIndex: 1,
       }}>
         <span>INTERFACE</span>
         <span>IP ADDRESS</span>
@@ -511,7 +511,7 @@ function ZonesTab({ device }) {
       {device.interfaces.filter(i => !i.parent).map(iface => {
         const zone     = device.fw_zones?.[iface.name] ?? ''
         const secLevel = device.fw_security_levels?.[iface.name] ?? null
-        const statusC  = STATUS_COLOR[iface.status] ?? '#555'
+        const statusC  = STATUS_COLOR[iface.status] ?? '#3e505d'
         const statusL  = STATUS_LABEL[iface.status] ?? iface.status
 
         return (
@@ -519,19 +519,19 @@ function ZonesTab({ device }) {
             key={iface.name}
             style={{
               display: 'grid', gridTemplateColumns: '180px 100px 1fr 160px 120px',
-              padding: '9px 14px', borderBottom: '1px solid #0d0d1a',
+              padding: '9px 14px', borderBottom: '1px solid #101519',
               alignItems: 'center',
             }}
           >
-            <span style={{ fontSize: 11, color: '#6a9ad4', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 12.5, color: '#6aa3d4', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {iface.name.replace('GigabitEthernet', 'Gi').replace('FastEthernet', 'Fa')}
             </span>
-            <span style={{ fontSize: 11, color: iface.ip ? '#d0d0d0' : '#333355', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: 12.5, color: iface.ip ? '#d9e2e8' : '#7090a6', fontFamily: 'var(--font-mono)' }}>
               {iface.ip ?? '—'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusC, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, color: statusC }}>{statusL}</span>
+              <span style={{ fontSize: 13, color: statusC }}>{statusL}</span>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               {['', ...ZONE_NAMES].map(z => (
@@ -539,23 +539,23 @@ function ZonesTab({ device }) {
                   key={z || 'none'}
                   onClick={() => setZone(iface.name, z)}
                   style={{
-                    padding: '3px 8px', fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
-                    border: `1px solid ${zone === z ? zoneColor(z) : '#1a1a30'}`,
+                    padding: '3px 8px', fontSize: 12, fontWeight: 700, letterSpacing: 0.3,
+                    border: `1px solid ${zone === z ? zoneColor(z) : '#1b252c'}`,
                     borderRadius: 3, cursor: 'pointer',
                     background: zone === z ? zoneColor(z) + '22' : 'transparent',
-                    color: zone === z ? zoneColor(z) : '#333355',
+                    color: zone === z ? zoneColor(z) : '#7090a6',
                   }}
                 >{z || 'NONE'}</button>
               ))}
             </div>
-            <span style={{ fontSize: 10, color: '#555', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: 12, color: '#738ea2', fontFamily: 'var(--font-mono)' }}>
               {secLevel !== null ? secLevel : '—'}
             </span>
           </div>
         )
       })}
 
-      <div style={{ padding: '12px 14px', fontSize: 10, color: '#2a2a50', borderTop: '1px solid #0d0d20', lineHeight: 1.8 }}>
+      <div style={{ padding: '12px 14px', fontSize: 13, color: '#708fa5', borderTop: '1px solid #12181c', lineHeight: 1.8 }}>
         Assign each interface to a zone to enable policy enforcement.
         Traffic crossing zone boundaries is checked against the POLICY rules.<br/>
         Security levels are informational only (not enforced — use explicit rules).
@@ -571,7 +571,7 @@ function LogsTab({ device }) {
   const bottomRef = useRef(null)
   const log       = [...(device.fw_log ?? [])].reverse()  // newest first
 
-  const VERDICT_COLOR = { permit: '#50fa7b', deny: '#ff5555', session: '#8be9fd' }
+  const VERDICT_COLOR = { permit: '#3ee08f', deny: '#ff6259', session: '#66d4ea' }
   const VERDICT_LABEL = { permit: 'PERMIT', deny: 'DENY', session: 'SESSION' }
 
   function clearLog() {
@@ -584,10 +584,10 @@ function LogsTab({ device }) {
       {/* Toolbar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '6px 14px', background: '#080f1e',
-        borderBottom: '1px solid #0d0d20', flexShrink: 0,
+        padding: '6px 14px', background: '#0a131c',
+        borderBottom: '1px solid #12181c', flexShrink: 0,
       }}>
-        <span style={{ fontSize: 10, color: '#333355' }}>
+        <span style={{ fontSize: 13, color: '#7090a6' }}>
           {log.length === 0 ? 'No traffic logged yet — run a ping to see firewall decisions here'
             : `${log.length} event${log.length !== 1 ? 's' : ''} — newest first`}
         </span>
@@ -595,12 +595,12 @@ function LogsTab({ device }) {
           <button
             onClick={clearLog}
             style={{
-              padding: '3px 10px', fontSize: 10, fontWeight: 700,
-              background: 'transparent', color: '#555',
-              border: '1px solid #222240', borderRadius: 3, cursor: 'pointer',
+              padding: '3px 10px', fontSize: 13, fontWeight: 700,
+              background: 'transparent', color: '#738ea2',
+              border: '1px solid #243039', borderRadius: 3, cursor: 'pointer',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ff5555'; e.currentTarget.style.borderColor = '#3a1010' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#555';    e.currentTarget.style.borderColor = '#222240' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ff6259'; e.currentTarget.style.borderColor = '#341613' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#738ea2';    e.currentTarget.style.borderColor = '#243039' }}
           >CLEAR LOG</button>
         )}
       </div>
@@ -609,9 +609,9 @@ function LogsTab({ device }) {
       {log.length > 0 && (
         <div style={{
           display: 'grid', gridTemplateColumns: '80px 1fr 1fr 90px 80px 80px 80px',
-          padding: '5px 14px', fontSize: 9, color: '#333355',
-          letterSpacing: 0.6, fontWeight: 700, background: '#07090f',
-          borderBottom: '1px solid #0d0d20', flexShrink: 0,
+          padding: '5px 14px', fontSize: 12, color: '#7090a6',
+          letterSpacing: 0.3, fontWeight: 700, background: '#0a0d10',
+          borderBottom: '1px solid #12181c', flexShrink: 0,
         }}>
           <span>TIME</span>
           <span>SOURCE</span>
@@ -624,9 +624,9 @@ function LogsTab({ device }) {
       )}
 
       {/* Log rows */}
-      <div style={{ flex: 1, overflowY: 'auto', fontFamily: 'monospace' }}>
+      <div style={{ flex: 1, overflowY: 'auto', fontFamily: 'var(--font-mono)' }}>
         {log.length === 0 && (
-          <div style={{ padding: '36px 16px', textAlign: 'center', color: '#2a2a50', fontSize: 11, lineHeight: 1.8 }}>
+          <div style={{ padding: '36px 16px', textAlign: 'center', color: '#708fa5', fontSize: 14, lineHeight: 1.8 }}>
             No traffic logged yet.<br/>
             Ping through this firewall and the policy decisions will appear here.
           </div>
@@ -637,25 +637,25 @@ function LogsTab({ device }) {
           const svc = entry.protocol === 'icmp' ? 'ICMP'
             : entry.port ? `${entry.protocol?.toUpperCase()}/${entry.port}`
             : (entry.protocol?.toUpperCase() ?? 'ANY')
-          const vc  = VERDICT_COLOR[entry.verdict] ?? '#888'
+          const vc  = VERDICT_COLOR[entry.verdict] ?? '#708ca0'
           const vl  = VERDICT_LABEL[entry.verdict] ?? entry.verdict
           return (
             <div
               key={i}
               style={{
                 display: 'grid', gridTemplateColumns: '80px 1fr 1fr 90px 80px 80px 80px',
-                padding: '5px 14px', fontSize: 10,
-                borderBottom: '1px solid #080c18',
-                background: entry.verdict === 'deny' ? '#1a030300' : 'transparent',
+                padding: '5px 14px', fontSize: 13,
+                borderBottom: '1px solid #091017',
+                background: entry.verdict === 'deny' ? '#1a070600' : 'transparent',
               }}
             >
-              <span style={{ color: '#3a3a60' }}>{ts}</span>
-              <span style={{ color: '#aaaacc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.srcIp}</span>
-              <span style={{ color: '#aaaacc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.dstIp}</span>
-              <span style={{ color: '#6a8ac4' }}>{svc}</span>
+              <span style={{ color: '#7291a6' }}>{ts}</span>
+              <span style={{ color: '#aab9cc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.srcIp}</span>
+              <span style={{ color: '#aab9cc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.dstIp}</span>
+              <span style={{ color: '#6a99c4' }}>{svc}</span>
               <ZoneBadge zone={entry.fromZone} small />
               <ZoneBadge zone={entry.toZone} small />
-              <span style={{ color: vc, fontWeight: 700, fontSize: 9, letterSpacing: 0.5 }}>{vl}</span>
+              <span style={{ color: vc, fontWeight: 700, fontSize: 12, letterSpacing: 0.3 }}>{vl}</span>
             </div>
           )
         })}
@@ -668,11 +668,11 @@ function LogsTab({ device }) {
 // ── Small shared UI atoms ─────────────────────────────────────────────────────
 
 function ZoneBadge({ zone, small }) {
-  if (!zone) return <span style={{ fontSize: small ? 9 : 10, color: '#333355' }}>—</span>
+  if (!zone) return <span style={{ fontSize: small ? 12 : 13, color: '#7090a6' }}>—</span>
   const c = zoneColor(zone)
   return (
     <span style={{
-      fontSize: small ? 9 : 10, fontWeight: 700, letterSpacing: 0.4,
+      fontSize: small ? 12 : 13, fontWeight: 700, letterSpacing: 0.2,
       color: c, background: c + '18',
       padding: '1px 5px', borderRadius: 3, border: `1px solid ${c}33`,
       display: 'inline-block',
@@ -684,11 +684,11 @@ function ActionBadge({ action }) {
   const isPermit = action === 'permit'
   return (
     <span style={{
-      fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
-      color: isPermit ? '#50fa7b' : '#ff5555',
-      background: isPermit ? '#0a2010' : '#1a0505',
+      fontSize: 12, fontWeight: 700, letterSpacing: 0.3,
+      color: isPermit ? '#3ee08f' : '#ff6259',
+      background: isPermit ? '#0d1e16' : '#1a0908',
       padding: '2px 7px', borderRadius: 3,
-      border: `1px solid ${isPermit ? '#1a4a20' : '#3a1010'}`,
+      border: `1px solid ${isPermit ? '#1e402f' : '#341613'}`,
       display: 'inline-block',
     }}>{isPermit ? 'ALLOW' : 'DENY'}</span>
   )
@@ -697,11 +697,11 @@ function ActionBadge({ action }) {
 function StatusChip({ up, label }) {
   return (
     <span style={{
-      fontSize: 8, fontWeight: 700, letterSpacing: 0.5,
+      fontSize: 11.5, fontWeight: 700, letterSpacing: 0.3,
       padding: '1px 5px', borderRadius: 3,
-      background: up ? '#0a2a10' : '#2a1010',
-      color: up ? '#50fa7b' : '#ff5555',
-      border: `1px solid ${up ? '#1a4a20' : '#4a1a1a'}`,
+      background: up ? '#0e261a' : '#271412',
+      color: up ? '#3ee08f' : '#ff6259',
+      border: `1px solid ${up ? '#1e402f' : '#411f1d'}`,
     }}>{label}</span>
   )
 }
@@ -709,7 +709,7 @@ function StatusChip({ up, label }) {
 function Pill({ label, color }) {
   return (
     <span style={{
-      fontSize: 9, fontWeight: 700, letterSpacing: 0.3,
+      fontSize: 12, fontWeight: 700, letterSpacing: 0.2,
       color, background: color + '15',
       padding: '2px 7px', borderRadius: 10, border: `1px solid ${color}30`,
     }}>{label}</span>
@@ -717,7 +717,7 @@ function Pill({ label, color }) {
 }
 
 function FieldLabel({ children }) {
-  return <div style={{ fontSize: 9, color: '#3a3a60', fontWeight: 700, letterSpacing: 0.5, marginBottom: 3 }}>{children}</div>
+  return <div style={{ fontSize: 12, color: '#7291a6', fontWeight: 700, letterSpacing: 0.3, marginBottom: 3 }}>{children}</div>
 }
 
 function RowBtn({ children, onClick, disabled, danger, title }) {
@@ -729,21 +729,21 @@ function RowBtn({ children, onClick, disabled, danger, title }) {
       style={{
         width: 20, height: 20, padding: 0,
         background: 'none', border: 'none',
-        color: disabled ? '#222240' : danger ? '#ff5555' : '#445',
-        cursor: disabled ? 'default' : 'pointer', fontSize: 11, lineHeight: 1,
+        color: disabled ? '#7391a7' : danger ? '#ff6259' : '#7490a2',
+        cursor: disabled ? 'default' : 'pointer', fontSize: 14, lineHeight: 1,
         borderRadius: 3,
       }}
-      onMouseEnter={e => { if (!disabled) e.currentTarget.style.color = danger ? '#ff5555' : '#8888bb' }}
-      onMouseLeave={e => { e.currentTarget.style.color = disabled ? '#222240' : danger ? '#ff5555' : '#445' }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.color = danger ? '#ff6259' : '#889fbb' }}
+      onMouseLeave={e => { e.currentTarget.style.color = disabled ? '#243039' : danger ? '#ff6259' : '#384954' }}
     >{children}</button>
   )
 }
 
 function zoneColor(zone) {
-  if (!zone) return '#555'
+  if (!zone) return '#3e505d'
   const z = zone.toUpperCase()
-  if (z === 'INSIDE')  return '#50fa7b'
-  if (z === 'OUTSIDE') return '#ff5555'
-  if (z === 'DMZ')     return '#ffb86c'
-  return '#8be9fd'
+  if (z === 'INSIDE')  return '#3ee08f'
+  if (z === 'OUTSIDE') return '#ff6259'
+  if (z === 'DMZ')     return '#ffb42e'
+  return '#66d4ea'
 }

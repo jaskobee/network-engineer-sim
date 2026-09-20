@@ -7,18 +7,8 @@ import { getMissionRuntime } from '../engine/missionEngine.js'
 import CompanyDashboard from './CompanyDashboard.jsx'
 import MissionBriefModal from './MissionBriefModal.jsx'
 import ActiveContractsPanel from './ActiveContractsPanel.jsx'
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function Stars({ n }) {
-  const max = 5
-  const filled = Math.max(0, Math.min(n ?? 0, max))
-  return (
-    <span style={{ color: '#ffb86c', fontSize: 10 }}>
-      {'★'.repeat(filled)}{'☆'.repeat(max - filled)}
-    </span>
-  )
-}
+import DifficultyBars from './DifficultyBars.jsx'
+import { IconChevronDown, IconChevronUp, IconLock } from './icons.jsx'
 
 // ── Job card ──────────────────────────────────────────────────────────────────
 
@@ -26,62 +16,51 @@ function JobCard({ mission, unlocked, lockedReason, onOpenBrief }) {
   const hw = mission.hardware ?? []
   return (
     <div style={{
-      margin: '0 0 12px',
-      background: '#0a0f1e',
-      border: `1px solid ${unlocked ? '#1e3a6a' : '#0d0d20'}`,
-      borderRadius: 8,
+      margin: '0 0 10px',
+      background: 'var(--surface-raised)',
+      border: '1px solid var(--rule)',
+      borderRadius: 10,
       overflow: 'hidden',
-      opacity: unlocked ? 1 : 0.45,
+      opacity: unlocked ? 1 : 0.6,
       transition: 'border-color 0.15s',
     }}
-      onMouseEnter={e => { if (unlocked) e.currentTarget.style.borderColor = '#2a5298' }}
-      onMouseLeave={e => { if (unlocked) e.currentTarget.style.borderColor = '#1e3a6a' }}
+      onMouseEnter={e => { if (unlocked) e.currentTarget.style.borderColor = 'var(--rule-strong)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)' }}
     >
-      {/* Card header */}
-      <div style={{ padding: '12px 14px 8px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+      <div style={{ padding: '12px 14px 0', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <span style={{ fontSize: 28, lineHeight: 1.1, flexShrink: 0 }}>{mission.avatar}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#c8d0e0', marginBottom: 2 }}>{mission.title}</div>
-          <div style={{ fontSize: 10, color: '#3a4a6a' }}>{mission.client}</div>
+          <div style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{mission.title}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 2 }}>{mission.client}</div>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#50fa7b', fontFamily: 'monospace' }}>
-            ${mission.reward.toLocaleString()}
-          </div>
-          <Stars n={mission.difficulty} />
+        <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>${mission.reward.toLocaleString()}</div>
+          <DifficultyBars level={mission.difficulty} />
         </div>
       </div>
 
-      {/* Description + hardware tags */}
-      <div style={{ padding: '0 14px 12px', borderTop: '1px solid #0d0d20' }}>
-        <div style={{ fontSize: 11, color: unlocked ? '#4a5a8a' : '#22223a', lineHeight: 1.65, marginTop: 8, marginBottom: hw.length > 0 ? 8 : 0 }}>
-          {unlocked ? mission.description : `🔒 ${lockedReason}`}
-        </div>
+      <div style={{ padding: '8px 14px 12px' }}>
+        {unlocked ? (
+          <p style={{ fontSize: 14.5, color: 'var(--ink-2)', lineHeight: 1.5, margin: 0 }}>{mission.description}</p>
+        ) : (
+          <p style={{ fontSize: 14, color: 'var(--ink-3)', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <IconLock size={15} /> {lockedReason}
+          </p>
+        )}
         {hw.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: unlocked ? 10 : 0 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {hw.map((h, i) => (
               <span key={i} style={{
-                fontSize: 9, fontFamily: 'monospace',
-                color: unlocked ? '#4a90e2' : '#222244',
-                background: unlocked ? '#0a1528' : '#0a0a14',
-                padding: '2px 7px', borderRadius: 3,
-                border: `1px solid ${unlocked ? '#1a3060' : '#1a1a30'}`,
+                fontSize: 13, color: 'var(--ink-2)', background: 'var(--surface-well)',
+                padding: '2px 8px', borderRadius: 4, border: '1px solid var(--rule)',
               }}>{h.label}</span>
             ))}
           </div>
         )}
         {unlocked && (
-          <button
-            onClick={onOpenBrief}
-            style={{
-              width: '100%', padding: '8px 0', fontSize: 12, fontWeight: 700,
-              background: '#0f1e3a', color: '#4a90e2',
-              border: '1px solid #2a5298', borderRadius: 5, cursor: 'pointer',
-              letterSpacing: 0.5, transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1e3a6a'; e.currentTarget.style.color = '#e0e0e0' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#0f1e3a'; e.currentTarget.style.color = '#4a90e2' }}
-          >VIEW JOB</button>
+          <button className="btn" onClick={onOpenBrief} style={{ width: '100%', marginTop: 12, padding: '7px 0' }}>
+            View job
+          </button>
         )}
       </div>
     </div>
@@ -94,29 +73,27 @@ function ArchivedMission({ mission }) {
   const [expanded, setExpanded] = useState(false)
   const tasks = getMissionRuntime(mission.id)?.tasks ?? []
   return (
-    <div style={{ borderBottom: '1px solid #0d0d1a' }}>
+    <div style={{ borderBottom: '1px solid var(--rule)' }}>
       <div
         onClick={() => setExpanded(e => !e)}
-        style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-        onMouseEnter={e => { e.currentTarget.style.background = '#0a0f1a' }}
+        style={{ padding: '9px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-raised)' }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
       >
-        <span style={{ fontSize: 16 }}>{mission.avatar}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, color: '#50fa7b', fontWeight: 700 }}>✓ COMPLETE</div>
-          <div style={{ fontSize: 11, color: '#2a6a2a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mission.title}</div>
+        <i className="led green" />
+        <span style={{ fontSize: 18.5 }}>{mission.avatar}</span>
+        <div style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {mission.title}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-          <div style={{ fontSize: 11, color: '#2a6a2a', fontFamily: 'monospace' }}>+${mission.reward.toLocaleString()}</div>
-          <span style={{ fontSize: 9, color: '#2a2a50' }}>{expanded ? '▲' : '▼'}</span>
-        </div>
+        <div style={{ fontSize: 13.5, color: 'var(--ink-3)' }}>+${mission.reward.toLocaleString()}</div>
+        <span style={{ color: 'var(--ink-3)', display: 'flex' }}>{expanded ? <IconChevronUp size={15} /> : <IconChevronDown size={15} />}</span>
       </div>
       {expanded && tasks.length > 0 && (
-        <div style={{ background: '#070a10', borderTop: '1px solid #0d0d1a' }}>
+        <div style={{ background: 'var(--surface-well)', borderTop: '1px solid var(--rule)', padding: '4px 0' }}>
           {tasks.map(task => (
-            <div key={task.id} style={{ padding: '5px 14px 5px 36px', borderBottom: '1px solid #0a0a12', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ fontSize: 10, color: '#1a5a1a' }}>✓</span>
-              <span style={{ fontSize: 11, color: '#1a5a1a', textDecoration: 'line-through' }}>{task.label}</span>
+            <div key={task.id} style={{ padding: '4px 14px 4px 44px', display: 'flex', gap: 9, alignItems: 'center' }}>
+              <i className="led green" style={{ width: 7, height: 7 }} />
+              <span style={{ fontSize: 14, color: 'var(--ink-3)' }}>{task.label}</span>
             </div>
           ))}
         </div>
@@ -197,7 +174,7 @@ export default function MissionPanel({ onNavigateAway }) {
 
       <div style={{
         display: 'flex', flexDirection: 'column', height: '100%',
-        background: '#09091a', borderLeft: '1px solid #1a1a3e',
+        background: 'var(--surface-ground)',
         overflow: 'hidden',
       }}>
 
@@ -205,39 +182,24 @@ export default function MissionPanel({ onNavigateAway }) {
         <ActiveContractsPanel onNavigateAway={onNavigateAway} />
 
         {/* ── Header ── */}
-        <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #1a1a3e', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontSize: 9, color: '#3a5a8a', fontWeight: 700, letterSpacing: 2.5 }}>JOB BOARD</div>
+        <div style={{ padding: '14px 16px 14px', borderBottom: '1px solid var(--rule)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 13.5, color: 'var(--ink-3)' }}>Balance</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.1 }}>${budget.toLocaleString()}</div>
+              {totalEarned > 0 && (
+                <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 3 }}>${totalEarned.toLocaleString()} earned from jobs</div>
+              )}
+            </div>
             {!allDone && (
               <button
+                className="btn ghost"
                 onClick={() => setJobBoardOpen(v => !v)}
-                style={{
-                  fontSize: 9, fontWeight: 700, letterSpacing: 0.5, cursor: 'pointer',
-                  background: 'transparent', border: '1px solid #1a2a4a',
-                  borderRadius: 3, padding: '2px 8px',
-                  color: jobBoardOpen ? '#4a90e2' : '#3a5a8a',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5298'; e.currentTarget.style.color = '#4a90e2' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a2a4a'; e.currentTarget.style.color = jobBoardOpen ? '#4a90e2' : '#3a5a8a' }}
+                aria-expanded={jobBoardOpen}
+                style={{ padding: '4px 8px' }}
               >
-                JOBS {jobBoardOpen ? '▲' : '▼'}
+                Job board {jobBoardOpen ? <IconChevronUp size={15} /> : <IconChevronDown size={15} />}
               </button>
-            )}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <div style={{ fontSize: 9, color: '#2a3a5a', marginBottom: 2 }}>balance</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#50fa7b', fontFamily: 'monospace' }}>
-                ${budget.toLocaleString()}
-              </div>
-            </div>
-            {totalEarned > 0 && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 9, color: '#2a3a5a', marginBottom: 2 }}>total earned</div>
-                <div style={{ fontSize: 13, color: '#2a6a2a', fontFamily: 'monospace' }}>
-                  +${totalEarned.toLocaleString()}
-                </div>
-              </div>
             )}
           </div>
         </div>
@@ -246,8 +208,8 @@ export default function MissionPanel({ onNavigateAway }) {
         {allDone && (
           <div style={{ padding: '28px 14px', textAlign: 'center', flexShrink: 0 }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}>🏆</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#50fa7b', marginBottom: 6 }}>All Jobs Complete!</div>
-            <div style={{ fontSize: 11, color: '#2a4a2a' }}>You&apos;re a certified Network Engineer.</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: '#3ee08f', marginBottom: 6 }}>All jobs complete</div>
+            <div style={{ fontSize: 14.5, color: 'var(--ink-3)' }}>You&apos;re a certified Network Engineer.</div>
           </div>
         )}
 
@@ -259,8 +221,8 @@ export default function MissionPanel({ onNavigateAway }) {
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 6px' }}>
             {!allDone && clientCards.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 9, color: '#2a2a50', letterSpacing: 1.5, fontWeight: 700, marginBottom: 10 }}>
-                  {activeMission ? 'YOUR UPCOMING WORK' : 'YOUR CLIENTS'}
+                <div style={{ fontSize: 15, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>
+                  {activeMission ? 'Your upcoming work' : 'Your clients'}
                 </div>
                 {clientCards.map(m => {
                   const { unlocked, lockedReason } = unlockInfo(m)
@@ -279,8 +241,8 @@ export default function MissionPanel({ onNavigateAway }) {
 
             {!allDone && legacyCards.length > 0 && (
               <>
-                <div style={{ fontSize: 9, color: '#2a2a50', letterSpacing: 1.5, fontWeight: 700, marginBottom: 10 }}>
-                  TUTORIAL MISSIONS
+                <div style={{ fontSize: 15, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>
+                  Tutorial missions
                 </div>
                 {legacyCards.map(m => {
                   const { unlocked, lockedReason } = unlockInfo(m)
@@ -298,8 +260,8 @@ export default function MissionPanel({ onNavigateAway }) {
             )}
 
             {!activeMission && !allDone && jobBoardMissions.length === 0 && (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: '#2a2a50', fontSize: 12 }}>
-                All jobs accepted!
+              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--ink-3)', fontSize: 14.5 }}>
+                All jobs accepted.
               </div>
             )}
           </div>
@@ -309,19 +271,15 @@ export default function MissionPanel({ onNavigateAway }) {
             history the player can open on demand, not something that needs
             to sit on screen the whole time. ── */}
         {completedMissions.length > 0 && (
-          <div style={{ borderTop: '1px solid #1a1a3e', flexShrink: 0 }}>
+          <div style={{ borderTop: '1px solid var(--rule)', flexShrink: 0 }}>
             <button
+              className="btn ghost"
               onClick={() => setCompletedJobsOpen(v => !v)}
-              style={{
-                width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '6px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
-                fontSize: 9, color: '#1a3a1a', letterSpacing: 1, fontWeight: 700,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#2a5a2a' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#1a3a1a' }}
+              aria-expanded={completedJobsOpen}
+              style={{ width: '100%', justifyContent: 'space-between', borderRadius: 0, padding: '9px 14px' }}
             >
-              <span>COMPLETED JOBS ({completedMissions.length})</span>
-              <span>{completedJobsOpen ? '▲' : '▼'}</span>
+              <span>Completed jobs ({completedMissions.length})</span>
+              {completedJobsOpen ? <IconChevronUp size={15} /> : <IconChevronDown size={15} />}
             </button>
             {completedJobsOpen && completedMissions.map(c => {
               const m = findMissionById(c.id)

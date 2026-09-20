@@ -7,6 +7,7 @@ import { computeRefund } from '../engine/economy.js'
 import { CONTRACT_TYPES } from '../data/contracts.js'
 import { MissionBlueprintSvg, FloorPlanZoneList } from './MissionBlueprint.jsx'
 import { MissionProgressBar, MissionTaskRows } from './MissionTaskList.jsx'
+import { IconChevronDown, IconChevronUp, IconDiagram } from './icons.jsx'
 
 // ── Completion modal ──────────────────────────────────────────────────────────
 //
@@ -49,93 +50,93 @@ function CompletionModal({ mission, refund, onCollect, onAcceptContract, onFinis
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: '#0d1226', border: '2px solid #50fa7b', borderRadius: 12,
+        background: 'var(--surface-panel)', border: '1px solid #2f9a68', borderRadius: 14,
         padding: '32px 36px', maxWidth: 440, width: '90%',
-        boxShadow: '0 0 60px #50fa7b30', textAlign: 'center',
+        boxShadow: '0 0 0 1px #0b0f11, 0 24px 70px rgba(0,0,0,.65), 0 0 60px #3ee08f18', textAlign: 'center',
       }}>
         {phase === 'reward' && (
           <>
             <div style={{ fontSize: 48, marginBottom: 8 }}>{mission.avatar}</div>
-            <div style={{ fontSize: 11, color: '#50fa7b', fontWeight: 700, letterSpacing: 2, marginBottom: 8 }}>MISSION COMPLETE</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#e0e0e0', marginBottom: 4 }}>{mission.title}</div>
-            <div style={{ fontSize: 11, color: '#555', marginBottom: 20 }}>{mission.client} is happy with your work.</div>
+            <div style={{ fontSize: 15, color: '#3ee08f', fontWeight: 700, marginBottom: 6 }}>Mission complete</div>
+            <div style={{ fontSize: 21, fontWeight: 700, color: '#e8eef2', marginBottom: 4 }}>{mission.title}</div>
+            <div style={{ fontSize: 14, color: '#738ea2', marginBottom: 20 }}>{mission.client} is happy with your work.</div>
             {skills.length > 0 && (
-              <div style={{ background: '#070d1a', borderRadius: 8, padding: '14px 16px', textAlign: 'left', marginBottom: 20 }}>
-                <div style={{ fontSize: 10, color: '#4a90e2', fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>WHAT YOU CONFIGURED</div>
+              <div style={{ background: '#081119', borderRadius: 8, padding: '14px 16px', textAlign: 'left', marginBottom: 20 }}>
+                <div style={{ fontSize: 14, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 8 }}>What you configured</div>
                 {skills.map((s, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 5 }}>
-                    <span style={{ color: '#50fa7b', fontSize: 12, marginTop: 1 }}>✓</span>
-                    <span style={{ fontSize: 12, color: '#c0c0c0' }}>{s}</span>
+                    <span style={{ color: '#3ee08f', fontSize: 14.5, marginTop: 1 }}>✓</span>
+                    <span style={{ fontSize: 14.5, color: '#b8c1c8' }}>{s}</span>
                   </div>
                 ))}
               </div>
             )}
-            <div style={{ background: '#070d1a', borderRadius: 8, padding: '12px 16px', marginBottom: 24, textAlign: 'left' }}>
+            <div style={{ background: '#081119', borderRadius: 8, padding: '12px 16px', marginBottom: 24, textAlign: 'left' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: '#555' }}>Job payout</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#50fa7b', fontFamily: 'monospace' }}>+${mission.reward.toLocaleString()}</span>
+                <span style={{ fontSize: 14, color: '#738ea2' }}>Job payout</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>+${mission.reward.toLocaleString()}</span>
               </div>
               {refund > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: '#555' }}>Equipment returned</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#4a90e2', fontFamily: 'monospace' }}>+${refund.toLocaleString()}</span>
+                  <span style={{ fontSize: 14, color: '#738ea2' }}>Equipment returned</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>+${refund.toLocaleString()}</span>
                 </div>
               )}
-              <div style={{ height: 1, background: '#1a2a40', margin: '8px 0' }} />
+              <div style={{ height: 1, background: '#212c34', margin: '8px 0' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, color: '#888', fontWeight: 700 }}>TOTAL</span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: '#50fa7b', fontFamily: 'monospace' }}>+${total.toLocaleString()}</span>
+                <span style={{ fontSize: 14.5, color: '#738ea2', fontWeight: 700 }}>Total</span>
+                <span style={{ fontSize: 24, fontWeight: 700, color: '#3ee08f' }}>+${total.toLocaleString()}</span>
               </div>
             </div>
             <button
               onClick={handleCollect}
-              style={{ background: '#50fa7b', color: '#0a0a0f', border: 'none', borderRadius: 6, padding: '10px 32px', fontSize: 14, fontWeight: 700, cursor: 'pointer', letterSpacing: 1 }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#40ea6b' }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#50fa7b' }}
-            >COLLECT REWARD</button>
-            <div style={{ fontSize: 10, color: '#2a2a40', marginTop: 12 }}>Your setup stays up — explore it, then accept the next job when ready.</div>
+              style={{ background: '#3ee08f', color: '#0b0f11', border: 'none', borderRadius: 6, padding: '10px 32px', fontSize: 17, fontWeight: 700, cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#48e290' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#3ee08f' }}
+            >Collect reward</button>
+            <div style={{ fontSize: 13, color: '#7091a6', marginTop: 12 }}>Your setup stays up — explore it, then accept the next job when ready.</div>
           </>
         )}
 
         {phase === 'reputation' && outcome && (
           <>
             <div style={{ fontSize: 40, marginBottom: 8 }}>📈</div>
-            <div style={{ fontSize: 11, color: '#8ab4d4', fontWeight: 700, letterSpacing: 2, marginBottom: 8 }}>REPUTATION EARNED</div>
-            <div style={{ fontSize: 30, fontWeight: 700, color: '#50fa7b', fontFamily: 'monospace', marginBottom: 4 }}>
+            <div style={{ fontSize: 15, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 6 }}>Reputation earned</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: '#3ee08f', marginBottom: 4 }}>
               +{outcome.reputationGained}
             </div>
-            <div style={{ fontSize: 13, color: '#c0c0c0', marginBottom: 24 }}>
-              You are now: <strong style={{ color: '#8ab4d4' }}>{outcome.tierLabel}</strong>
+            <div style={{ fontSize: 15.5, color: '#b8c1c8', marginBottom: 24 }}>
+              You are now: <strong style={{ color: '#8ab3d4' }}>{outcome.tierLabel}</strong>
             </div>
             <button
               onClick={handleReputationContinue}
-              style={{ background: '#2a5298', color: '#e0e0e0', border: 'none', borderRadius: 6, padding: '10px 32px', fontSize: 14, fontWeight: 700, cursor: 'pointer', letterSpacing: 1 }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#3a6ab8' }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#2a5298' }}
-            >CONTINUE</button>
+              style={{ background: '#2f6fbd', color: '#e8eef2', border: 'none', borderRadius: 6, padding: '10px 32px', fontSize: 17, fontWeight: 700, cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#3f7fcf' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#2f6fbd' }}
+            >Continue</button>
           </>
         )}
 
         {phase === 'contract' && (
           <>
             <div style={{ fontSize: 40, marginBottom: 8 }}>📋</div>
-            <div style={{ fontSize: 11, color: '#ffb86c', fontWeight: 700, letterSpacing: 2, marginBottom: 8 }}>CONTRACT OFFER</div>
-            <div style={{ fontSize: 14, color: '#c0c0c0', marginBottom: 16 }}>
+            <div style={{ fontSize: 15, color: '#ffb42e', fontWeight: 700, marginBottom: 6 }}>Contract offer</div>
+            <div style={{ fontSize: 16.5, color: '#b8c1c8', marginBottom: 16 }}>
               {mission.client} wants to keep working with you.
             </div>
             {(() => {
               const def = CONTRACT_TYPES[mission.contractOutcome?.type]
               if (!def) return null
               return (
-                <div style={{ background: '#070d1a', borderRadius: 8, padding: '14px 16px', textAlign: 'left', marginBottom: 24 }}>
+                <div style={{ background: '#081119', borderRadius: 8, padding: '14px 16px', textAlign: 'left', marginBottom: 24 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#e0e0e0' }}>{def.label}</span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#50fa7b', fontFamily: 'monospace' }}>${def.amountPerMonth}/mo</span>
+                    <span style={{ fontSize: 15.5, fontWeight: 700, color: '#e8eef2' }}>{def.label}</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>${def.amountPerMonth}/mo</span>
                   </div>
                   {def.services.map((s, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 4 }}>
-                      <span style={{ color: '#4a90e2', fontSize: 11 }}>•</span>
-                      <span style={{ fontSize: 11, color: '#8090b0' }}>{s}</span>
+                      <span style={{ color: '#4da6ff', fontSize: 14 }}>•</span>
+                      <span style={{ fontSize: 14, color: '#8099b0' }}>{s}</span>
                     </div>
                   ))}
                 </div>
@@ -144,12 +145,12 @@ function CompletionModal({ mission, refund, onCollect, onAcceptContract, onFinis
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               <button
                 onClick={onFinish}
-                style={{ padding: '10px 20px', fontSize: 12, fontWeight: 600, background: 'transparent', color: '#556', border: '1px solid #1a2a40', borderRadius: 6, cursor: 'pointer' }}
-              >Not Right Now</button>
+                style={{ padding: '10px 20px', fontSize: 14.5, fontWeight: 600, background: 'transparent', color: '#738fa2', border: '1px solid #212c34', borderRadius: 6, cursor: 'pointer' }}
+              >Not right now</button>
               <button
                 onClick={handleAcceptContract}
-                style={{ background: '#50fa7b', color: '#0a0a0f', border: 'none', borderRadius: 6, padding: '10px 28px', fontSize: 13, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}
-              >ACCEPT CONTRACT</button>
+                style={{ background: '#3ee08f', color: '#0b0f11', border: 'none', borderRadius: 6, padding: '10px 28px', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
+              >Accept contract</button>
             </div>
           </>
         )}
@@ -164,20 +165,20 @@ function BlueprintModal({ mission, onClose }) {
   if (!mission.blueprint) return null
   return (
     <div style={{position:'fixed',inset:0,zIndex:2000,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={onClose}>
-      <div style={{background:'#080d1c',border:'1px solid #1a3060',borderRadius:10,padding:'18px 20px',maxWidth:460,width:'90vw',boxShadow:'0 0 60px #1a3a8020'}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:'#0a121a',border:'1px solid #1f3e5b',borderRadius:10,padding:'18px 20px',maxWidth:460,width:'90vw',boxShadow:'0 0 60px #224e7820'}} onClick={e=>e.stopPropagation()}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
           <div>
-            <div style={{fontSize:9,color:'#3a5a8a',fontWeight:700,letterSpacing:2,marginBottom:2}}>NETWORK BLUEPRINT</div>
-            <div style={{fontSize:13,fontWeight:700,color:'#b0bcd0'}}>{mission.title}</div>
+            <div style={{fontSize:13.5,color:'var(--ink-3)',fontWeight:600,marginBottom:2}}>Network blueprint</div>
+            <div style={{fontSize:15.5,fontWeight:700,color:'#b0c1d0'}}>{mission.title}</div>
           </div>
-          <button onClick={onClose} style={{background:'none',border:'1px solid #1a2a40',color:'#3a4a60',cursor:'pointer',borderRadius:4,padding:'2px 8px',fontSize:12}}>✕</button>
+          <button onClick={onClose} style={{background:'none',border:'1px solid #212c34',color:'#7291a6',cursor:'pointer',borderRadius:4,padding:'2px 8px',fontSize:14.5}}>✕</button>
         </div>
         <MissionBlueprintSvg blueprint={mission.blueprint} />
         <div style={{textAlign:'center',marginTop:14}}>
-          <button onClick={onClose} style={{background:'#0c1628',border:'1px solid #1e3a60',color:'#3a6898',padding:'7px 24px',borderRadius:5,fontSize:11,fontWeight:700,cursor:'pointer'}}
-            onMouseEnter={e=>{e.currentTarget.style.color='#5a90c8';e.currentTarget.style.borderColor='#2a5080'}}
-            onMouseLeave={e=>{e.currentTarget.style.color='#3a6898';e.currentTarget.style.borderColor='#1e3a60'}}
-          >GOT IT</button>
+          <button onClick={onClose} style={{background:'#0e1a26',border:'1px solid #23405b',color:'#718fa5',padding:'7px 24px',borderRadius:5,fontSize:14,fontWeight:700,cursor:'pointer'}}
+            onMouseEnter={e=>{e.currentTarget.style.color='#5a96c8';e.currentTarget.style.borderColor='#30567a'}}
+            onMouseLeave={e=>{e.currentTarget.style.color='#718fa5';e.currentTarget.style.borderColor='#23405b'}}
+          >Got it</button>
         </div>
       </div>
     </div>
@@ -189,14 +190,14 @@ function BlueprintModal({ mission, onClose }) {
 function FloorPlanBrief({ layout }) {
   const [open, setOpen] = useState(false)
   return (
-    <div style={{margin:'0 12px 8px',borderRadius:5,overflow:'hidden',border:'1px solid #141428'}}>
-      <button onClick={()=>setOpen(v=>!v)} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'#08091a',border:'none',cursor:'pointer'}}
-        onMouseEnter={e=>{e.currentTarget.style.background='#0c0e20'}} onMouseLeave={e=>{e.currentTarget.style.background='#08091a'}}>
-        <span style={{fontSize:9,fontWeight:700,letterSpacing:1,color:'#3a4a7a'}}>{open?'▴':'▾'} FLOOR PLAN</span>
-        <span style={{fontSize:9,color:'#252545'}}>{open?'collapse':'show zones'}</span>
+    <div style={{margin:'0 12px 8px',borderRadius:5,overflow:'hidden',border:'1px solid #171f24'}}>
+      <button onClick={()=>setOpen(v=>!v)} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'#091119',border:'none',cursor:'pointer'}}
+        onMouseEnter={e=>{e.currentTarget.style.background='#11171c'}} onMouseLeave={e=>{e.currentTarget.style.background='#091119'}}>
+        <span style={{display:'flex',alignItems:'center',gap:6,fontSize:14,fontWeight:600,color:'var(--ink-2)'}}>{open?<IconChevronUp size={15}/>:<IconChevronDown size={15}/>} Floor plan</span>
+        <span style={{fontSize:13,color:'var(--ink-3)'}}>{open?'Hide zones':'Show zones'}</span>
       </button>
       {open && (
-        <div style={{background:'#06081a',padding:'10px 10px 6px'}}>
+        <div style={{background:'#081018',padding:'10px 10px 6px'}}>
           <FloorPlanZoneList layout={layout} />
         </div>
       )}
@@ -316,13 +317,9 @@ export default function ActiveJobPanel() {
 
   function iconBtn(label, onClick, title) {
     return (
-      <button onClick={onClick} title={title} style={{
-        background:'none', border:'1px solid #1a2a40', color:'#3a5a7a', cursor:'pointer',
-        borderRadius:4, padding:'2px 8px', fontSize:11, lineHeight:1.4, flexShrink:0,
-      }}
-        onMouseEnter={e=>{e.currentTarget.style.color='#6a9ad4';e.currentTarget.style.borderColor='#2a5298'}}
-        onMouseLeave={e=>{e.currentTarget.style.color='#3a5a7a';e.currentTarget.style.borderColor='#1a2a40'}}
-      >{label}</button>
+      <button className="btn ghost icon" onClick={onClick} title={title} aria-label={title} style={{ flexShrink: 0 }}>
+        {label}
+      </button>
     )
   }
 
@@ -344,9 +341,9 @@ export default function ActiveJobPanel() {
 
       <div style={{
         position: 'fixed', left: pos.x, top: pos.y, zIndex: 1500,
-        width: 360, background: '#07091a',
-        border: '1px solid #2260c8', borderRadius: 10,
-        boxShadow: '0 12px 48px #00000095, 0 0 0 1px #1a3a6a10',
+        width: 380, background: 'var(--surface-panel)',
+        border: '1px solid var(--rule-strong)', borderRadius: 12,
+        boxShadow: '0 16px 56px rgba(0,0,0,.6), 0 0 0 1px #0b0f11',
         display: 'flex', flexDirection: 'column',
         maxHeight: minimized ? 'none' : 'calc(100vh - 72px)',
         userSelect: 'none',
@@ -363,24 +360,24 @@ export default function ActiveJobPanel() {
             padding: '10px 12px',
             cursor: 'grab',
             display: 'flex', alignItems: 'center', gap: 10,
-            background: '#060818',
-            borderBottom: minimized ? 'none' : '1px solid #152045',
-            borderRadius: minimized ? 10 : '10px 10px 0 0',
+            background: 'var(--surface-raised)',
+            borderBottom: minimized ? 'none' : '1px solid var(--rule)',
+            borderRadius: minimized ? 12 : '12px 12px 0 0',
             flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{activeMission ? activeMission.avatar : '🔧'}</span>
+          <span style={{ fontSize: 25, lineHeight: 1, flexShrink: 0 }}>{activeMission ? activeMission.avatar : '🔧'}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 8, color: '#3a6aaa', letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase' }}>
-              {isTicket ? 'Contract Ticket' : 'Active Job'}
+            <div style={{ fontSize: 13, color: 'var(--ink-3)', fontWeight: 600 }}>
+              {isTicket ? 'Contract ticket' : 'Active job'}
             </div>
-            <div title={displaySubject.title} style={{ fontSize: 13, fontWeight: 700, color: '#c4d4ec', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+            <div title={displaySubject.title} style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginTop: 1 }}>
               {displaySubject.title}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
-            {activeMission?.blueprint && !minimized && iconBtn('◈', () => setBlueprintOpen(true), 'View blueprint')}
-            {iconBtn(minimized ? '▲' : '▼', () => setMinimized(v => !v), minimized ? 'Expand' : 'Minimise')}
+            {activeMission?.blueprint && !minimized && iconBtn(<IconDiagram size={16} />, () => setBlueprintOpen(true), 'View blueprint')}
+            {iconBtn(minimized ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />, () => setMinimized(v => !v), minimized ? 'Expand' : 'Minimise')}
           </div>
         </div>
 
@@ -389,15 +386,15 @@ export default function ActiveJobPanel() {
           <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
             {/* Progress header */}
-            <div style={{ padding: '12px 14px 10px', flexShrink: 0, borderBottom: '1px solid #0d0f1e' }}>
+            <div style={{ padding: '12px 14px 10px', flexShrink: 0, borderBottom: '1px solid var(--rule)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: allTasksDone ? '#50fa7b' : '#4a90e2', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: allTasksDone ? '#3ee08f' : 'var(--ink)' }}>
                     {passed}/{tasks.length}
                   </span>
-                  <span style={{ fontSize: 10, color: '#2a3a5a' }}>tasks complete</span>
+                  <span style={{ fontSize: 14, color: 'var(--ink-3)' }}>tasks complete</span>
                 </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#50fa7b', fontFamily: 'monospace' }}>
+                <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>
                   ${displaySubject.reward.toLocaleString()}
                 </span>
               </div>
@@ -425,12 +422,12 @@ export default function ActiveJobPanel() {
                 <button
                   onClick={handleCompleteTicket}
                   style={{
-                    width: '100%', padding: '10px 0', fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
-                    background: '#50fa7b', color: '#0a0a0f', border: 'none', borderRadius: 6, cursor: 'pointer',
+                    width: '100%', padding: '10px 0', fontSize: 15.5, fontWeight: 700,
+                    background: '#3ee08f', color: '#0b0f11', border: 'none', borderRadius: 6, cursor: 'pointer',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#40ea6b' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#50fa7b' }}
-                >MARK TICKET COMPLETE — +${activeTicket.reward}</button>
+                  onMouseEnter={e => { e.currentTarget.style.background = '#48e290' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#3ee08f' }}
+                >Mark ticket complete — +${activeTicket.reward}</button>
               </div>
             )}
 

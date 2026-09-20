@@ -16,10 +16,10 @@ import { ticketUrgency, msRemaining } from '../engine/contractClock.js'
 import SatisfactionMeter from './SatisfactionMeter.jsx'
 
 const URGENCY_STYLE = {
-  safe:    { color: '#50fa7b', bg: '#0a2010', label: 'On track' },
-  warning: { color: '#ffb86c', bg: '#2a1a00', label: 'Time is short' },
-  overdue: { color: '#ff8855', bg: '#2a1400', label: 'Overdue' },
-  expired: { color: '#ff5555', bg: '#2a1010', label: 'Expired' },
+  safe:    { color: '#3ee08f', bg: '#0f1f18', led: 'green', label: 'On track' },
+  warning: { color: '#ffb42e', bg: '#211a0a', led: 'amber', label: 'Time is short' },
+  overdue: { color: '#ff8a4a', bg: '#22140a', led: 'amber', label: 'Overdue' },
+  expired: { color: '#ff6259', bg: '#241412', led: 'red',   label: 'Expired' },
 }
 
 function formatRemaining(ms) {
@@ -28,6 +28,11 @@ function formatRemaining(ms) {
   const m = Math.floor(totalSec / 60)
   const s = totalSec % 60
   return `${m}:${String(s).padStart(2, '0')}`
+}
+
+const rowBase = {
+  margin: '0 0 8px', borderRadius: 10,
+  background: 'var(--surface-raised)', border: '1px solid var(--rule)',
 }
 
 function ContractRow({ client, contract, ticket, hasContract, canOpen, onOpen, onView }) {
@@ -40,15 +45,11 @@ function ContractRow({ client, contract, ticket, hasContract, canOpen, onOpen, o
 
   if (client.dormant) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '10px 12px', margin: '0 0 8px', borderRadius: 6,
-        background: '#0a0a14', border: '1px solid #1a1a2a', opacity: 0.55,
-      }}>
-        <span style={{ fontSize: 20, filter: 'grayscale(1)' }}>{client.avatar}</span>
+      <div style={{ ...rowBase, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', opacity: 0.6 }}>
+        <span style={{ fontSize: 23, filter: 'grayscale(1)' }}>{client.avatar}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#556' }}>{client.companyName}</div>
-          <div style={{ fontSize: 9, color: '#445', marginTop: 2 }}>Relationship paused — no response in too long</div>
+          <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ink-2)' }}>{client.companyName}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 2 }}>Relationship paused — no response in too long</div>
         </div>
       </div>
     )
@@ -65,21 +66,19 @@ function ContractRow({ client, contract, ticket, hasContract, canOpen, onOpen, o
         onClick={canOpen ? onView : undefined}
         title={canOpen ? `View ${client.companyName}'s network` : 'Finish your current job/ticket first'}
         style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '7px 10px', margin: '0 0 6px', borderRadius: 6,
-          background: '#0a0f1e', border: '1px solid #16223a',
-          cursor: canOpen ? 'pointer' : 'default',
+          ...rowBase, display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+          cursor: canOpen ? 'pointer' : 'default', transition: 'border-color 0.12s',
         }}
-        onMouseEnter={e => { if (canOpen) e.currentTarget.style.borderColor = '#2a5298' }}
-        onMouseLeave={e => { if (canOpen) e.currentTarget.style.borderColor = '#16223a' }}
+        onMouseEnter={e => { if (canOpen) e.currentTarget.style.borderColor = 'var(--rule-strong)' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)' }}
       >
-        <span style={{ fontSize: 15, flexShrink: 0 }}>{client.avatar}</span>
+        <span style={{ fontSize: 19, flexShrink: 0 }}>{client.avatar}</span>
         <span style={{
-          fontSize: 11, fontWeight: 700, color: '#c8d0e0', flex: 1, minWidth: 0,
+          fontSize: 15.5, fontWeight: 600, color: 'var(--ink)', flex: 1, minWidth: 0,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{client.companyName}</span>
         {hasContract && (
-          <span style={{ fontSize: 9, color: '#3a5a8a', fontFamily: 'monospace', flexShrink: 0 }}>${contract.amountPerMonth}/mo</span>
+          <span style={{ fontSize: 13.5, color: 'var(--ink-3)', flexShrink: 0 }}>${contract.amountPerMonth}/mo</span>
         )}
         <SatisfactionMeter value={client.satisfaction} />
       </div>
@@ -90,43 +89,36 @@ function ContractRow({ client, contract, ticket, hasContract, canOpen, onOpen, o
   const style = URGENCY_STYLE[urgency]
 
   return (
-    <div style={{
-      padding: '10px 12px', margin: '0 0 8px', borderRadius: 6,
-      background: '#0a0f1e', border: '1px solid #1a2a4a',
-    }}>
+    <div style={{ ...rowBase, padding: '10px 12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 20 }}>{client.avatar}</span>
+        <span style={{ fontSize: 23 }}>{client.avatar}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#c8d0e0' }}>{client.companyName}</div>
-          <div style={{ fontSize: 9, color: '#3a5a8a', marginTop: 2, fontFamily: 'monospace' }}>${contract.amountPerMonth}/mo</div>
+          <div style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--ink)' }}>{client.companyName}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 1 }}>${contract.amountPerMonth}/mo</div>
         </div>
         <SatisfactionMeter value={client.satisfaction} />
       </div>
 
       {ticket && (
         <div style={{
-          marginTop: 8, padding: '7px 10px', borderRadius: 5,
+          marginTop: 10, padding: '8px 10px', borderRadius: 8,
           background: style.bg, border: `1px solid ${style.color}40`,
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', gap: 10,
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#c8d0e0' }}>{ticket.title}</div>
-            <div style={{ fontSize: 9, color: style.color, fontFamily: 'monospace', marginTop: 2 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>{ticket.title}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: style.color, marginTop: 3, display: 'flex', alignItems: 'center', gap: 7 }}>
+              <i className={`led ${style.led}`} style={{ width: 7, height: 7 }} />
               {style.label} · {formatRemaining(msRemaining(ticket, now))} left
             </div>
           </div>
           <button
+            className="btn primary"
             onClick={onOpen}
             disabled={!canOpen}
             title={canOpen ? undefined : 'Finish your current job/ticket first'}
-            style={{
-              padding: '4px 12px', fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
-              background: canOpen ? '#1a3a5c' : '#0d1220',
-              color: canOpen ? '#4a90e2' : '#334',
-              border: `1px solid ${canOpen ? '#2a5298' : '#1a1a2a'}`,
-              borderRadius: 4, cursor: canOpen ? 'pointer' : 'not-allowed', flexShrink: 0,
-            }}
-          >OPEN</button>
+            style={{ padding: '4px 14px', flexShrink: 0 }}
+          >Open</button>
         </div>
       )}
     </div>
@@ -153,9 +145,9 @@ export default function ActiveContractsPanel({ onNavigateAway }) {
   }
 
   return (
-    <div style={{ padding: '14px 14px 4px', borderBottom: '1px solid #1a1a3e', flexShrink: 0 }}>
-      <div style={{ fontSize: 9, color: '#2a2a50', letterSpacing: 1.5, fontWeight: 700, marginBottom: 10 }}>
-        CLIENT NETWORKS
+    <div style={{ padding: '14px 14px 6px', borderBottom: '1px solid var(--rule)', flexShrink: 0 }}>
+      <div style={{ fontSize: 15, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 10 }}>
+        Client networks
       </div>
       {establishedClients.map(client => {
         const contract = client.currentContractId ? contracts[client.currentContractId] : null

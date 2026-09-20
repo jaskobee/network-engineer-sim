@@ -18,16 +18,20 @@ export default function Inventory() {
   }
 
   return (
-    <div className="panel" style={{ flex: 1 }}>
-      <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#4a90e2' }}>Inventory</h3>
+    <div style={{ flex: 1, padding: '10px 12px' }}>
       {inventoryDevices.length === 0 ? (
-        <p style={{ color: '#444', fontSize: 12, margin: 0 }}>Empty — buy devices from the shop</p>
+        <p style={{ color: 'var(--ink-3)', fontSize: 14.5, lineHeight: 1.5 }}>
+          Nothing in inventory. Buy devices from the Shop, then place them on the map.
+        </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {inventoryDevices.map(device => (
-            <DraggableItem key={device.id} device={device} onPlace={handlePlace} />
-          ))}
-        </div>
+        <>
+          <p style={{ color: 'var(--ink-3)', fontSize: 13.5, marginBottom: 8 }}>Drag onto the map, or press Place.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {inventoryDevices.map(device => (
+              <DraggableItem key={device.id} device={device} onPlace={handlePlace} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
@@ -46,8 +50,11 @@ function DraggableItem({ device, onPlace }) {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '5px 0',
-        borderBottom: '1px solid #1a1a2e',
+        gap: 8,
+        padding: '7px 8px 7px 12px',
+        background: 'var(--surface-raised)',
+        border: '1px solid var(--rule)',
+        borderRadius: 8,
         opacity: isDragging ? 0.4 : 1,
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
         cursor: 'grab',
@@ -56,13 +63,14 @@ function DraggableItem({ device, onPlace }) {
       {...listeners}
       {...attributes}
     >
-      <div>
-        <span style={{ fontSize: 12, fontFamily: 'monospace' }}>{device.hostname}</span>
-        <span style={{ fontSize: 11, color: '#555', marginLeft: 6 }}>({device.type})</span>
+      <div style={{ minWidth: 0 }}>
+        <span style={{ fontSize: 14, fontFamily: 'var(--font-mono)', color: 'var(--ink)' }}>{device.hostname}</span>
+        <span style={{ fontSize: 13.5, color: 'var(--ink-3)', marginLeft: 8 }}>{device.type}</span>
       </div>
       {/* onPointerDown stops the drag from starting when clicking the button */}
       <button
-        className="btn-small"
+        className="btn"
+        style={{ padding: '3px 12px' }}
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onPlace(device.id) }}
       >

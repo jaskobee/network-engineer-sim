@@ -66,6 +66,31 @@ ping-animation layer, all inside one endless, pannable canvas:
 dashboard tab) + `FirewallWebUI.jsx` + `BrowserPanel.jsx` + `WiresharkPanel.jsx`. Full
 detail in [[Admin Laptop and Tools]].
 
+## The design system (2026-09-20)
+
+One idea runs through the whole UI: **colour is signal.** Surfaces and text are a quiet
+cool graphite; the only saturated colours are what a port LED would say — green = up or
+done, amber = attention or down, red = fault — plus one blue for whatever you can act on.
+Tokens live in `src/index.css` `:root` (`--surface-*`, `--ink*`, `--signal*`, `--led-*`,
+`--font-ui`, `--font-mono`); the rules are in `.claude/rules/ui.md`.
+
+- **Type**: Barlow Semi Condensed for the UI, Atkinson Hyperlegible Mono for data and the
+  terminal (chosen because IPs, interface names and commands must keep `0/O` and `1/l/I`
+  apart). Both are self-hosted in `src/assets/fonts` (SIL OFL). Sentence-case labels, no
+  tracked-caps eyebrows.
+- **The LED** (`.led`) is the signature: header wordmark, "Saved", interface status in the
+  inspector (up / down / administratively down each look different, per the accuracy
+  spec), incident urgency, inbox item kind, tour progress.
+- **Mission progress is a patch cable** (`.step`, `MissionTaskList.jsx`): one LED per task,
+  the cable lit up to the current step, a single breathing blue LED on what's next.
+- **Difficulty is signal-strength bars** (`DifficultyBars`), not stars.
+- **Login hero** is an 8-port switch faceplate (`Faceplate.jsx`), reused on the tour's first step.
+- Icons are SVG from `icons.jsx`; emoji appear only as player content (avatars).
+- Shared primitives: `.btn` (`.primary .ghost .danger .icon .on`), `.seg`, `.utab`,
+  `.lap-tab`, `CatalogCard` (Shop and Sandbox), `DeviceIcons` (floorplan and catalogs).
+
+See also [[Decisions Log]] §UI design system.
+
 ## Other notable components
 
 - `Shop.jsx` / `Inventory.jsx` — buy hardware from `deviceCatalog.js`, then drag from

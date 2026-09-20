@@ -5,11 +5,16 @@ import '@xterm/xterm/css/xterm.css'
 import { useGame } from '../state/GameContext.jsx'
 import { isValidIp, resolveHostname } from '../models/ipUtils.js'
 
+// Atkinson Hyperlegible Mono keeps 0/O and 1/l/I distinct — which matters when the
+// text on screen is an IP address or a command a learner has to retype exactly.
+const TERM_FALLBACK_FONT = 'Cascadia Code, Consolas, "Courier New", monospace'
+const TERM_FONT = `"Atkinson Hyperlegible Mono", ${TERM_FALLBACK_FONT}`
+
 const PC_TYPES = new Set(['pc', 'server', 'phone', 'laptop'])
 
 // ── Main pane ─────────────────────────────────────────────────────────────────
 
-const DEFAULT_SIZE = { w: 720, h: 340 }
+const DEFAULT_SIZE = { w: 800, h: 360 }
 
 export default function TerminalPane() {
   const {
@@ -85,8 +90,8 @@ export default function TerminalPane() {
     position: 'fixed', left: floatPos.x, top: floatPos.y,
     width: floatSize.w, height: minimized ? 'auto' : floatSize.h,
     zIndex: 300, borderRadius: 8, overflow: 'hidden',
-    boxShadow: '0 8px 40px rgba(0,0,0,0.8)', border: '1px solid #2a5298',
-    display: 'flex', flexDirection: 'column', background: '#0a0a0f',
+    boxShadow: '0 8px 40px rgba(0,0,0,0.8)', border: '1px solid #2f6fbd',
+    display: 'flex', flexDirection: 'column', background: '#0b0f11',
     transformOrigin: originStyle,
     animation: 'terminal-pop-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both',
   }
@@ -107,14 +112,14 @@ export default function TerminalPane() {
       <div
         style={{
           display: 'flex', alignItems: 'stretch',
-          background: '#07070d', borderBottom: '1px solid #1a1a3e',
+          background: '#090c0f', borderBottom: '1px solid #202b33',
           flexShrink: 0, overflowX: 'auto', overflowY: 'hidden', minHeight: 32,
           cursor: 'grab', userSelect: 'none',
         }}
         onMouseDown={startDrag}
       >
         {terminalSessions.length === 0 ? (
-          <div style={{ padding: '6px 14px', fontSize: 11, color: '#252540', fontStyle: 'italic', alignSelf: 'center' }}>
+          <div style={{ padding: '6px 14px', fontSize: 14, color: '#728fa5', fontStyle: 'italic', alignSelf: 'center' }}>
             Right-click a device → Open Terminal
           </div>
         ) : (
@@ -137,10 +142,10 @@ export default function TerminalPane() {
             onClick={() => setMinimized(m => !m)}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: '#444', fontSize: 13, lineHeight: 1, padding: '2px 4px',
+              color: '#7490a2', fontSize: 15.5, lineHeight: 1, padding: '2px 4px',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ffb86c' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#444' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ffb42e' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#7490a2' }}
           >
             {minimized ? '▲' : '▼'}
           </button>
@@ -149,10 +154,10 @@ export default function TerminalPane() {
             onClick={closeTerminalWindow}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: '#444', fontSize: 14, lineHeight: 1, padding: '2px 4px',
+              color: '#7490a2', fontSize: 16.5, lineHeight: 1, padding: '2px 4px',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ff5555' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#444' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ff6259' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#7490a2' }}
           >
             ✕
           </button>
@@ -166,7 +171,7 @@ export default function TerminalPane() {
           {allTerminalSessions.length === 0 ? (
             <div style={{
               height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#1a1a30', fontFamily: 'monospace', fontSize: 12,
+              color: '#7191a8', fontFamily: 'var(--font-mono)', fontSize: 13,
             }}>
               No terminals open
             </div>
@@ -190,7 +195,7 @@ export default function TerminalPane() {
           style={{
             position: 'absolute', right: 0, bottom: 0, width: 14, height: 14,
             cursor: 'se-resize',
-            background: 'linear-gradient(135deg, transparent 50%, #2a5298 50%)',
+            background: 'linear-gradient(135deg, transparent 50%, #2f6fbd 50%)',
             zIndex: 10,
           }}
         />
@@ -205,31 +210,31 @@ function TermTab({ session, isActive, onSelect, onClose }) {
   const { getDevice } = useGame()
   const device = getDevice(session.deviceId)
   const label = device?.hostname ?? '—'
-  const typeColor = device?.type === 'router' ? '#4a90e2'
-    : device?.type === 'switch' ? '#8be9fd'
-    : device?.type === 'firewall' ? '#ff6b35'
-    : '#50fa7b'
+  const typeColor = device?.type === 'router' ? '#4da6ff'
+    : device?.type === 'switch' ? '#66d4ea'
+    : device?.type === 'firewall' ? '#ff8a4a'
+    : '#3ee08f'
   return (
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 5,
         padding: '0 10px 0 12px',
-        borderRight: '1px solid #1a1a3e',
-        borderBottom: isActive ? '2px solid #4a90e2' : '2px solid transparent',
-        background: isActive ? '#0a0a0f' : 'transparent',
+        borderRight: '1px solid #202b33',
+        borderBottom: isActive ? '2px solid #4da6ff' : '2px solid transparent',
+        background: isActive ? '#0b0f11' : 'transparent',
         cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', minWidth: 0,
       }}
       onMouseDown={e => e.stopPropagation()}
       onClick={onSelect}
     >
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: typeColor, flexShrink: 0 }} />
-      <span style={{ fontSize: 11, fontFamily: 'monospace', color: isActive ? '#d0d0d0' : '#555' }}>
+      <span style={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', color: isActive ? '#d9e2e8' : '#738ea2' }}>
         {label}
       </span>
       <span
-        style={{ fontSize: 13, color: '#333', cursor: 'pointer', lineHeight: 1, padding: '0 2px', flexShrink: 0 }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#ff5555' }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#333' }}
+        style={{ fontSize: 15.5, color: '#7491a4', cursor: 'pointer', lineHeight: 1, padding: '0 2px', flexShrink: 0 }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#ff6259' }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#7491a4' }}
         onClick={e => { e.stopPropagation(); onClose() }}
         title="Close"
       >×</span>
@@ -289,14 +294,14 @@ function TermSession({ session, isActive }) {
 
     const term = new XTerm({
       cursorBlink: true,
-      fontFamily: 'Cascadia Code, Consolas, "Courier New", monospace',
-      fontSize: 13, lineHeight: 1.2, convertEol: true,
+      fontFamily: TERM_FALLBACK_FONT,
+      fontSize: 13, lineHeight: 1.25, convertEol: true,
       theme: {
-        background: '#0a0a0f', foreground: '#e0e0e0',
-        cursor: '#4a90e2', cursorAccent: '#0a0a0f',
-        green: '#50fa7b', yellow: '#ffb86c', red: '#ff5555',
-        blue: '#4a90e2', cyan: '#8be9fd', white: '#f8f8f2',
-        brightBlack: '#6272a4',
+        background: '#0b0f11', foreground: '#e8eef2',
+        cursor: '#4da6ff', cursorAccent: '#0b0f11',
+        green: '#3ee08f', yellow: '#ffb42e', red: '#ff6259',
+        blue: '#4da6ff', cyan: '#66d4ea', white: '#eef3f6',
+        brightBlack: '#6283a4',
       },
     })
 
@@ -306,6 +311,14 @@ function TermSession({ session, isActive }) {
     term.open(containerRef.current)
     requestAnimationFrame(() => fitAddon.fit())
     xtermRef.current = term
+
+    // xterm measures its cell size from the font at creation time, so start on the
+    // system stack and switch to the app's mono once it has actually loaded —
+    // changing the family string makes xterm re-measure, then we refit.
+    document.fonts.load('13px "Atkinson Hyperlegible Mono"').then(() => {
+      if (xtermRef.current !== term) return
+      try { term.options.fontFamily = TERM_FONT; fitAddon.fit() } catch { /* terminal was disposed */ }
+    }).catch(() => {})
 
     term.writeln(`\r\n\x1b[36mConnected to ${device.hostname} (${device.model})\x1b[0m`)
     term.writeln(`\x1b[90m${isWindows
@@ -628,5 +641,5 @@ function TermSession({ session, isActive }) {
     }
   }, [session.deviceId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div ref={containerRef} style={{ height: '100%', background: '#0a0a0f' }} onClick={() => xtermRef.current?.focus()} />
+  return <div ref={containerRef} style={{ height: '100%', background: '#0b0f11' }} onClick={() => xtermRef.current?.focus()} />
 }

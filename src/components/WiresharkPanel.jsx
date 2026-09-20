@@ -14,7 +14,7 @@
  * Phase 3a (needed first):
  *   Refactor the engine to be event-emitting: a packet object walks the topology
  *   hop-by-hop; each device processes it (L2 MAC lookup, L3 route lookup, NAT
- *   rewrite, firewall policy) and emits events. The existing 379 Vitest tests
+ *   rewrite, firewall policy) and emits events. The existing Vitest suite
  *   are the spec — any behavioural drift is a bug.
  *
  * Phase 3b (this component, once 3a lands):
@@ -24,71 +24,76 @@
  *   capture is a later feature).
  */
 
+import { IconPulse } from './icons.jsx'
+
+const PHASES = [
+  ['3a', 'Packet/event engine', 'Hop-by-hop packet walk, device processing, event emission. The existing test suite is the spec; every diff from today\'s BFS is a deliberate decision.'],
+  ['3b', 'WireFish as first consumer', 'Subscribe to capture events at a specific interface. The capture point is the laptop\'s NIC — what a real NIC on a switched network would see.'],
+  ['3c', 'DHCP DORA visualisation', 'Watch Discover die at the router, add ip helper-address, then watch it get relayed as unicast. Makes a described lesson visible.'],
+]
+
+const code = { fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink)' }
+
 export default function WireFishPanel() {
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      height: '100%', background: '#0a0f18', color: '#9ab', fontFamily: 'monospace', padding: 40,
-      textAlign: 'center',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      minHeight: '100%', background: 'var(--surface-ground)', color: 'var(--ink-2)',
+      padding: '36px 24px 40px', overflowY: 'auto',
     }}>
-      <div style={{ fontSize: 48, marginBottom: 20 }}>🐟</div>
+      <div style={{
+        width: 56, height: 56, display: 'grid', placeItems: 'center', marginBottom: 16,
+        color: 'var(--signal)', background: 'var(--signal-wash)',
+        border: '1px solid var(--signal-deep)', borderRadius: 14,
+      }}><IconPulse size={28} /></div>
 
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#c8d8e8', marginBottom: 8 }}>
-        WireFish
-      </div>
-      <div style={{ fontSize: 11, color: '#4a90e2', marginBottom: 24, fontStyle: 'italic' }}>
-        Packet Capture Analyser — Phase 3
+      <h2 style={{ fontSize: 28, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.1 }}>WireFish</h2>
+      <div style={{ fontSize: 16, color: 'var(--ink-3)', marginTop: 4, marginBottom: 22 }}>
+        Packet capture analyser · Phase 3
       </div>
 
       <div style={{
-        maxWidth: 500, background: '#0d1520', border: '1px solid #1a2a3e',
-        borderRadius: 8, padding: 24, textAlign: 'left',
+        width: '100%', maxWidth: 540, background: 'var(--surface-panel)',
+        border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 22px', textAlign: 'left',
       }}>
-        <div style={{ fontSize: 10, color: '#e08050', fontWeight: 700, marginBottom: 10,
-          textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          ⚠ Not yet available — here's why
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 16.5, color: 'var(--ink)', fontWeight: 600, marginBottom: 12 }}>
+          <i className="led amber" /> Not available yet — here&apos;s why
         </div>
 
-        <p style={{ fontSize: 10, color: '#8ab', lineHeight: 1.8, margin: '0 0 12px 0' }}>
-          WireFish must only show frames the engine actually produced.
-          Inventing a plausible ARP/ICMP sequence from a BFS result and calling it a
-          "capture" would mislead every student who trusts this tool to learn packet
-          analysis. That's the one shortcut we won't take.
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, margin: '0 0 12px' }}>
+          WireFish must only show frames the engine actually produced. Inventing a plausible
+          ARP/ICMP sequence from a BFS result and calling it a &quot;capture&quot; would mislead every
+          student who trusts this tool to learn packet analysis. That&apos;s the one shortcut we won&apos;t take.
         </p>
 
-        <p style={{ fontSize: 10, color: '#8ab', lineHeight: 1.8, margin: '0 0 16px 0' }}>
-          The current engine is a reachability oracle — it answers <em>"can src reach dst, and why not?"</em>
-          but doesn't walk packets hop-by-hop. WireFish needs the event-emitting packet
-          engine (Phase 3a) before it can display anything truthfully.
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, margin: '0 0 16px' }}>
+          The current engine is a reachability oracle. It answers <em>&quot;can src reach dst, and why not?&quot;</em> but
+          doesn&apos;t walk packets hop by hop. WireFish needs the event-emitting packet engine
+          (Phase 3a) before it can display anything truthfully.
         </p>
 
-        <div style={{ borderTop: '1px solid #1a2a3e', paddingTop: 14 }}>
-          <div style={{ fontSize: 9, color: '#668', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Phase 3 build order
-          </div>
-          {[
-            ['3a', 'Packet/event engine — hop-by-hop packet walk, device processing, event emission. Existing 379 tests are the spec. Every diff from current BFS = deliberate decision.', false],
-            ['3b', 'WireFish as first consumer — subscribe to capture events at a specific interface. Capture point = laptop\'s NIC (what a real NIC on a switched network would see).', false],
-            ['3c', 'DHCP DORA visualisation — watch Discover die at the router; add ip helper-address; watch it get relayed as unicast. Makes a described lesson visible.', false],
-          ].map(([phase, desc, done]) => (
-            <div key={phase} style={{ display: 'flex', gap: 10, marginBottom: 10, opacity: done ? 1 : 0.7 }}>
-              <span style={{
-                flexShrink: 0, width: 28, height: 28, borderRadius: '50%', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700,
-                background: done ? '#0a2a0a' : '#1a2a3e', color: done ? '#5aba5a' : '#4a90e2',
-                border: `1px solid ${done ? '#2a5a2a' : '#2a3a4e'}`,
-              }}>{phase}</span>
-              <span style={{ fontSize: 10, color: '#668', lineHeight: 1.6 }}>{desc}</span>
+        <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12 }}>
+          <div style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600, marginBottom: 4 }}>Phase 3 build order</div>
+          {PHASES.map(([phase, title, desc], i) => (
+            <div key={phase} className={`step${i === 0 ? ' first' : ''}${i === PHASES.length - 1 ? ' last' : ''}`} style={{ paddingLeft: 0, paddingRight: 0 }}>
+              <i className="led step-led" />
+              <div className="step-body">
+                <div style={{ fontSize: 15.5, color: 'var(--ink)', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--ink-3)', marginRight: 8 }}>{phase}</span>{title}
+                </div>
+                <div style={{ fontSize: 14.5, color: 'var(--ink-3)', lineHeight: 1.5, marginTop: 2 }}>{desc}</div>
+              </div>
             </div>
           ))}
         </div>
 
-        <div style={{ marginTop: 16, padding: '8px 12px', background: '#0a1200',
-          border: '1px solid #1a2a1a', borderRadius: 4, fontSize: 9, color: '#4a6a4a' }}>
-          <strong style={{ color: '#5a8a5a' }}>Until then:</strong> use <code style={{ color: '#9ab' }}>ping</code> and
-          the device CLI (<code style={{ color: '#9ab' }}>show ip route</code>,
-          <code style={{ color: '#9ab' }}>show firewall-rules</code>,
-          <code style={{ color: '#9ab' }}>show conn</code>) to diagnose network behaviour.
+        <div style={{
+          marginTop: 14, padding: '10px 12px', background: 'var(--surface-well)',
+          border: '1px solid var(--rule)', borderRadius: 8, fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-2)',
+        }}>
+          <strong style={{ color: 'var(--ink)' }}>Until then:</strong> use <code style={code}>ping</code> and
+          the device CLI (<code style={code}>show ip route</code>, <code style={code}>show firewall-rules</code>,{' '}
+          <code style={code}>show conn</code>) to diagnose network behaviour.
           The fault-injection missions are designed around exactly these tools.
         </div>
       </div>

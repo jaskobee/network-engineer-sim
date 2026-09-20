@@ -9,33 +9,33 @@
  */
 import { getMissionRuntime } from '../engine/missionEngine.js'
 import { MissionBlueprintSvg, FloorPlanZoneList } from './MissionBlueprint.jsx'
-
-function Stars({ n }) {
-  const max = 5
-  const filled = Math.max(0, Math.min(n ?? 0, max))
-  return (
-    <span style={{ color: '#ffb86c', fontSize: 12 }}>
-      {'★'.repeat(filled)}{'☆'.repeat(max - filled)}
-    </span>
-  )
-}
+import DifficultyBars from './DifficultyBars.jsx'
+import { IconClose } from './icons.jsx'
 
 function Row({ label, children }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: '1px solid #0d1128' }}>
-      <span style={{ fontSize: 10, color: '#3a5a8a', letterSpacing: 0.5, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 11, color: '#c0c8e0', textAlign: 'right' }}>{children}</span>
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+      padding: '8px 0', borderBottom: '1px solid var(--rule)',
+    }}>
+      <span style={{ fontSize: 14.5, color: 'var(--ink-3)', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 15, color: 'var(--ink)', textAlign: 'right' }}>{children}</span>
     </div>
   )
 }
 
 function Section({ title, children }) {
   return (
-    <div style={{ marginTop: 16 }}>
-      <div style={{ fontSize: 9, color: '#4a90e2', fontWeight: 700, letterSpacing: 1.5, marginBottom: 8 }}>{title}</div>
+    <div style={{ marginTop: 20 }}>
+      <div style={{ fontSize: 16, color: 'var(--ink)', fontWeight: 700, marginBottom: 8 }}>{title}</div>
       {children}
     </div>
   )
+}
+
+const chip = {
+  fontSize: 13.5, color: 'var(--ink-2)', background: 'var(--surface-well)',
+  border: '1px solid var(--rule)', borderRadius: 4, padding: '3px 9px',
 }
 
 export default function MissionBriefModal({ mission, reputation, onClose, onStart }) {
@@ -49,133 +49,116 @@ export default function MissionBriefModal({ mission, reputation, onClose, onStar
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(4,8,11,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={onClose}
     >
       <div
+        role="dialog" aria-modal="true" aria-label={`Mission brief: ${mission.title}`}
         style={{
-          background: '#0a0f1e', border: '1px solid #1e3a6a', borderRadius: 12,
-          width: 480, maxWidth: '95vw', maxHeight: '88vh', overflowY: 'auto',
-          boxShadow: '0 20px 80px rgba(0,0,0,0.7)',
+          background: 'var(--surface-panel)', border: '1px solid var(--rule-strong)', borderRadius: 14,
+          width: 520, maxWidth: '95vw', maxHeight: '88vh', overflowY: 'auto',
+          boxShadow: 'var(--shadow-float)',
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #14203a', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <span style={{ fontSize: 34, lineHeight: 1.1 }}>{mission.avatar}</span>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--rule)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <span style={{ fontSize: 36, lineHeight: 1.1 }}>{mission.avatar}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9, color: '#3a5a8a', fontWeight: 700, letterSpacing: 2, marginBottom: 3 }}>MISSION BRIEF</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#e0e6f0' }}>{mission.title}</div>
-            <div style={{ fontSize: 11, color: '#5a7aa8', marginTop: 2 }}>{mission.client}</div>
+            <div style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 2 }}>Mission brief</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.15 }}>{mission.title}</div>
+            <div style={{ fontSize: 15, color: 'var(--ink-3)', marginTop: 3 }}>{mission.client}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1a2a40', color: '#3a4a60', cursor: 'pointer', borderRadius: 4, padding: '3px 9px', fontSize: 12, flexShrink: 0 }}>✕</button>
+          <button className="btn ghost icon" onClick={onClose} title="Close" aria-label="Close"><IconClose size={17} /></button>
         </div>
 
-        <div style={{ padding: '16px 24px 24px' }}>
+        <div style={{ padding: '14px 24px 24px' }}>
           {/* Key facts */}
-          <Row label="DIFFICULTY"><Stars n={mission.difficulty} /></Row>
-          {mission.estimatedDuration && <Row label="ESTIMATED DURATION">{mission.estimatedDuration}</Row>}
-          <Row label="PAYMENT">
-            <span style={{ color: '#50fa7b', fontWeight: 700, fontFamily: 'monospace' }}>${mission.reward?.toLocaleString()}</span>
+          <Row label="Difficulty"><DifficultyBars level={mission.difficulty} /></Row>
+          {mission.estimatedDuration && <Row label="Estimated duration">{mission.estimatedDuration}</Row>}
+          <Row label="Payment">
+            <span style={{ fontWeight: 700 }}>${mission.reward?.toLocaleString()}</span>
             {mission.optionalObjectiveBonus > 0 && (
-              <span style={{ color: '#8ab4d4', marginLeft: 6 }}>(+${mission.optionalObjectiveBonus} bonus)</span>
+              <span style={{ color: 'var(--ink-3)', marginLeft: 6 }}>(+${mission.optionalObjectiveBonus} bonus)</span>
             )}
           </Row>
           {requiredRep > 0 && (
-            <Row label="REPUTATION REQUIRED">
-              <span style={{ color: repMet ? '#50fa7b' : '#ff5555' }}>{requiredRep}{!repMet && ' — not yet met'}</span>
+            <Row label="Reputation required">
+              <span style={{ color: repMet ? '#3ee08f' : '#ff6259' }}>{requiredRep}{!repMet && ' — not yet met'}</span>
             </Row>
           )}
           {mission.contractOutcome && (
-            <Row label="POTENTIAL CONTRACT">
-              <span style={{ color: '#ffb86c' }}>Ongoing support agreement on completion</span>
+            <Row label="Potential contract">
+              <span style={{ color: 'var(--led-amber)' }}>Ongoing support agreement on completion</span>
             </Row>
           )}
 
           {/* Description */}
-          <div style={{ fontSize: 12, color: '#8090b8', lineHeight: 1.6, marginTop: 14 }}>
+          <p style={{ fontSize: 15.5, color: 'var(--ink-2)', lineHeight: 1.55, marginTop: 16 }}>
             {mission.description}
-          </div>
+          </p>
 
           {/* Required knowledge */}
           {knowledge.length > 0 && (
-            <Section title="REQUIRED KNOWLEDGE">
+            <Section title="What you should know">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {knowledge.map((k, i) => (
-                  <span key={i} style={{ fontSize: 10, color: '#4a90e2', background: '#0a1528', border: '1px solid #1a3060', borderRadius: 3, padding: '3px 8px' }}>
-                    {k}
-                  </span>
-                ))}
+                {knowledge.map((k, i) => <span key={i} style={chip}>{k}</span>)}
               </div>
             </Section>
           )}
 
           {/* Hardware needed */}
           {hw.length > 0 && (
-            <Section title="HARDWARE NEEDED">
+            <Section title="Hardware needed">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {hw.map((h, i) => (
-                  <span key={i} style={{ fontSize: 10, color: '#8ab4d4', background: '#0a1528', border: '1px solid #1a3060', borderRadius: 3, padding: '3px 8px' }}>
-                    {h.label}
-                  </span>
-                ))}
+                {hw.map((h, i) => <span key={i} style={chip}>{h.label}</span>)}
               </div>
             </Section>
           )}
 
           {/* Topology preview — no spoilers, just the target shape */}
           {mission.blueprint && (
-            <Section title="NETWORK TOPOLOGY">
-              <div style={{ background: '#050a16', border: '1px solid #14203a', borderRadius: 6, padding: 10 }}>
+            <Section title="Network topology">
+              <div style={{ background: 'var(--surface-well)', border: '1px solid var(--rule)', borderRadius: 8, padding: 10 }}>
                 <MissionBlueprintSvg blueprint={mission.blueprint} />
               </div>
             </Section>
           )}
           {mission.layout && (
-            <Section title="FLOOR PLAN">
+            <Section title="Floor plan">
               <FloorPlanZoneList layout={mission.layout} />
             </Section>
           )}
 
           {/* Objectives — labels only, never conditions/hints */}
-          <Section title="OBJECTIVES">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Section title="Objectives">
+            <ol style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {requiredTasks.map((t, i) => (
-                <div key={t.id} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#8090b8' }}>
-                  <span style={{ color: '#3a5a8a', fontFamily: 'monospace', flexShrink: 0 }}>{i + 1}.</span>
+                <li key={t.id} style={{ display: 'flex', gap: 10, fontSize: 15, color: 'var(--ink-2)', lineHeight: 1.4 }}>
+                  <span style={{ color: 'var(--ink-3)', flexShrink: 0, minWidth: 16, textAlign: 'right' }}>{i + 1}</span>
                   {t.label}
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </Section>
           {optionalTasks.length > 0 && (
-            <Section title="🎁 OPTIONAL OBJECTIVES">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Section title="Bonus objectives">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {optionalTasks.map(t => (
-                  <div key={t.id} style={{ fontSize: 11, color: '#ffb86c' }}>{t.label}</div>
+                  <div key={t.id} style={{ fontSize: 15, color: 'var(--ink-2)', display: 'flex', gap: 9, alignItems: 'baseline' }}>
+                    <i className="led amber" style={{ width: 7, height: 7 }} />
+                    {t.label}
+                  </div>
                 ))}
               </div>
             </Section>
           )}
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24 }}>
-            <button
-              onClick={onClose}
-              style={{ padding: '9px 20px', fontSize: 12, fontWeight: 600, background: 'transparent', color: '#556', border: '1px solid #1a2a40', borderRadius: 6, cursor: 'pointer' }}
-            >
-              Not Yet
-            </button>
-            <button
-              onClick={onStart}
-              disabled={!repMet}
-              style={{
-                padding: '9px 26px', fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
-                background: repMet ? '#2a5298' : '#1a2030', color: repMet ? '#e0e0e0' : '#445',
-                border: 'none', borderRadius: 6, cursor: repMet ? 'pointer' : 'not-allowed',
-              }}
-            >
-              START JOB
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 26 }}>
+            <button className="btn ghost" onClick={onClose} style={{ padding: '9px 18px', fontSize: 15 }}>Not yet</button>
+            <button className="btn primary" onClick={onStart} disabled={!repMet} style={{ padding: '9px 26px', fontSize: 16 }}>
+              Start job
             </button>
           </div>
         </div>

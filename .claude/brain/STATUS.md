@@ -1,6 +1,6 @@
 # STATUS — where NetSim is right now
 
-_Last refreshed: 2026-09-11. Keep this describing **now**; remove finished items._
+_Last refreshed: 2026-09-20. Keep this describing **now**; remove finished items._
 
 ## Health
 - `npm test` → **440 tests / 21 files passing** (Vitest 4).
@@ -25,8 +25,12 @@ _Last refreshed: 2026-09-11. Keep this describing **now**; remove finished items
 - **Three CLI engines**: `CLIEngine` (IOS: router/switch/firewall), `PCCLIEngine`
   (Linux iproute2: pc/server), `WindowsCLIEngine` (CMD: admin laptop when
   `os_type === 'windows'`).
-- **Admin Laptop** (`components/AdminLaptop*.jsx`) with Firewall Web UI, Browser panel,
+- **Admin Laptop** (`components/AdminLaptop*.jsx`) with a real-data Dashboard tab (balance,
+  incidents on an SLA timeline, client happiness, earnings), Firewall Web UI, Browser panel,
   Wireshark panel — GUI writes the *same* device state the CLI does.
+- **Endless, pannable floorplan** (drag empty background; `panOffset` in `GameContext`).
+- **UI design system** — tokens in `index.css` `:root`, LED-as-signal colour language, two
+  self-hosted fonts, SVG icon set; rules in `.claude/rules/ui.md`.
 - **Dev/QA mode** (`src/devMode/`): 14 presets (working + broken), foundation smoke tests,
   live state inspector. Presets drive the real engine — no state writes.
 - Auto-save to localStorage + Export/Import JSON (`utils/saveLoad.js`), reset guard,
@@ -52,6 +56,12 @@ _Last refreshed: 2026-09-11. Keep this describing **now**; remove finished items
    click-to-connect cabling, blueprint diagrams in briefings.
 
 ## Known rough edges
+- **Mission blueprint diagrams have layout bugs in their data** (`src/data/missions.js`):
+  `mission_005` places three 155-wide segments at x = 8/150/280 in a 400-wide viewBox, so
+  boxes overlap and the ISP box is clipped (and the firewall's long subnet string
+  overflows); `mission_004`'s two link labels overlap. Fix the segment coordinates/viewBox.
+- The main game shell is desktop-only (drag-and-drop map, terminals); login and the tour are
+  responsive down to phone width.
 - `docs/` filenames are inconsistent in case (`Roas-Sandbox-LAB.md`, `dhcp-sandbox-lab.md`,
   `NETWORKING_AUDIT.md`); older docs reference names that no longer match exactly.
 - `docs/ADMIN_LAPTOP_AND_TOOLS.md` still says "nothing here is implemented yet" — the

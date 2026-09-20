@@ -3,6 +3,8 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useGame } from '../state/GameContext.jsx'
 import ContextMenu from './ContextMenu.jsx'
 import { maskToPrefixLen } from '../models/ipUtils.js'
+import { DEVICE_ICONS as ICONS } from './DeviceIcons.jsx'
+import { IconDiagram } from './icons.jsx'
 
 const W = 108
 const H = 90
@@ -15,197 +17,54 @@ function center(placement) {
   return { x: placement.x + W / 2, y: placement.y + H / 2 }
 }
 
-// ── SVG device icons ──────────────────────────────────────────────────────────
-
-function RouterIcon() {
-  return (
-    <svg viewBox="0 0 54 38" width="54" height="38" style={{ display: 'block', margin: '0 auto' }}>
-      <rect x="2" y="10" width="50" height="20" rx="3" fill="#0d1a40" stroke="#4a90e2" strokeWidth="1.4"/>
-      {[10, 18, 26, 34].map(x => (
-        <rect key={x} x={x} y="17" width="5" height="6" rx="1" fill="#1a3060" stroke="#2a6abf" strokeWidth="0.8"/>
-      ))}
-      <circle cx="45" cy="20" r="2.5" fill="#50fa7b"/>
-      <line x1="12" y1="10" x2="9"  y2="2"  stroke="#2a5298" strokeWidth="1.5" strokeLinecap="round"/>
-      <line x1="42" y1="10" x2="45" y2="2"  stroke="#2a5298" strokeWidth="1.5" strokeLinecap="round"/>
-      <circle cx="9"  cy="2" r="1.5" fill="#4a90e2"/>
-      <circle cx="45" cy="2" r="1.5" fill="#4a90e2"/>
-    </svg>
-  )
-}
-
-function SwitchIcon() {
-  return (
-    <svg viewBox="0 0 54 22" width="54" height="22" style={{ display: 'block', margin: '0 auto' }}>
-      <rect x="1" y="2" width="52" height="18" rx="2" fill="#0d1a40" stroke="#4a90e2" strokeWidth="1.4"/>
-      {[5, 10, 15, 20, 25, 30, 35, 40].map(x => (
-        <rect key={x} x={x} y="6" width="4" height="10" rx="0.8" fill="#1a3060" stroke="#2a6abf" strokeWidth="0.6"/>
-      ))}
-      <circle cx="49" cy="11" r="2" fill="#50fa7b"/>
-    </svg>
-  )
-}
-
-function PCIcon() {
-  return (
-    <svg viewBox="0 0 48 42" width="48" height="42" style={{ display: 'block', margin: '0 auto' }}>
-      <rect x="2" y="2" width="44" height="30" rx="3" fill="#0d1a40" stroke="#4a90e2" strokeWidth="1.4"/>
-      <rect x="5" y="5" width="38" height="22" rx="1.5" fill="#060d20"/>
-      <rect x="9" y="11" width="6"  height="1.5" rx="0.5" fill="#4a90e2" opacity="0.7"/>
-      <rect x="9" y="14" width="14" height="1.5" rx="0.5" fill="#2a5298" opacity="0.5"/>
-      <rect x="9" y="17" width="10" height="1.5" rx="0.5" fill="#2a5298" opacity="0.5"/>
-      <rect x="21" y="32" width="6"  height="5" fill="#1a3060"/>
-      <rect x="13" y="37" width="22" height="3" rx="1.5" fill="#1a3060" stroke="#2a5298" strokeWidth="0.8"/>
-    </svg>
-  )
-}
-
-function ServerIcon() {
-  return (
-    <svg viewBox="0 0 48 44" width="48" height="44" style={{ display: 'block', margin: '0 auto' }}>
-      {[0, 14, 28].map((y, i) => (
-        <g key={y}>
-          <rect x="2" y={y + 2} width="44" height="11" rx="1.5" fill="#0d1a40" stroke="#4a90e2" strokeWidth="1.2"/>
-          {[6, 13, 20, 27].map(x => (
-            <rect key={x} x={x} y={y + 5} width="5" height="5" rx="0.5" fill="#131d3a" stroke="#2a4080" strokeWidth="0.5"/>
-          ))}
-          <circle cx="41" cy={y + 7.5} r="2" fill={i === 0 ? '#50fa7b' : i === 1 ? '#ffb86c' : '#50fa7b'}/>
-        </g>
-      ))}
-    </svg>
-  )
-}
-
-function PhoneIcon() {
-  return (
-    <svg viewBox="0 0 48 48" width="48" height="48" style={{ display: 'block', margin: '0 auto' }}>
-      {/* Phone body */}
-      <rect x="8" y="10" width="32" height="28" rx="3" fill="#0d1a40" stroke="#ff79c6" strokeWidth="1.4"/>
-      {/* Screen */}
-      <rect x="11" y="13" width="26" height="14" rx="1.5" fill="#060d20"/>
-      {/* Screen glow lines (idle display) */}
-      <rect x="14" y="16" width="12" height="1.5" rx="0.5" fill="#ff79c6" opacity="0.6"/>
-      <rect x="14" y="19" width="8"  height="1.5" rx="0.5" fill="#a020d0" opacity="0.4"/>
-      {/* Keypad dots */}
-      {[0,1,2].map(col => [0,1,2].map(row => (
-        <circle key={`${col}-${row}`}
-          cx={16 + col * 7} cy={31 + row * 4} r="1.2"
-          fill="#ff79c6" opacity="0.5"/>
-      )))}
-      {/* Power LED */}
-      <circle cx="40" cy="14" r="2" fill="#50fa7b"/>
-    </svg>
-  )
-}
-
-function FirewallIcon() {
-  return (
-    <svg viewBox="0 0 54 46" width="54" height="46" style={{ display: 'block', margin: '0 auto' }}>
-      {/* Chassis */}
-      <rect x="2" y="10" width="50" height="22" rx="3" fill="#0d1a40" stroke="#ff6b35" strokeWidth="1.4"/>
-      {/* Status LEDs */}
-      <circle cx="45" cy="21" r="2.5" fill="#50fa7b"/>
-      <circle cx="40" cy="21" r="2" fill="#ffb86c"/>
-      {/* Shield emblem */}
-      <path d="M27 14 L34 17 L34 23 Q34 27 27 30 Q20 27 20 23 L20 17 Z" fill="#0a1530" stroke="#ff6b35" strokeWidth="1.2"/>
-      <line x1="27" y1="18" x2="27" y2="27" stroke="#ff6b35" strokeWidth="1" opacity="0.7"/>
-      <line x1="22" y1="22" x2="32" y2="22" stroke="#ff6b35" strokeWidth="1" opacity="0.7"/>
-      {/* Ports */}
-      {[7, 11, 15].map(x => (
-        <rect key={x} x={x} y="17" width="3" height="8" rx="0.5" fill="#1a3060" stroke="#2a4080" strokeWidth="0.5"/>
-      ))}
-      {/* Antennas */}
-      <line x1="10" y1="10" x2="8"  y2="3"  stroke="#ff6b35" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/>
-      <line x1="44" y1="10" x2="46" y2="3"  stroke="#ff6b35" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/>
-    </svg>
-  )
-}
-
-function IspIcon() {
-  return (
-    <svg viewBox="0 0 54 42" width="54" height="42" style={{ display: 'block', margin: '0 auto' }}>
-      <circle cx="27" cy="21" r="17" fill="#040d1a" stroke="#00bcd4" strokeWidth="1.5"/>
-      <ellipse cx="27" cy="21" rx="17" ry="7" fill="none" stroke="#00bcd4" strokeWidth="0.8" opacity="0.45"/>
-      <ellipse cx="27" cy="21" rx="8" ry="17" fill="none" stroke="#00bcd4" strokeWidth="0.8" opacity="0.45"/>
-      <line x1="10" y1="21" x2="44" y2="21" stroke="#00bcd4" strokeWidth="0.8" opacity="0.45"/>
-      <line x1="27" y1="4" x2="27" y2="38" stroke="#00bcd4" strokeWidth="0.8" opacity="0.45"/>
-      <circle cx="27" cy="4" r="2" fill="#00bcd4" opacity="0.9"/>
-    </svg>
-  )
-}
-
-function LaptopIcon() {
-  return (
-    <svg viewBox="0 0 54 42" width="54" height="42" style={{ display: 'block', margin: '0 auto' }}>
-      {/* Lid */}
-      <rect x="4" y="3" width="46" height="28" rx="2.5" fill="#0d1a40" stroke="#8ab4d4" strokeWidth="1.4"/>
-      <rect x="7" y="6" width="40" height="22" rx="1.5" fill="#060d20"/>
-      {/* Screen content lines */}
-      <rect x="10" y="10" width="24" height="1.5" rx="0.5" fill="#4a90e2" opacity="0.7"/>
-      <rect x="10" y="14" width="18" height="1.5" rx="0.5" fill="#8be9fd" opacity="0.5"/>
-      <rect x="10" y="18" width="20" height="1.5" rx="0.5" fill="#8be9fd" opacity="0.4"/>
-      {/* Admin star badge */}
-      <circle cx="39" cy="16" r="5" fill="#1a2a50" stroke="#4a90e2" strokeWidth="0.8"/>
-      <text x="39" y="19" textAnchor="middle" fontSize="6" fill="#4a90e2">★</text>
-      {/* Base / keyboard */}
-      <path d="M2 31 Q2 38 6 38 L48 38 Q52 38 52 31 Z" fill="#0d1a40" stroke="#8ab4d4" strokeWidth="1.2"/>
-      {/* Touchpad */}
-      <rect x="19" y="33" width="16" height="3" rx="1" fill="#111c2a" stroke="#4a90e2" strokeWidth="0.5" opacity="0.6"/>
-      {/* Hinge */}
-      <rect x="4" y="30" width="46" height="2" rx="1" fill="#1a2a50" stroke="#8ab4d4" strokeWidth="0.6"/>
-    </svg>
-  )
-}
-
-const ICONS = { router: RouterIcon, switch: SwitchIcon, pc: PCIcon, server: ServerIcon, phone: PhoneIcon, firewall: FirewallIcon, isp: IspIcon, laptop: LaptopIcon }
 
 // ── Device hover tooltip ──────────────────────────────────────────────────────
 
 function DeviceTooltip({ device, x, y }) {
-  const STATUS_COLOR = { up: '#50fa7b', down: '#ffb86c', admin_down: '#333355' }
+  const STATUS_COLOR = { up: '#3ee08f', down: '#ffb42e', admin_down: '#7d9aae' }
   const STATUS_LABEL = { up: 'up', down: 'down', admin_down: 'admin down' }
   const flipLeft = x > window.innerWidth - 280
   return (
     <div style={{
       position: 'fixed', left: flipLeft ? x - 280 : x,
       top: Math.min(y, window.innerHeight - 220),
-      zIndex: 500, background: '#10182e', border: '1px solid #2a5298',
-      borderRadius: 6, minWidth: 256, maxWidth: 300,
-      boxShadow: '0 6px 24px rgba(0,0,0,0.7)', pointerEvents: 'none', userSelect: 'none',
+      zIndex: 500, background: 'var(--surface-raised)', border: '1px solid var(--rule-strong)',
+      borderRadius: 8, minWidth: 256, maxWidth: 300,
+      boxShadow: 'var(--shadow-float)', pointerEvents: 'none', userSelect: 'none',
     }}>
-      <div style={{ padding: '7px 12px 5px', borderBottom: '1px solid #1a2a50' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#4a90e2', fontFamily: 'monospace' }}>
+      <div style={{ padding: '8px 12px 6px', borderBottom: '1px solid var(--rule)' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
           {device.hostname}
         </div>
-        <div style={{ fontSize: 10, color: '#555', marginTop: 1 }}>{device.model} — {device.type}</div>
+        <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 1 }}>{device.model} · {device.type}</div>
       </div>
       <div style={{ padding: '4px 0 6px' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr auto',
-          padding: '2px 12px', fontSize: 9, color: '#3a3a60',
-          fontFamily: 'monospace', letterSpacing: 0.5, marginBottom: 2,
+          padding: '3px 12px', fontSize: 13, color: 'var(--ink-3)', fontWeight: 600, marginBottom: 2,
         }}>
-          <span>INTERFACE</span><span>IP</span><span>STATUS</span>
+          <span>Interface</span><span>IP</span><span>Status</span>
         </div>
         {device.interfaces.map(iface => (
           <div key={iface.name} style={{
             display: 'grid', gridTemplateColumns: '1fr 1fr auto',
-            padding: '2px 12px', fontSize: 10, fontFamily: 'monospace',
-            background: iface.status === 'up' ? '#0a1520' : 'transparent',
+            padding: '2px 12px', fontSize: 12, fontFamily: 'var(--font-mono)',
+            background: iface.status === 'up' ? 'var(--surface-hover)' : 'transparent',
           }}>
-            <span style={{ color: '#6a9ad4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {iface.name.replace('GigabitEthernet', 'Gi').replace('FastEthernet', 'Fa').replace('Ethernet', 'Eth')}
             </span>
-            <span style={{ color: iface.ip ? '#d0d0d0' : '#333355' }}>
+            <span style={{ color: iface.ip ? 'var(--ink)' : 'var(--ink-3)' }}>
               {iface.ip ? `${iface.ip}/${maskToPrefixLen(iface.subnet_mask)}` : '—'}
             </span>
-            <span style={{ color: STATUS_COLOR[iface.status] || '#555', fontSize: 9 }}>
+            <span style={{ color: STATUS_COLOR[iface.status] || '#738ea2', fontSize: 12 }}>
               {STATUS_LABEL[iface.status] || iface.status}
             </span>
           </div>
         ))}
       </div>
-      <div style={{ padding: '4px 12px 6px', borderTop: '1px solid #111a30' }}>
-        <span style={{ fontSize: 9, color: '#3a3a60' }}>
+      <div style={{ padding: '5px 12px 7px', borderTop: '1px solid var(--rule)' }}>
+        <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
           {device.interfaces.filter(i => i.connected_to).length} cable(s) connected
           {' · '}{device.interfaces.filter(i => i.status === 'up').length} port(s) up
         </span>
@@ -234,12 +93,12 @@ function DevicePortPanel({ device, selectedPort, onSelectPort }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <div style={{ transform: 'scale(0.7)', transformOrigin: 'left center' }}><Icon /></div>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#c8d0e0', fontFamily: 'monospace' }}>{device.hostname}</div>
-          <div style={{ fontSize: 9, color: '#4a5a7a' }}>{device.model}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#c8d4e0', fontFamily: 'var(--font-mono)' }}>{device.hostname}</div>
+          <div style={{ fontSize: 12, color: '#6f8fa5' }}>{device.model}</div>
         </div>
       </div>
       <div style={{
-        background: '#080c18', border: '1px solid #1a2a4a', borderRadius: 6,
+        background: '#091017', border: '1px solid #24313a', borderRadius: 6,
         padding: '10px 10px 8px', display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center',
       }}>
         {device.interfaces.map(iface => {
@@ -255,22 +114,22 @@ function DevicePortPanel({ device, selectedPort, onSelectPort }) {
               style={{
                 width: 36, height: 32, borderRadius: 3, padding: 0,
                 cursor: occupied ? 'not-allowed' : 'pointer',
-                background: occupied ? '#0a2010' : isSelected ? '#12254a' : '#0d1a30',
-                border: `2px solid ${occupied ? '#50fa7b' : isSelected ? '#4a90e2' : '#2a3a5a'}`,
-                boxShadow: isSelected ? '0 0 10px #4a90e260' : 'none',
+                background: occupied ? '#0d1e16' : isSelected ? '#162f46' : '#101f2d',
+                border: `2px solid ${occupied ? '#3ee08f' : isSelected ? '#4da6ff' : '#2f3f4b'}`,
+                boxShadow: isSelected ? '0 0 10px #4da6ff60' : 'none',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 transition: 'border-color 0.12s, background 0.12s',
               }}
-              onMouseEnter={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#4a6a9a' }}
-              onMouseLeave={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#2a3a5a' }}
+              onMouseEnter={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#4a749a' }}
+              onMouseLeave={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#2f3f4b' }}
             >
               <div style={{
                 width: 13, height: 9, borderRadius: '1px 1px 0 0',
-                background: occupied ? '#50fa7b' : isSelected ? '#4a90e2' : '#1a2a4a',
+                background: occupied ? '#3ee08f' : isSelected ? '#4da6ff' : '#24313a',
               }} />
               <span style={{
-                fontSize: 7, marginTop: 2, fontFamily: 'monospace',
-                color: occupied ? '#50fa7b' : isSelected ? '#8ab4d4' : '#5a6a8a',
+                fontSize: 10.5, marginTop: 2, fontFamily: 'var(--font-mono)',
+                color: occupied ? '#3ee08f' : isSelected ? '#8ab3d4' : '#768fa6',
               }}>{portNum}</span>
             </button>
           )
@@ -297,25 +156,25 @@ function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
     }} onClick={onCancel}>
       <div
         style={{
-          background: '#0d1226', border: '1px solid #2a5298', borderRadius: 10,
-          padding: '22px 26px', minWidth: 340, boxShadow: '0 8px 40px rgba(0,0,0,0.7)',
+          background: 'var(--surface-panel)', border: '1px solid var(--rule-strong)', borderRadius: 14,
+          padding: '22px 26px', minWidth: 340, boxShadow: 'var(--shadow-float)',
           animation: 'portPickerIn 0.15s ease-out',
         }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ fontSize: 11, color: '#4a90e2', fontWeight: 700, letterSpacing: 1.5, marginBottom: 16 }}>
-          CONNECT CABLE — pick a free port on each device
+        <div style={{ fontSize: 17, color: 'var(--ink)', fontWeight: 700, marginBottom: 16 }}>
+          Connect cable — pick a free port on each device
         </div>
 
         {(noSrc || noDst) ? (
           <>
-            <div style={{ color: '#ff5555', fontSize: 12, marginBottom: 16 }}>
+            <div style={{ color: '#ff6259', fontSize: 14.5, marginBottom: 16 }}>
               No free ports on <strong>{noSrc ? srcDevice.hostname : dstDevice.hostname}</strong>.
             </div>
             <button
               style={{
-                padding: '6px 18px', background: '#1a1a3e', color: '#888',
-                border: '1px solid #2a2a4a', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+                padding: '6px 18px', background: '#202b33', color: '#738ea2',
+                border: '1px solid #2a3843', borderRadius: 4, cursor: 'pointer', fontSize: 14.5,
               }}
               onClick={onCancel}
             >
@@ -325,34 +184,34 @@ function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
         ) : (
           <>
             <DevicePortPanel device={srcDevice} selectedPort={srcPort} onSelectPort={setSrcPort} />
-            <div style={{ textAlign: 'center', color: '#2a5298', fontSize: 16, margin: '6px 0' }}>⇅</div>
+            <div style={{ textAlign: 'center', color: '#2f6fbd', fontSize: 18.5, margin: '6px 0' }}>⇅</div>
             <DevicePortPanel device={dstDevice} selectedPort={dstPort} onSelectPort={setDstPort} />
 
-            <div style={{ fontSize: 9, color: '#3a4a6a', marginTop: 10, textAlign: 'center' }}>
-              <span style={{ color: '#50fa7b' }}>■</span> connected &nbsp;
-              <span style={{ color: '#4a90e2' }}>■</span> selected &nbsp;
-              <span style={{ color: '#2a3a5a' }}>■</span> free
+            <div style={{ fontSize: 12, color: '#708fa6', marginTop: 10, textAlign: 'center' }}>
+              <span style={{ color: '#3ee08f' }}>■</span> connected &nbsp;
+              <span style={{ color: '#4da6ff' }}>■</span> selected &nbsp;
+              <span style={{ color: '#7290a6' }}>■</span> free
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
               <button
                 style={{
-                  padding: '6px 16px', background: 'transparent', color: '#666',
-                  border: '1px solid #2a2a4a', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+                  padding: '6px 16px', background: 'transparent', color: '#738fa2',
+                  border: '1px solid #2a3843', borderRadius: 4, cursor: 'pointer', fontSize: 14.5,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#d0d0d0' }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#666' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#d9e2e8' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#738fa2' }}
                 onClick={onCancel}
               >
                 Cancel
               </button>
               <button
                 style={{
-                  padding: '6px 20px', background: '#2a5298', color: '#e0e0e0',
-                  border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  padding: '6px 20px', background: '#2f6fbd', color: '#e8eef2',
+                  border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 14.5, fontWeight: 700,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#3a6ab8' }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#2a5298' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#3f7fcf' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#2f6fbd' }}
                 onClick={() => onConnect(
                   srcDevice.id + ':' + srcPort,
                   dstDevice.id + ':' + dstPort,
@@ -426,8 +285,8 @@ function FloorLabel({ label, onMove, onEdit, onDelete }) {
             if (e.key === 'Escape') { setDraft(label.text); setEditing(false) }
           }}
           style={{
-            background: '#0d1226', color: '#e0e0e0', border: '1px solid #4a90e2',
-            borderRadius: 4, padding: '3px 8px', fontSize: 11, fontFamily: 'monospace',
+            background: '#141a1f', color: '#e8eef2', border: '1px solid #4da6ff',
+            borderRadius: 4, padding: '3px 8px', fontSize: 12.5, fontFamily: 'var(--font-mono)',
             outline: 'none', minWidth: 70,
           }}
         />
@@ -438,9 +297,9 @@ function FloorLabel({ label, onMove, onEdit, onDelete }) {
           title="Drag to move · double-click to rename"
           style={{
             position: 'relative', display: 'inline-block',
-            background: '#12182a', border: '1px dashed #3a4a6a', borderRadius: 4,
+            background: '#171f24', border: '1px dashed #3a4e5d', borderRadius: 4,
             padding: `3px ${hovered ? 22 : 10}px 3px 10px`,
-            fontSize: 11, fontFamily: 'monospace', color: '#c0ccdc',
+            fontSize: 12.5, fontFamily: 'var(--font-mono)', color: '#c0cfdc',
             cursor: 'grab', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
             transition: 'padding 0.1s',
           }}
@@ -454,11 +313,11 @@ function FloorLabel({ label, onMove, onEdit, onDelete }) {
               style={{
                 position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)',
                 width: 15, height: 15, lineHeight: '13px', padding: 0,
-                background: 'transparent', color: '#8a4a4a', border: '1px solid #4a2a2a',
-                borderRadius: 3, fontSize: 10, cursor: 'pointer',
+                background: 'transparent', color: '#b97c7c', border: '1px solid #422c2a',
+                borderRadius: 3, fontSize: 13, cursor: 'pointer',
               }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ff5555'; e.currentTarget.style.borderColor = '#ff5555' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#8a4a4a'; e.currentTarget.style.borderColor = '#4a2a2a' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ff6259'; e.currentTarget.style.borderColor = '#ff6259' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#b97c7c'; e.currentTarget.style.borderColor = '#422c2a' }}
             >×</button>
           )}
         </div>
@@ -475,7 +334,7 @@ function BackgroundContextMenu({ x, y, onAddLabel }) {
     <div
       style={{
         position: 'fixed', left: x, top: y, zIndex: 1000,
-        background: '#16213e', border: '1px solid #2a5298', borderRadius: 4,
+        background: '#1f2a31', border: '1px solid #2f6fbd', borderRadius: 4,
         minWidth: 160, boxShadow: '0 6px 20px rgba(0,0,0,0.6)', overflow: 'hidden', userSelect: 'none',
       }}
       onMouseDown={e => e.stopPropagation()}
@@ -483,11 +342,11 @@ function BackgroundContextMenu({ x, y, onAddLabel }) {
     >
       <div
         onClick={onAddLabel}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', fontSize: 12, color: '#50fa7b', cursor: 'pointer' }}
-        onMouseEnter={e => { e.currentTarget.style.background = '#0a2010' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', fontSize: 14.5, color: '#3ee08f', cursor: 'pointer' }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#0d1e16' }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
       >
-        <span style={{ fontSize: 11 }}>🏷</span> Add Label Here
+        <span style={{ fontSize: 14 }}>🏷</span> Add Label Here
       </div>
     </div>
   )
@@ -508,12 +367,12 @@ function DeviceNode({ device, placement, isSelected, onSelect, onCtxMenu, onHove
   const isWireSrc = wireMode?.srcDeviceId === device.id
   const isIsp     = device.type === 'isp'
 
-  const borderColor = isIsp       ? (isWireSrc ? '#f1fa8c' : isSelected ? '#00e5ff' : '#00bcd4')
-    : isWireSrc      ? '#f1fa8c'
-    : !isPowered     ? '#1a1a2a'
-    : isSelected     ? '#4a90e2'
-    : hasUp          ? '#1e5c3a'
-    : '#1a1a3e'
+  const borderColor = isIsp       ? (isWireSrc ? '#f0d264' : isSelected ? '#00e5ff' : '#26bfd6')
+    : isWireSrc      ? '#f0d264'
+    : !isPowered     ? '#192229'
+    : isSelected     ? '#4da6ff'
+    : hasUp          ? '#234e39'
+    : '#202b33'
 
   const style = {
     position: 'absolute',
@@ -553,29 +412,29 @@ function DeviceNode({ device, placement, isSelected, onSelect, onCtxMenu, onHove
     >
       <div style={{
         width: '100%', height: '100%',
-        background: isWireSrc ? '#1c1a08' : isSelected ? '#12254a' : '#0d1226',
+        background: isWireSrc ? '#1c1a08' : isSelected ? '#162f46' : '#141a1f',
         border: `2px solid ${borderColor}`,
         borderRadius: 6,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', gap: 2,
         boxShadow: isWireSrc
-          ? '0 0 12px #f1fa8c40'
-          : isSelected ? '0 0 10px #4a90e240' : 'none',
+          ? '0 0 12px #f0d26440'
+          : isSelected ? '0 0 10px #4da6ff40' : 'none',
         padding: '4px 0',
       }}>
         <div style={{ opacity: isPowered ? 1 : 0.4 }}>
           <Icon />
         </div>
-        <div style={{ fontSize: 11, fontFamily: 'monospace', color: isPowered ? '#d0d0d0' : '#3a3a5a', marginTop: 2 }}>
+        <div style={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', color: isPowered ? '#d9e2e8' : '#7091a7', marginTop: 2 }}>
           {device.hostname}
         </div>
         {isIsp ? (
-          <div style={{ fontSize: 9, color: '#00bcd4', letterSpacing: 1.5, fontWeight: 700, marginTop: 2 }}>
-            INTERNET
+          <div style={{ fontSize: 13, color: '#26bfd6', fontWeight: 600, marginTop: 2 }}>
+            Internet
           </div>
         ) : !isPowered ? (
-          <div style={{ fontSize: 9, color: '#ff5555', letterSpacing: 0.5, fontWeight: 700, opacity: 0.7 }}>
-            OFFLINE — right-click to power on
+          <div title="Right-click the device and choose Power On" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-3)', fontWeight: 600, marginTop: 1 }}>
+            <i className="led" style={{ width: 6, height: 6 }} /> Powered off
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 3, marginTop: 1 }}>
@@ -585,13 +444,13 @@ function DeviceNode({ device, placement, isSelected, onSelect, onCtxMenu, onHove
                 title={`${iface.name}: ${iface.status}${iface.ip ? ' ' + iface.ip : ''}`}
                 style={{
                   width: 6, height: 6, borderRadius: '50%',
-                  background: iface.status === 'up' ? '#50fa7b'
-                    : iface.status === 'admin_down' ? '#2a2a40' : '#ffb86c',
+                  background: iface.status === 'up' ? '#3ee08f'
+                    : iface.status === 'admin_down' ? '#3a4855' : '#ffb42e',
                 }}
               />
             ))}
             {device.interfaces.length > 8 && (
-              <span style={{ fontSize: 9, color: '#555', lineHeight: '6px' }}>+{device.interfaces.length - 8}</span>
+              <span style={{ fontSize: 12, color: '#738ea2', lineHeight: '6px' }}>+{device.interfaces.length - 8}</span>
             )}
           </div>
         )}
@@ -638,7 +497,7 @@ function CableLayer({ devices, placements }) {
       {cables.map(c => (
         <line
           key={c.key} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2}
-          stroke={c.state === 'up' ? '#2a5298' : c.state === 'down' ? '#c05800' : '#161625'}
+          stroke={c.state === 'up' ? '#2f6fbd' : c.state === 'down' ? '#c05800' : '#161e24'}
           strokeWidth={c.state === 'up' ? 2.5 : 2}
           strokeDasharray={c.state === 'up' ? undefined : '6 3'}
           strokeOpacity={c.state === 'admin_down' ? 0.45 : 1}
@@ -705,7 +564,7 @@ function PingDot({ waypoints, success, startTime, isReply }) {
   }, [startTime]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Echo Request: green. Echo Reply: cyan — visually distinct so the return path is obvious.
-  const color = !success ? '#ff5555' : isReply ? '#8be9fd' : '#50fa7b'
+  const color = !success ? '#ff6259' : isReply ? '#66d4ea' : '#3ee08f'
   return (
     <g>
       <circle cx={state.x} cy={state.y} r={9}  fill={color} opacity={state.opacity * 0.25}/>
@@ -726,13 +585,13 @@ function WireLayer({ wireMode, placements, mousePos, wireHoverDeviceId }) {
   return (
     <>
       {/* Pulsing ring on source */}
-      <circle cx={sx} cy={sy} r="52" fill="none" stroke="#f1fa8c" strokeWidth="2">
+      <circle cx={sx} cy={sy} r="52" fill="none" stroke="#f0d264" strokeWidth="2">
         <animate attributeName="r" values="44;58;44" dur="1.2s" repeatCount="indefinite"/>
         <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1.2s" repeatCount="indefinite"/>
       </circle>
       {/* Pulsing ring on hover target */}
       {dstP && (
-        <circle cx={ex} cy={ey} r="52" fill="none" stroke="#50fa7b" strokeWidth="2">
+        <circle cx={ex} cy={ey} r="52" fill="none" stroke="#3ee08f" strokeWidth="2">
           <animate attributeName="r" values="44;58;44" dur="1.2s" repeatCount="indefinite"/>
           <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1.2s" repeatCount="indefinite"/>
         </circle>
@@ -740,7 +599,7 @@ function WireLayer({ wireMode, placements, mousePos, wireHoverDeviceId }) {
       {/* Live dashed wire */}
       <line
         x1={sx} y1={sy} x2={ex} y2={ey}
-        stroke="#4a90e2" strokeWidth="2" strokeDasharray="8 5"
+        stroke="#4da6ff" strokeWidth="2" strokeDasharray="8 5"
         strokeLinecap="round" opacity="0.8"
       />
     </>
@@ -757,6 +616,7 @@ export default function Floorplan() {
     adminLaptopOpen, setAdminLaptopOpen, laptopDevice,
     labels, addLabel, moveLabel, updateLabelText, removeLabel,
     panOffset, setPanOffset,
+    mode, activeMissionId, activeTicket,
   } = useGame()
 
   const [ctxMenu,          setCtxMenu]          = useState(null)
@@ -896,14 +756,14 @@ export default function Floorplan() {
       ref={setRefs}
       style={{
         position: 'relative', flex: 1, overflow: 'hidden',
-        background: '#0d0d1a',
-        backgroundImage: 'radial-gradient(circle, #151530 1px, transparent 1px)',
+        background: '#101519',
+        backgroundImage: 'radial-gradient(circle, #1a2329 1px, transparent 1px)',
         backgroundSize: '28px 28px',
         // The grid pans in lockstep with content so an endless canvas actually
         // reads as one continuous plane sliding under a fixed viewport,
         // rather than content moving over a static backdrop.
         backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
-        outline: isOver ? '2px solid #2a5298' : 'none',
+        outline: isOver ? '2px solid #2f6fbd' : 'none',
         outlineOffset: -2,
         cursor: wireMode ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
       }}
@@ -973,29 +833,38 @@ export default function Floorplan() {
         </svg>
       </div>
 
-      {placed.length === 0 && !wireMode && (
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%,-50%)',
-          color: '#1e1e35', fontSize: 14, textAlign: 'center', pointerEvents: 'none',
-        }}>
-          <div style={{ fontSize: 52, marginBottom: 10 }}>◈</div>
-          Buy devices, then drag from Inventory or click <strong style={{ color: '#252545' }}>Place</strong>
-        </div>
-      )}
+      {placed.length === 0 && !wireMode && (() => {
+        // Say what to do next for where the player actually is, rather than one line for everyone.
+        const copy = mode === 'sandbox'
+          ? ['Your canvas is empty', 'Add a device from the palette on the left.']
+          : (activeMissionId || activeTicket)
+            ? ['Your map is empty', 'Buy the gear for this job in the Shop, then drag it from Inventory or press Place.']
+            : ['Your map is empty', 'Open Career on the right and accept a job. Then buy the gear in the Shop.']
+        return (
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%,-50%)', maxWidth: 340,
+            textAlign: 'center', pointerEvents: 'none',
+          }}>
+            <div style={{ color: 'var(--ink-3)', display: 'flex', justifyContent: 'center', marginBottom: 12 }}><IconDiagram size={40} /></div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6 }}>{copy[0]}</div>
+            <div style={{ fontSize: 16, color: 'var(--ink-3)', lineHeight: 1.45 }}>{copy[1]}</div>
+          </div>
+        )
+      })()}
 
       {/* Power All On button — shown when any placed non-ISP device is offline */}
       {placed.some(d => !d.powered && d.type !== 'isp') && !wireMode && (
         <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 50 }}>
           <button
             style={{
-              padding: '5px 12px', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
-              background: '#0d1a00', color: '#50fa7b',
-              border: '1px solid #1e4400', borderRadius: 4, cursor: 'pointer',
+              padding: '5px 12px', fontSize: 14, fontWeight: 600,
+              background: 'var(--surface-raised)', color: 'var(--ink)',
+              border: '1px solid var(--rule-strong)', borderRadius: 6, cursor: 'pointer',
               boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#162800' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#0d1a00' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-raised)' }}
             onClick={e => { e.stopPropagation(); powerAllDevices() }}
           >
             Power All On
@@ -1007,12 +876,12 @@ export default function Floorplan() {
       {wireMode && (
         <div style={{
           position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
-          background: '#0d1226', border: '1px solid #4a90e2', borderRadius: 6,
-          padding: '6px 16px', fontSize: 11, color: '#4a90e2',
-          pointerEvents: 'none', zIndex: 50, letterSpacing: 0.5,
+          background: 'var(--surface-panel)', border: '1px solid var(--signal-strong)', borderRadius: 8,
+          padding: '7px 16px', fontSize: 15, color: 'var(--ink)',
+          pointerEvents: 'none', zIndex: 50,
           boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
         }}>
-          Click a device to connect — <span style={{ color: '#555' }}>Esc to cancel</span>
+          Click a device to connect — <span style={{ color: '#738ea2' }}>Esc to cancel</span>
         </div>
       )}
 
@@ -1049,43 +918,43 @@ export default function Floorplan() {
             title={adminLaptopOpen ? 'Close Admin Laptop' : 'Open Admin Laptop'}
             style={{
               width: 58, height: 58,
-              background: adminLaptopOpen ? '#0f1e38' : '#090d1c',
-              border: `2px solid ${adminLaptopOpen ? '#4a90e2' : laptopDevice.powered ? '#2a4a6a' : '#1a2a3a'}`,
+              background: adminLaptopOpen ? '#122435' : '#0a131b',
+              border: `2px solid ${adminLaptopOpen ? '#4da6ff' : laptopDevice.powered ? '#344754' : '#1f2a31'}`,
               borderRadius: 12,
               cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
               boxShadow: adminLaptopOpen
-                ? '0 0 18px #4a90e230, 0 4px 16px #00000060'
+                ? '0 0 18px #4da6ff30, 0 4px 16px #00000060'
                 : '0 4px 12px #00000050',
               transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
               padding: 0,
             }}
-            onMouseEnter={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = '#3a6aaa'; e.currentTarget.style.background = '#0c1428' } }}
-            onMouseLeave={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = laptopDevice.powered ? '#2a4a6a' : '#1a2a3a'; e.currentTarget.style.background = '#090d1c' } }}
+            onMouseEnter={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = '#3a76aa'; e.currentTarget.style.background = '#0e1a26' } }}
+            onMouseLeave={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = laptopDevice.powered ? '#344754' : '#1f2a31'; e.currentTarget.style.background = '#0a131b' } }}
           >
             <svg viewBox="0 0 54 42" width="32" height="25" style={{ opacity: adminLaptopOpen ? 1 : laptopDevice.powered ? 0.9 : 0.45 }}>
-              <rect x="4" y="3" width="46" height="28" rx="2.5" fill="#0d1a40" stroke={adminLaptopOpen ? '#4a90e2' : '#8ab4d4'} strokeWidth="1.4"/>
-              <rect x="7" y="6" width="40" height="22" rx="1.5" fill="#060d20"/>
-              <rect x="10" y="10" width="24" height="1.5" rx="0.5" fill={adminLaptopOpen ? '#4a90e2' : '#4a90e2'} opacity="0.7"/>
-              <rect x="10" y="14" width="18" height="1.5" rx="0.5" fill="#8be9fd" opacity="0.5"/>
-              <circle cx="39" cy="16" r="5" fill="#1a2a50" stroke={adminLaptopOpen ? '#4a90e2' : '#4a90e2'} strokeWidth="0.8"/>
-              <text x="39" y="19" textAnchor="middle" fontSize="6" fill={adminLaptopOpen ? '#4a90e2' : '#4a90e2'}>★</text>
-              <path d="M2 31 Q2 38 6 38 L48 38 Q52 38 52 31 Z" fill="#0d1a40" stroke="#8ab4d4" strokeWidth="1.2"/>
-              <rect x="19" y="33" width="16" height="3" rx="1" fill="#111c2a" stroke="#4a90e2" strokeWidth="0.5" opacity="0.6"/>
+              <rect x="4" y="3" width="46" height="28" rx="2.5" fill="#11273c" stroke={adminLaptopOpen ? '#4da6ff' : '#8ab3d4'} strokeWidth="1.4"/>
+              <rect x="7" y="6" width="40" height="22" rx="1.5" fill="#08131e"/>
+              <rect x="10" y="10" width="24" height="1.5" rx="0.5" fill={adminLaptopOpen ? '#4da6ff' : '#4da6ff'} opacity="0.7"/>
+              <rect x="10" y="14" width="18" height="1.5" rx="0.5" fill="#66d4ea" opacity="0.5"/>
+              <circle cx="39" cy="16" r="5" fill="#1e364c" stroke={adminLaptopOpen ? '#4da6ff' : '#4da6ff'} strokeWidth="0.8"/>
+              <text x="39" y="19" textAnchor="middle" fontSize="6" fill={adminLaptopOpen ? '#4da6ff' : '#4da6ff'}>★</text>
+              <path d="M2 31 Q2 38 6 38 L48 38 Q52 38 52 31 Z" fill="#11273c" stroke="#8ab3d4" strokeWidth="1.2"/>
+              <rect x="19" y="33" width="16" height="3" rx="1" fill="#161e24" stroke="#4da6ff" strokeWidth="0.5" opacity="0.6"/>
             </svg>
             <span style={{
-              fontSize: 8, fontWeight: 700, letterSpacing: 0.8,
-              color: adminLaptopOpen ? '#4a90e2' : laptopDevice.powered ? '#4a6a8a' : '#2a3a4a',
+              fontSize: 13, fontWeight: 600,
+              color: adminLaptopOpen ? '#4da6ff' : laptopDevice.powered ? '#8ea6b6' : '#7d9aae',
             }}>
-              {adminLaptopOpen ? 'LAPTOP ▲' : 'LAPTOP'}
+              Laptop
             </span>
             {/* Power/config status dot */}
             <div style={{
               position: 'absolute', top: 6, right: 6,
               width: 7, height: 7, borderRadius: '50%',
-              background: !laptopDevice.powered ? '#333355'
-                : laptopDevice.interfaces.some(i => i.ip) ? '#50fa7b'
-                : '#ffb86c',
+              background: !laptopDevice.powered ? '#30414d'
+                : laptopDevice.interfaces.some(i => i.ip) ? '#3ee08f'
+                : '#ffb42e',
             }} title={!laptopDevice.powered ? 'Offline' : laptopDevice.interfaces.some(i => i.ip) ? 'Configured' : 'Not configured'} />
           </button>
         </div>

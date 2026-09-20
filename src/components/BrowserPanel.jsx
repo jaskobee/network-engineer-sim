@@ -68,28 +68,28 @@ function LaptopNotConfiguredPage({ laptopDevice }) {
   const hasLaptop = !!laptopDevice
   const powered   = laptopDevice?.powered
   return (
-    <div style={{ padding: 40, fontFamily: 'monospace', textAlign: 'center', color: '#9ab' }}>
+    <div style={{ padding: 40, fontFamily: 'var(--font-mono)', textAlign: 'center', color: '#99acbb' }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>🔌</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#e08050', marginBottom: 8 }}>
+      <div style={{ fontSize: 21, fontWeight: 700, color: '#e08050', marginBottom: 8 }}>
         Admin Laptop — Not on network
       </div>
-      <div style={{ fontSize: 11, color: '#668', maxWidth: 420, margin: '0 auto', lineHeight: 1.8 }}>
+      <div style={{ fontSize: 14, color: '#7e8c9e', maxWidth: 420, margin: '0 auto', lineHeight: 1.8 }}>
         {!hasLaptop && 'No laptop device found. Accept a mission or clear the sandbox to create one.'}
         {hasLaptop && !powered && (
           <>
-            The laptop (<strong style={{ color: '#9ab' }}>{laptopDevice.hostname}</strong>) is powered off.<br />
+            The laptop (<strong style={{ color: '#99acbb' }}>{laptopDevice.hostname}</strong>) is powered off.<br />
             Right-click it on the floorplan and select <strong>Power On</strong>.
           </>
         )}
         {hasLaptop && powered && (
           <>
             The laptop is powered on but has no IP address.<br />
-            Open its terminal and run <code style={{ color: '#8eda8e' }}>ip addr add &lt;IP&gt;/&lt;prefix&gt; dev Ethernet0/0</code><br />
-            or <code style={{ color: '#8eda8e' }}>dhclient Ethernet0/0</code>, then set a default gateway.
+            Open its terminal and run <code style={{ color: '#92d6b2' }}>ip addr add &lt;IP&gt;/&lt;prefix&gt; dev Ethernet0/0</code><br />
+            or <code style={{ color: '#92d6b2' }}>dhclient Ethernet0/0</code>, then set a default gateway.
           </>
         )}
       </div>
-      <div style={{ marginTop: 20, fontSize: 9, color: '#334', lineHeight: 1.7 }}>
+      <div style={{ marginTop: 20, fontSize: 12, color: '#7291a6', lineHeight: 1.7 }}>
         The browser uses the laptop's real IP to check reachability via the engine.<br />
         If the engine says "no route", so does the browser.
       </div>
@@ -112,28 +112,28 @@ function ErrorPage({ url, reason, failurePoint }) {
   }[reason] ?? `Engine failure reason: ${reason}`
 
   return (
-    <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center', color: '#9ab' }}>
+    <div style={{ padding: 40, fontFamily: 'var(--font-ui)', textAlign: 'center', color: '#99acbb' }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>🚫</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#cc4444', marginBottom: 6 }}>
+      <div style={{ fontSize: 21, fontWeight: 700, color: '#d76c6c', marginBottom: 6 }}>
         This site can't be reached
       </div>
-      <div style={{ fontSize: 13, color: '#778', marginBottom: 6 }}>
-        <strong style={{ fontFamily: 'monospace' }}>{url}</strong>
+      <div style={{ fontSize: 15.5, color: '#7590a3', marginBottom: 6 }}>
+        <strong style={{ fontFamily: 'var(--font-mono)' }}>{url}</strong>
       </div>
-      <div style={{ fontSize: 12, fontFamily: 'monospace', background: '#0a1520', marginBottom: 16,
+      <div style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: '#0c151e', marginBottom: 16,
         display: 'inline-block', padding: '4px 12px', borderRadius: 4, color: '#cc8888' }}>
         {title}
       </div>
-      <div style={{ marginTop: 16, fontSize: 11, color: '#445', maxWidth: 420,
+      <div style={{ marginTop: 16, fontSize: 14, color: '#7490a2', maxWidth: 420,
         margin: '16px auto 0', lineHeight: 1.7, textAlign: 'left',
-        background: '#0a1520', border: '1px solid #1a2a3e', borderRadius: 6, padding: 16 }}>
-        <strong style={{ color: isFirewallBlock ? '#e08050' : '#668' }}>
+        background: '#0c151e', border: '1px solid #202b33', borderRadius: 6, padding: 16 }}>
+        <strong style={{ color: isFirewallBlock ? '#e08050' : '#7e8c9e' }}>
           {isFirewallBlock ? '⛔ Blocked by firewall' : '🔌 Network unreachable'}
         </strong>
         <br />
         {hint.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
       </div>
-      <div style={{ marginTop: 16, fontSize: 9, color: '#334' }}>
+      <div style={{ marginTop: 16, fontSize: 12, color: '#7291a6' }}>
         The browser called topology.checkPing(laptopIp, {url}, tcp/443) — engine returned: <em>{reason}</em>
       </div>
     </div>
@@ -142,25 +142,25 @@ function ErrorPage({ url, reason, failurePoint }) {
 
 function RefusedPage({ url }) {
   return (
-    <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center', color: '#9ab' }}>
+    <div style={{ padding: 40, fontFamily: 'var(--font-ui)', textAlign: 'center', color: '#99acbb' }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>🚧</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#cc8844', marginBottom: 6 }}>
+      <div style={{ fontSize: 21, fontWeight: 700, color: '#cc8844', marginBottom: 6 }}>
         This site can't be reached
       </div>
-      <div style={{ fontSize: 12, color: '#778', marginBottom: 16 }}>
-        <strong style={{ fontFamily: 'monospace' }}>{url}</strong>
+      <div style={{ fontSize: 14.5, color: '#7590a3', marginBottom: 16 }}>
+        <strong style={{ fontFamily: 'var(--font-mono)' }}>{url}</strong>
       </div>
-      <div style={{ fontSize: 12, fontFamily: 'monospace', background: '#0a1520',
+      <div style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: '#0c151e',
         display: 'inline-block', padding: '4px 12px', borderRadius: 4, color: '#cc8844' }}>
         ERR_CONNECTION_REFUSED
       </div>
-      <div style={{ marginTop: 16, fontSize: 11, color: '#445', maxWidth: 420,
+      <div style={{ marginTop: 16, fontSize: 14, color: '#7490a2', maxWidth: 420,
         margin: '16px auto 0', lineHeight: 1.7, textAlign: 'left',
-        background: '#0a1520', border: '1px solid #1a2a3e', borderRadius: 6, padding: 16 }}>
-        <strong style={{ color: '#668' }}>TCP connection refused (port 443)</strong><br />
+        background: '#0c151e', border: '1px solid #202b33', borderRadius: 6, padding: 16 }}>
+        <strong style={{ color: '#7e8c9e' }}>TCP connection refused (port 443)</strong><br />
         The host is reachable but nothing is listening on port 443.<br />
         This device type does not have a web management interface.<br />
-        <span style={{ color: '#334', fontSize: 9 }}>
+        <span style={{ color: '#7291a6', fontSize: 12 }}>
           (Phase 2: services[] will make this explicit per-device)
         </span>
       </div>
@@ -171,14 +171,14 @@ function RefusedPage({ url }) {
 // ── Device info page (for routers — basic management) ─────────────────────────
 function DeviceInfoPage({ device }) {
   return (
-    <div style={{ padding: 24, fontFamily: 'monospace', color: '#9ab' }}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#4a90e2', marginBottom: 4 }}>
+    <div style={{ padding: 24, fontFamily: 'var(--font-mono)', color: '#99acbb' }}>
+      <div style={{ fontSize: 21, fontWeight: 700, color: '#4da6ff', marginBottom: 4 }}>
         {device.hostname}
       </div>
-      <div style={{ fontSize: 11, color: '#668', marginBottom: 20 }}>
+      <div style={{ fontSize: 14, color: '#7e8c9e', marginBottom: 20 }}>
         {device.type.toUpperCase()} — management interface
       </div>
-      <table style={{ fontSize: 11, borderCollapse: 'collapse', width: '100%', maxWidth: 600 }}>
+      <table style={{ fontSize: 14, borderCollapse: 'collapse', width: '100%', maxWidth: 600 }}>
         <thead>
           <tr>
             {['Interface', 'IP Address', 'Mask', 'Status'].map(h => (
@@ -192,14 +192,14 @@ function DeviceInfoPage({ device }) {
               <td style={tdStyle}>{iface.name}</td>
               <td style={tdStyle}>{iface.ip ?? '—'}</td>
               <td style={tdStyle}>{iface.subnet_mask ?? '—'}</td>
-              <td style={{ ...tdStyle, color: iface.status === 'up' ? '#6f6' : iface.status === 'admin_down' ? '#f66' : '#668' }}>
+              <td style={{ ...tdStyle, color: iface.status === 'up' ? '#6ef7ae' : iface.status === 'admin_down' ? '#ff6666' : '#7e8c9e' }}>
                 {iface.status === 'up' ? 'up/up' : iface.status === 'admin_down' ? 'admin-down' : 'down'}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div style={{ marginTop: 24, fontSize: 10, color: '#334', fontStyle: 'italic' }}>
+      <div style={{ marginTop: 24, fontSize: 13, color: '#7291a6', fontStyle: 'italic' }}>
         Use the CLI terminal (right-click on floorplan) to configure this device.
       </div>
     </div>
@@ -212,19 +212,19 @@ function Suggestions({ items, onSelect }) {
   return (
     <div style={{
       position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-      background: '#0d1a2a', border: '1px solid #2a3a4e', borderTop: 'none',
+      background: '#0f1c28', border: '1px solid #2b3a45', borderTop: 'none',
       borderRadius: '0 0 4px 4px', maxHeight: 200, overflowY: 'auto',
     }}>
       {items.map(({ ip, label }) => (
         <div
           key={ip + label}
           onMouseDown={() => onSelect(ip)}
-          style={{ padding: '5px 12px', fontSize: 11, cursor: 'pointer', color: '#9ab' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#1a2a3e'}
+          style={{ padding: '5px 12px', fontSize: 14, cursor: 'pointer', color: '#99acbb' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#202b33'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-          <span style={{ fontFamily: 'monospace', color: '#4a90e2', marginRight: 8 }}>{ip}</span>
-          <span style={{ color: '#556', fontSize: 10 }}>{label}</span>
+          <span style={{ fontFamily: 'var(--font-mono)', color: '#4da6ff', marginRight: 8 }}>{ip}</span>
+          <span style={{ color: '#738fa2', fontSize: 13 }}>{label}</span>
         </div>
       ))}
     </div>
@@ -310,15 +310,15 @@ export default function BrowserPanel() {
   function renderPage() {
     if (!currentUrl) {
       return (
-        <div style={{ padding: 40, textAlign: 'center', color: '#334', fontFamily: 'monospace' }}>
+        <div style={{ padding: 40, textAlign: 'center', color: '#7291a6', fontFamily: 'var(--font-mono)' }}>
           <div style={{ fontSize: 32, marginBottom: 16 }}>🌐</div>
-          <div style={{ fontSize: 12, color: '#4a6', marginBottom: 6 }}>
+          <div style={{ fontSize: 14.5, color: '#49a574', marginBottom: 6 }}>
             {laptopIp
-              ? <>Laptop IP: <strong style={{ color: '#9ab' }}>{laptopIp}</strong></>
-              : <span style={{ color: '#664' }}>⚠ Laptop has no IP — configure it on the floorplan first</span>
+              ? <>Laptop IP: <strong style={{ color: '#99acbb' }}>{laptopIp}</strong></>
+              : <span style={{ color: '#8e8e5f' }}>⚠ Laptop has no IP — configure it on the floorplan first</span>
             }
           </div>
-          <div style={{ fontSize: 11, color: '#446', marginBottom: 24 }}>
+          <div style={{ fontSize: 14, color: '#7090a6', marginBottom: 24 }}>
             Type a device IP address in the address bar to open its management interface.
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
@@ -326,11 +326,11 @@ export default function BrowserPanel() {
               <button
                 key={ip}
                 onClick={() => navigate(ip)}
-                style={{ padding: '6px 12px', fontSize: 10, background: '#0d1a2a',
-                  color: '#4a90e2', border: '1px solid #1a2a3e', borderRadius: 4, cursor: 'pointer' }}
+                style={{ padding: '6px 12px', fontSize: 13, background: '#0f1c28',
+                  color: '#4da6ff', border: '1px solid #202b33', borderRadius: 4, cursor: 'pointer' }}
               >
                 {ip}
-                <span style={{ color: '#446', marginLeft: 4, fontSize: 9 }}>{label}</span>
+                <span style={{ color: '#7090a6', marginLeft: 4, fontSize: 12 }}>{label}</span>
               </button>
             ))}
           </div>
@@ -350,29 +350,29 @@ export default function BrowserPanel() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0a0f18' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0e1316' }}>
 
       {/* ── Chrome-style toolbar ──────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
-        background: '#0d1520', borderBottom: '1px solid #1a2a3e', flexShrink: 0 }}>
+        background: '#12181c', borderBottom: '1px solid #202b33', flexShrink: 0 }}>
 
         <button onClick={goBack}    disabled={histIdx <= 0}               style={navBtn(histIdx <= 0)}>‹</button>
         <button onClick={goForward} disabled={histIdx >= history.length - 1} style={navBtn(histIdx >= history.length - 1)}>›</button>
 
         {/* Laptop IP status pill */}
         <span style={{
-          fontSize: 9, padding: '2px 6px', borderRadius: 3, fontFamily: 'monospace', flexShrink: 0,
-          background: laptopIp ? '#0a1e0a' : '#1e0a0a',
-          color:      laptopIp ? '#5a8a5a' : '#8a3a3a',
-          border: `1px solid ${laptopIp ? '#1a3a1a' : '#3a1a1a'}`,
+          fontSize: 11.5, padding: '2px 6px', borderRadius: 3, fontFamily: 'var(--font-mono)', flexShrink: 0,
+          background: laptopIp ? '#0d1c15' : '#1d0d0c',
+          color:      laptopIp ? '#66977e' : '#c57575',
+          border: `1px solid ${laptopIp ? '#1d3328' : '#341d1c'}`,
         }}>
           {laptopIp ? `🖥 ${laptopIp}` : '🖥 not configured'}
         </span>
 
         <div style={{ flex: 1, position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6,
-            background: '#111c2a', border: '1px solid #2a3a4e', borderRadius: 16, padding: '3px 12px' }}>
-            <span style={{ fontSize: 10, color: pageState?.type === 'firewall' || pageState?.type === 'router' ? '#5a8' : '#445' }}>
+            background: '#161e24', border: '1px solid #2b3a45', borderRadius: 16, padding: '3px 12px' }}>
+            <span style={{ fontSize: 13, color: pageState?.type === 'firewall' || pageState?.type === 'router' ? '#59a67d' : '#7490a2' }}>
               {pageState?.type === 'firewall' || pageState?.type === 'router' ? '🔒' : '🌐'}
             </span>
             <input
@@ -385,11 +385,11 @@ export default function BrowserPanel() {
               onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
               placeholder="Enter device IP (e.g. 10.1.0.1)…"
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                fontSize: 11, color: '#9ab', fontFamily: 'monospace' }}
+                fontSize: 12.5, color: '#99acbb', fontFamily: 'var(--font-mono)' }}
             />
             {addressBar && (
               <button onMouseDown={() => { setAddressBar(''); inputRef.current?.focus() }}
-                style={{ background: 'none', border: 'none', color: '#446', cursor: 'pointer', fontSize: 12, padding: 0 }}>✕</button>
+                style={{ background: 'none', border: 'none', color: '#7090a6', cursor: 'pointer', fontSize: 14.5, padding: 0 }}>✕</button>
             )}
           </div>
 
@@ -402,7 +402,7 @@ export default function BrowserPanel() {
       </div>
 
       {/* ── Page area ────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', background: '#0a0f18', color: '#c8d8e8' }}>
+      <div style={{ flex: 1, overflowY: 'auto', background: '#0e1316', color: '#c8d9e8' }}>
         {renderPage()}
       </div>
     </div>
@@ -411,16 +411,16 @@ export default function BrowserPanel() {
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const thStyle = {
-  padding: '5px 10px', textAlign: 'left', fontSize: 10,
-  color: '#668', borderBottom: '1px solid #1a2a3e', fontWeight: 700,
+  padding: '5px 10px', textAlign: 'left', fontSize: 13,
+  color: '#7e8c9e', borderBottom: '1px solid #202b33', fontWeight: 700,
 }
 const tdStyle = {
-  padding: '4px 10px', fontSize: 11, borderBottom: '1px solid #0d1520', fontFamily: 'monospace',
+  padding: '4px 10px', fontSize: 12.5, borderBottom: '1px solid #12181c', fontFamily: 'var(--font-mono)',
 }
 function navBtn(disabled) {
   return {
-    padding: '2px 8px', fontSize: 14, background: 'transparent',
-    color: disabled ? '#223' : '#9ab', border: '1px solid #1a2a3e',
+    padding: '2px 8px', fontSize: 16.5, background: 'transparent',
+    color: disabled ? '#7190a7' : '#99acbb', border: '1px solid #202b33',
     borderRadius: 4, cursor: disabled ? 'default' : 'pointer',
   }
 }

@@ -19,30 +19,24 @@ export default function CompanyDashboard() {
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 8,
-      padding: '9px 16px', borderBottom: '1px solid #1a1a3e', flexShrink: 0,
-      background: '#070a16', fontSize: 10,
+      padding: '12px 16px', borderBottom: '1px solid var(--rule)', flexShrink: 0,
+      background: 'var(--surface-panel)',
     }}>
-      <span style={{ fontSize: 14, flexShrink: 0 }}>{company.avatar}</span>
-      <span style={{
-        fontWeight: 700, color: '#c8d0e0', flexShrink: 0, maxWidth: 90,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>{company.name}</span>
-      <span style={{ color: '#1a2a4a' }}>·</span>
-      <span title={`${reputation} reputation points`} style={{ color: '#8ab4d4', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {tier.label}
-      </span>
-      {clientCount > 0 && (
-        <>
-          <span style={{ color: '#1a2a4a' }}>·</span>
-          <span style={{ color: '#556', flexShrink: 0 }}>{clientCount} client{clientCount === 1 ? '' : 's'}</span>
-        </>
-      )}
-      {monthlyIncome > 0 && (
-        <>
-          <span style={{ color: '#1a2a4a' }}>·</span>
-          <span style={{ color: '#50fa7b', fontFamily: 'monospace', flexShrink: 0 }}>${monthlyIncome.toLocaleString()}/mo</span>
-        </>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>{company.avatar}</span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {company.name}
+        </span>
+      </div>
+      <div style={{ fontSize: 14, color: 'var(--ink-2)', marginTop: 4 }} title={`${reputation} reputation points`}>
+        {tier.label} · {reputation} reputation
+      </div>
+      {(clientCount > 0 || monthlyIncome > 0) && (
+        <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 2 }}>
+          {clientCount > 0 && `${clientCount} client${clientCount === 1 ? '' : 's'}`}
+          {clientCount > 0 && monthlyIncome > 0 && ' · '}
+          {monthlyIncome > 0 && `$${monthlyIncome.toLocaleString()}/mo recurring`}
+        </div>
       )}
     </div>
   )

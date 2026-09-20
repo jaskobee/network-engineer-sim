@@ -9,7 +9,9 @@ const BP_DEVICE_H = 17
 const BP_PAD_B    = 10
 const BP_SEG_W    = 155
 const BP_GLYPHS   = { router: '▣', switch: '▤', pc: '▢', server: '▥' }
-const BP_COLORS   = { router: '#4a90e2', switch: '#50fa7b', pc: '#8090c0', server: '#ffb86c' }
+// Infrastructure (router/switch) in signal blue, endpoints grey — colour keeps one meaning.
+const BP_COLORS   = { router: '#4da6ff', switch: '#4da6ff', pc: '#8fa7b8', server: '#8fa7b8' }
+const BP_FONT     = { fontFamily: 'var(--font-ui)' }
 
 function bpSegH(devices) { return BP_HEADER_H + (devices?.length ?? 0) * BP_DEVICE_H + BP_PAD_B }
 
@@ -17,14 +19,14 @@ function SegmentBox({ seg }) {
   const h = bpSegH(seg.devices), cx = seg.svgX + BP_SEG_W / 2
   return (
     <g>
-      <rect x={seg.svgX} y={seg.svgY} width={BP_SEG_W} height={h} rx="5" fill="#07101e" stroke="#1a3868" strokeWidth="1.2"/>
-      <line x1={seg.svgX+1} y1={seg.svgY+BP_HEADER_H} x2={seg.svgX+BP_SEG_W-1} y2={seg.svgY+BP_HEADER_H} stroke="#0f1e3a" strokeWidth="1"/>
-      <text x={cx} y={seg.svgY+16} textAnchor="middle" fontSize="10" fontWeight="700" fill="#5a9ae0" fontFamily="'Segoe UI',system-ui,sans-serif">{seg.label}</text>
-      <text x={cx} y={seg.svgY+30} textAnchor="middle" fontSize="8" fill="#243a6a" fontFamily="monospace">{seg.subnet}</text>
+      <rect x={seg.svgX} y={seg.svgY} width={BP_SEG_W} height={h} rx="5" fill="#0e151b" stroke="#2c3b46" strokeWidth="1.2"/>
+      <line x1={seg.svgX+1} y1={seg.svgY+BP_HEADER_H} x2={seg.svgX+BP_SEG_W-1} y2={seg.svgY+BP_HEADER_H} stroke="#202b33" strokeWidth="1"/>
+      <text x={cx} y={seg.svgY+17} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#e8eef2" style={BP_FONT}>{seg.label}</text>
+      <text x={cx} y={seg.svgY+32} textAnchor="middle" fontSize="10.5" fill="#8fa7b8" style={BP_FONT}>{seg.subnet}</text>
       {(seg.devices??[]).map((d,i)=>(
-        <text key={i} x={seg.svgX+10} y={seg.svgY+BP_HEADER_H+i*BP_DEVICE_H+13} fontSize="9" fontFamily="'Segoe UI',system-ui,sans-serif">
-          <tspan fill={BP_COLORS[d.type]??'#555'}>{BP_GLYPHS[d.type]??'◦'} </tspan>
-          <tspan fill="#5a6a90">{d.role}</tspan>
+        <text key={i} x={seg.svgX+10} y={seg.svgY+BP_HEADER_H+i*BP_DEVICE_H+13} fontSize="11.5" style={BP_FONT}>
+          <tspan fill={BP_COLORS[d.type]??'#8fa7b8'}>{BP_GLYPHS[d.type]??'◦'} </tspan>
+          <tspan fill="#b4c2cd">{d.role}</tspan>
         </text>
       ))}
     </g>
@@ -51,8 +53,8 @@ function SegLink({ link, segMap }) {
   const isWan=link.type==='wan'
   return (
     <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={isWan?'#2a5080':'#1a4a30'} strokeWidth={isWan?2:1.5} strokeDasharray={isWan?'6,3':'4,2'}/>
-      <text x={labelX} y={labelY} textAnchor={labelAnchor} fontSize="8" fill={isWan?'#3a6090':'#2a5040'} fontFamily="monospace">{link.label}</text>
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={isWan?'#4da6ff':'#5f7a8c'} strokeOpacity={isWan?0.7:1} strokeWidth={isWan?2:1.5} strokeDasharray={isWan?'6,3':'4,2'}/>
+      <text x={labelX} y={labelY} textAnchor={labelAnchor} fontSize="10.5" fill="#9fb3c2" style={BP_FONT}>{link.label}</text>
     </g>
   )
 }
@@ -69,7 +71,7 @@ export function MissionBlueprintSvg({ blueprint, notes = true }) {
         {(blueprint.segments??[]).map(seg=><SegmentBox key={seg.id} seg={seg}/>)}
       </svg>
       {notes && blueprint.notes && (
-        <div style={{fontSize:10,color:'#3a4a70',lineHeight:1.55,marginTop:10,paddingTop:10,borderTop:'1px solid #0d1630'}}>
+        <div style={{fontSize:14,color:'var(--ink-3)',lineHeight:1.55,marginTop:10,paddingTop:10,borderTop:'1px solid var(--rule)'}}>
           {blueprint.notes}
         </div>
       )}
@@ -85,13 +87,13 @@ export function FloorPlanZoneList({ layout }) {
   return (
     <>
       {layout.map((row,i)=>(
-        <div key={i} style={{marginBottom:i<layout.length-1?10:0,paddingBottom:i<layout.length-1?10:0,borderBottom:i<layout.length-1?'1px solid #0f1128':'none'}}>
+        <div key={i} style={{marginBottom:i<layout.length-1?10:0,paddingBottom:i<layout.length-1?10:0,borderBottom:i<layout.length-1?'1px solid var(--rule)':'none'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:3}}>
-            <span style={{fontSize:10,fontWeight:700,color:'#5a90e2',letterSpacing:0.3}}>{row.zone}</span>
-            <span style={{fontSize:9,color:'#2a4a7a',fontFamily:'monospace',flexShrink:0,marginLeft:6}}>{row.subnet}</span>
+            <span style={{fontSize:14.5,fontWeight:600,color:'var(--ink)'}}>{row.zone}</span>
+            <span style={{fontSize:12.5,color:'var(--ink-3)',fontFamily:'var(--font-mono)',flexShrink:0,marginLeft:6}}>{row.subnet}</span>
           </div>
-          <div style={{fontSize:10,color:'#4a4a80',lineHeight:1.5}}>{row.devices}</div>
-          {row.note && <div style={{fontSize:9,color:'#2a3a5a',lineHeight:1.5,fontStyle:'italic'}}>{row.note}</div>}
+          <div style={{fontSize:14,color:'var(--ink-2)',lineHeight:1.5}}>{row.devices}</div>
+          {row.note && <div style={{fontSize:13.5,color:'var(--ink-3)',lineHeight:1.5}}>{row.note}</div>}
         </div>
       ))}
     </>

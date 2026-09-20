@@ -17,6 +17,7 @@ import FirewallConsole from './components/FirewallConsole.jsx'
 import AdminLaptop from './components/AdminLaptop.jsx'
 import ActiveJobPanel from './components/ActiveJobPanel.jsx'
 import ContractClockDriver from './components/ContractClockDriver.jsx'
+import { IconCart, IconBox, IconBriefcase, IconLaptop, IconSliders, IconClose } from './components/icons.jsx'
 
 export default function App() {
   const { user } = useAuth()
@@ -57,10 +58,10 @@ function VerticalResizeDivider({ onDelta }) {
   return (
     <div
       onMouseDown={onMouseDown}
-      style={{ height: 5, flexShrink: 0, cursor: 'row-resize', background: '#0d0d1a',
-        borderTop: '1px solid #1a1a3e', borderBottom: '1px solid #1a1a3e' }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#2a5298' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#0d0d1a' }}
+      style={{ height: 5, flexShrink: 0, cursor: 'row-resize', background: '#101519',
+        borderTop: '1px solid #202b33', borderBottom: '1px solid #202b33' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#2f6fbd' }}
+      onMouseLeave={e => { e.currentTarget.style.background = '#101519' }}
       title="Drag to resize"
     />
   )
@@ -74,8 +75,9 @@ function VerticalResizeDivider({ onDelta }) {
 // the floorplan and closes again, reclaiming floorplan width by default.
 
 const RAIL_WIDTH = 46
-const DOCK_WIDTH = 210
-const CAREER_DOCK_WIDTH = 260
+const DOCK_WIDTH = 296
+const CAREER_DOCK_WIDTH = 340
+const SANDBOX_PALETTE_WIDTH = 296
 
 function MenuButton({ children, onClick, danger }) {
   return (
@@ -83,11 +85,11 @@ function MenuButton({ children, onClick, danger }) {
       onClick={onClick}
       style={{
         display: 'block', width: '100%', textAlign: 'left',
-        padding: '6px 8px', fontSize: 11, fontWeight: 700, letterSpacing: 0.3,
-        background: 'transparent', color: danger ? '#ff5555' : '#4a90e2',
-        border: 'none', borderRadius: 4, cursor: 'pointer',
+        padding: '8px 10px', fontSize: 14.5, fontWeight: 600,
+        background: 'transparent', color: danger ? 'var(--led-red)' : 'var(--ink)',
+        border: 'none', borderRadius: 6, cursor: 'pointer',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = danger ? '#2a1010' : '#111122' }}
+      onMouseEnter={e => { e.currentTarget.style.background = danger ? '#2a1714' : 'var(--surface-hover)' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
     >
       {children}
@@ -97,20 +99,20 @@ function MenuButton({ children, onClick, danger }) {
 
 function RailButton({ icon, label, active, onClick }) {
   return (
-    <button
-      onClick={onClick}
-      title={label}
-      style={{
-        width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 17, background: active ? '#1a2e4a' : 'transparent',
-        border: `1px solid ${active ? '#2a5298' : 'transparent'}`,
-        borderRadius: 6, cursor: 'pointer', transition: 'all 0.15s',
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#111122' }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-    >
+    <button className="rail-btn" onClick={onClick} title={label} aria-label={label} aria-pressed={!!active}>
       {icon}
     </button>
+  )
+}
+
+function DockHead({ title, onClose }) {
+  return (
+    <div className="dock-head">
+      <span className="dock-title">{title}</span>
+      <button className="btn ghost icon" onClick={onClose} title="Close" aria-label={`Close ${title}`}>
+        <IconClose size={16} />
+      </button>
+    </div>
   )
 }
 
@@ -130,24 +132,11 @@ function ShopInventoryDock({ openPanel, onClose }) {
   return (
     <div style={{
       position: 'absolute', top: 0, bottom: 0, left: RAIL_WIDTH, width: DOCK_WIDTH, zIndex: 30,
-      background: '#0d0d1a', borderRight: '1px solid #1a1a3e',
+      background: 'var(--surface-panel)', borderRight: '1px solid var(--rule)',
       display: 'flex', flexDirection: 'column',
       boxShadow: '6px 0 24px rgba(0,0,0,0.5)',
     }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '8px 12px', borderBottom: '1px solid #1a1a3e', flexShrink: 0,
-      }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#4a90e2', letterSpacing: 1.5 }}>
-          {openPanel === 'shop' ? 'SHOP' : 'INVENTORY'}
-        </span>
-        <button
-          onClick={onClose}
-          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#e0e0e0' }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
-        >✕</button>
-      </div>
+      <DockHead title={openPanel === 'shop' ? 'Shop' : 'Inventory'} onClose={onClose} />
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {openPanel === 'shop' ? <Shop /> : <Inventory />}
       </div>
@@ -168,22 +157,11 @@ function CareerDock({ open, onClose, children }) {
   return (
     <div style={{
       position: 'absolute', top: 0, bottom: 0, right: RAIL_WIDTH, width: CAREER_DOCK_WIDTH, zIndex: 30,
-      background: '#0d0d1a', borderLeft: '1px solid #1a1a3e',
+      background: 'var(--surface-panel)', borderLeft: '1px solid var(--rule)',
       display: 'flex', flexDirection: 'column',
       boxShadow: '-6px 0 24px rgba(0,0,0,0.5)',
     }}>
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '8px 12px', borderBottom: '1px solid #1a1a3e', flexShrink: 0,
-      }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#4a90e2', letterSpacing: 1.5 }}>CAREER</span>
-        <button
-          onClick={onClose}
-          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#e0e0e0' }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
-        >✕</button>
-      </div>
+      <DockHead title="Career" onClose={onClose} />
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {children}
       </div>
@@ -235,51 +213,51 @@ function LaptopIntroModal({ onClose }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: '#080d1c', border: '1px solid #2a5298', borderRadius: 10,
+        background: '#0a121a', border: '1px solid #2f6fbd', borderRadius: 10,
         padding: '28px 30px', maxWidth: 420, width: '90vw',
         boxShadow: '0 8px 60px #00000090',
       }}>
         <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 12 }}>🖥</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#c8d4e8', textAlign: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 17.5, fontWeight: 700, color: '#c8d9e8', textAlign: 'center', marginBottom: 12 }}>
           You have an Admin Laptop
         </div>
-        <p style={{ fontSize: 12, color: '#6a80a0', lineHeight: 1.75, marginBottom: 14 }}>
-          The <strong style={{ color: '#4a90e2' }}>Admin Laptop</strong> is a real device on your network.
+        <p style={{ fontSize: 14.5, color: '#738fa6', lineHeight: 1.75, marginBottom: 14 }}>
+          The <strong style={{ color: '#4da6ff' }}>Admin Laptop</strong> is a real device on your network.
           It starts uncabled and unpowered — you need to plug it into your router and give it an IP address
           before it can reach anything.
         </p>
         <div style={{
-          background: '#060c1a', borderRadius: 6, padding: '12px 14px',
-          border: '1px solid #1a2a4a', marginBottom: 16,
+          background: '#081018', borderRadius: 6, padding: '12px 14px',
+          border: '1px solid #24313a', marginBottom: 16,
         }}>
-          <div style={{ fontSize: 9, color: '#3a6090', fontWeight: 700, letterSpacing: 1.5, marginBottom: 10 }}>WHAT IT CAN DO</div>
+          <div style={{ fontSize: 12, color: '#7290a7', fontWeight: 700, letterSpacing: 0.6, marginBottom: 10 }}>WHAT IT CAN DO</div>
           {[
             ['💻', 'CLI', 'Real Linux or Windows networking commands — ip addr, ping, netsh, route'],
             ['🐟', 'WireFish', 'Inspect packets flowing through your network'],
             ['🌐', 'Browser', 'Access device web UIs once management is configured'],
           ].map(([icon, name, desc]) => (
             <div key={name} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+              <span style={{ fontSize: 16.5, flexShrink: 0, marginTop: 1 }}>{icon}</span>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#8090b0' }}>{name}</div>
-                <div style={{ fontSize: 10, color: '#3a4a6a', lineHeight: 1.5 }}>{desc}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#8099b0' }}>{name}</div>
+                <div style={{ fontSize: 13, color: '#708fa6', lineHeight: 1.5 }}>{desc}</div>
               </div>
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 11, color: '#3a4a6a', lineHeight: 1.65, marginBottom: 20 }}>
-          Click <strong style={{ color: '#5a90c8' }}>🖥 ADMIN LAPTOP</strong> in the top bar to open it.
-          The <strong style={{ color: '#5a90c8' }}>GUIDE</strong> tab walks you through cabling, IP setup, and first steps.
+        <p style={{ fontSize: 14, color: '#708fa6', lineHeight: 1.65, marginBottom: 20 }}>
+          Click <strong style={{ color: '#5a96c8' }}>🖥 ADMIN LAPTOP</strong> in the top bar to open it.
+          The <strong style={{ color: '#5a96c8' }}>GUIDE</strong> tab walks you through cabling, IP setup, and first steps.
         </p>
         <button
           onClick={onClose}
           style={{
-            width: '100%', padding: '10px 0', fontSize: 13, fontWeight: 700,
-            background: '#1a3a5c', color: '#4a90e2',
-            border: '1px solid #2a5298', borderRadius: 6, cursor: 'pointer', letterSpacing: 0.5,
+            width: '100%', padding: '10px 0', fontSize: 15.5, fontWeight: 700,
+            background: '#1f3c57', color: '#4da6ff',
+            border: '1px solid #2f6fbd', borderRadius: 6, cursor: 'pointer', letterSpacing: 0.3,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#2a5298'; e.currentTarget.style.color = '#e0e0e0' }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#1a3a5c'; e.currentTarget.style.color = '#4a90e2' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#2f6fbd'; e.currentTarget.style.color = '#e8eef2' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#1f3c57'; e.currentTarget.style.color = '#4da6ff' }}
         >GOT IT — LET&apos;S START</button>
       </div>
     </div>
@@ -397,51 +375,40 @@ function AppContent() {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="app-layout">
         <header className="app-header">
-          <span className="app-title">NETSIM</span>
-          <span className="app-subtitle">Network Engineer Simulator</span>
-          {company && (
-            <span
-              title="Your company"
-              style={{
-                marginLeft: 10, fontSize: 11, fontWeight: 700, color: '#8ab4d4',
-                display: 'flex', alignItems: 'center', gap: 5,
-                borderLeft: '1px solid #1a1a3e', paddingLeft: 10,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>{company.avatar}</span>
-              {company.name}
+          <div className="brand" title="NetSim — Network Engineer Simulator">
+            <span className="brand-leds" aria-hidden="true">
+              <i className="led green" /><i className="led amber" /><i className="led" />
             </span>
+            NetSim
+          </div>
+          {company && (
+            <>
+              <span className="hdr-divider" />
+              <span className="company-chip" title="Your company">
+                <span style={{ fontSize: 17 }}>{company.avatar}</span>
+                {company.name}
+              </span>
+            </>
           )}
-          {/* Mode toggle */}
-          <div style={{ marginLeft: 16, display: 'flex', borderRadius: 4, overflow: 'hidden', border: '1px solid #1a1a3e' }}>
+          <div className="seg" role="group" aria-label="Game mode">
             {(['missions', 'sandbox']).map(m => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                style={{
-                  padding: '3px 12px', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
-                  border: 'none', cursor: 'pointer',
-                  background: mode === m ? '#2a5298' : 'transparent',
-                  color: mode === m ? '#e0e0e0' : '#444',
-                  transition: 'background 0.15s, color 0.15s',
-                }}
-              >
-                {m === 'missions' ? 'MISSIONS' : 'SANDBOX'}
+              <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m}>
+                {m === 'missions' ? 'Missions' : 'Sandbox'}
               </button>
             ))}
           </div>
 
           {/* DEV MODE — only in dev builds */}
           {import.meta.env.DEV && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button
                 onClick={() => setDevPanelOpen(o => !o)}
                 title="Toggle Dev Panel (Ctrl+Shift+D)"
                 style={{
-                  padding: '3px 10px', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
-                  background: devPanelOpen ? '#ff5555' : '#ff555522',
-                  color: devPanelOpen ? '#fff' : '#ff5555',
-                  border: '1px solid #ff555566', borderRadius: 3, cursor: 'pointer',
+                  padding: '3px 10px', fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+                  background: devPanelOpen ? '#ff6259' : '#ff625922',
+                  color: devPanelOpen ? '#ffffff' : '#ff6259',
+                  border: '1px solid #ff625966', borderRadius: 4, cursor: 'pointer',
                 }}
               >DEV</button>
               {devPanelOpen && (
@@ -452,40 +419,26 @@ function AppContent() {
 
           {/* Admin Laptop toggle */}
           <button
+            className={`btn${adminLaptopOpen ? ' on' : ''}`}
+            style={{ position: 'relative' }}
             onClick={() => setAdminLaptopOpen(o => !o)}
-            title="Admin Laptop — Wireshark + Browser + Inbox"
-            style={{
-              position: 'relative',
-              marginLeft: 16,
-              padding: '3px 12px', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
-              background: adminLaptopOpen ? '#1a3a5c' : 'transparent',
-              color: adminLaptopOpen ? '#4a90e2' : '#4a5568',
-              border: `1px solid ${adminLaptopOpen ? '#2a5298' : '#1a1a3e'}`,
-              borderRadius: 3, cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => { if (!adminLaptopOpen) { e.currentTarget.style.color = '#4a90e2'; e.currentTarget.style.borderColor = '#2a3a5c' } }}
-            onMouseLeave={e => { if (!adminLaptopOpen) { e.currentTarget.style.color = '#4a5568'; e.currentTarget.style.borderColor = '#1a1a3e' } }}
+            title="Admin Laptop — Dashboard, Guide, Wireshark, Browser, Inbox"
+            aria-pressed={adminLaptopOpen}
           >
-            🖥 ADMIN LAPTOP
+            <IconLaptop size={17} />
+            Admin laptop
             {unreadNotifications > 0 && (
-              <span style={{
-                position: 'absolute', top: -6, right: -6,
-                minWidth: 15, height: 15, borderRadius: 8, padding: '0 3px',
-                background: '#ff5555', color: '#fff', fontSize: 9, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '1px solid #0a0a0f',
-              }}>{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>
+              <span className="badge">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>
             )}
           </button>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Save indicator */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Save indicator — a lit LED, not a glyph */}
             {saveStatus === 'saved' && (
-              <span style={{ fontSize: 10, color: '#50fa7b', opacity: 0.8 }}>✓ Saved</span>
+              <span className="save-note"><i className="led green" />Saved</span>
             )}
             {saveStatus === 'loaded' && (
-              <span style={{ fontSize: 10, color: '#4a90e2', opacity: 0.7 }}>↺ Restored</span>
+              <span className="save-note"><i className="led blue" />Restored</span>
             )}
             <input
               ref={importInputRef}
@@ -510,68 +463,49 @@ function AppContent() {
                 behind one button instead of sitting in the header permanently. */}
             <div ref={settingsMenuRef} style={{ position: 'relative' }}>
               <button
+                className={`btn icon${settingsMenuOpen ? ' on' : ' ghost'}`}
                 onClick={() => setSettingsMenuOpen(o => !o)}
                 title="Settings"
-                style={{
-                  padding: '3px 9px', fontSize: 13,
-                  background: settingsMenuOpen ? '#1a2e4a' : 'transparent',
-                  color: settingsMenuOpen ? '#4a90e2' : '#4a5568',
-                  border: `1px solid ${settingsMenuOpen ? '#2a5298' : '#1a1a3e'}`,
-                  borderRadius: 3, cursor: 'pointer',
-                }}
-              >⚙</button>
+                aria-label="Settings"
+                aria-pressed={settingsMenuOpen}
+              ><IconSliders size={18} /></button>
               {settingsMenuOpen && (
                 <div style={{
-                  position: 'absolute', top: '100%', right: 0, marginTop: 6,
-                  background: '#0d0d1a', border: '1px solid #1a1a3e', borderRadius: 6,
-                  padding: 8, zIndex: 200, minWidth: 190,
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+                  position: 'absolute', top: '100%', right: 0, marginTop: 8,
+                  background: 'var(--surface-panel)', border: '1px solid var(--rule-strong)', borderRadius: 8,
+                  padding: 6, zIndex: 200, minWidth: 200,
+                  boxShadow: 'var(--shadow-float)',
                 }}>
-                  <MenuButton onClick={() => { exportSave(); setSettingsMenuOpen(false) }}>⬇ Export Save</MenuButton>
-                  <MenuButton onClick={() => { importInputRef.current?.click(); setSettingsMenuOpen(false) }}>⬆ Import Save</MenuButton>
+                  <MenuButton onClick={() => { exportSave(); setSettingsMenuOpen(false) }}>Export save</MenuButton>
+                  <MenuButton onClick={() => { importInputRef.current?.click(); setSettingsMenuOpen(false) }}>Import save</MenuButton>
 
-                  <div style={{ fontSize: 8, color: '#445', letterSpacing: 0.5, margin: '8px 0 4px' }}>DIFFICULTY</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink-3)', margin: '10px 8px 4px' }}>Difficulty</div>
                   <select
                     value={difficulty}
                     onChange={e => setDifficulty(e.target.value)}
                     style={{
-                      width: '100%', fontSize: 10, fontWeight: 700,
-                      background: '#07070d', color: difficulty === 'beginner' ? '#50fa7b' : difficulty === 'advanced' ? '#ffb86c' : '#ff5555',
-                      border: '1px solid #1a1a3e', borderRadius: 3, padding: '4px 6px',
-                      cursor: 'pointer', letterSpacing: 0.3, marginBottom: 8,
+                      width: 'calc(100% - 4px)', margin: '0 2px', fontSize: 14, fontWeight: 600,
+                      background: 'var(--surface-well)', color: difficulty === 'beginner' ? '#3ee08f' : difficulty === 'advanced' ? '#ffb42e' : '#ff6259',
+                      border: '1px solid var(--rule-strong)', borderRadius: 6, padding: '6px 8px',
+                      cursor: 'pointer', marginBottom: 6,
                     }}
                   >
-                    <option value="beginner">BEGINNER</option>
-                    <option value="advanced">ADVANCED</option>
-                    <option value="networkEngineer">NETWORK ENGINEER</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="networkEngineer">Network engineer</option>
                   </select>
 
-                  <div style={{ borderTop: '1px solid #1a1a3e', margin: '4px 0 8px' }} />
-                  <MenuButton danger onClick={() => { setSettingsMenuOpen(false); newGame() }}>NEW GAME</MenuButton>
+                  <div style={{ borderTop: '1px solid var(--rule)', margin: '6px 0' }} />
+                  <MenuButton danger onClick={() => { setSettingsMenuOpen(false); newGame() }}>New game</MenuButton>
                 </div>
               )}
             </div>
 
             {/* Session info + logout */}
-            <span style={{
-              fontSize: 9, color: user?.role === 'admin' ? '#ffb86c' : '#4a90e2',
-              letterSpacing: 1, borderLeft: '1px solid #1a1a3e', paddingLeft: 8,
-            }}>
-              {user?.displayName?.toUpperCase()}
+            <span className="user-chip" style={user?.role === 'admin' ? { color: 'var(--led-amber)' } : undefined}>
+              {user?.displayName}
             </span>
-            <button
-              onClick={logout}
-              style={{
-                padding: '3px 10px', fontSize: 10, fontWeight: 700,
-                background: 'transparent', color: '#555',
-                border: '1px solid #1a1a3e', borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#e0e0e0'; e.currentTarget.style.borderColor = '#333' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#555';    e.currentTarget.style.borderColor = '#1a1a3e' }}
-              title="Sign out"
-            >
-              SIGN OUT
-            </button>
+            <button className="btn ghost" onClick={logout} title="Sign out">Sign out</button>
           </div>
         </header>
 
@@ -583,14 +517,14 @@ function AppContent() {
               guarantee rather than a hand-computed pixel offset. */}
           <div style={{ position: 'relative', display: 'flex', flex: 1, minWidth: 0 }}>
             {/* Left rail: spawn palette in sandbox (unchanged), icon-only Shop/Inventory triggers in missions */}
-            <aside className="sidebar-left" style={{ width: mode === 'sandbox' ? 210 : RAIL_WIDTH }}>
+            <aside className="sidebar-left" style={{ width: mode === 'sandbox' ? SANDBOX_PALETTE_WIDTH : RAIL_WIDTH }}>
               {mode === 'sandbox' ? (
                 <SandboxPalette />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 10 }}>
-                  <RailButton icon="🛒" label="Shop" active={openPanel === 'shop'}
+                  <RailButton icon={<IconCart />} label="Shop" active={openPanel === 'shop'}
                     onClick={() => setOpenPanel(p => p === 'shop' ? null : 'shop')} />
-                  <RailButton icon="📦" label="Inventory" active={openPanel === 'inventory'}
+                  <RailButton icon={<IconBox />} label="Inventory" active={openPanel === 'inventory'}
                     onClick={() => setOpenPanel(p => p === 'inventory' ? null : 'inventory')} />
                 </div>
               )}
@@ -616,33 +550,21 @@ function AppContent() {
               <div style={{
                 height: inspectorHeight, flexShrink: 0,
                 overflowY: 'auto', overflowX: 'auto',
-                borderTop: '1px solid #1a1a3e',
+                borderTop: '1px solid #202b33',
               }}>
                 <DeviceInspector />
               </div>
             </main>
 
-            {/* Right rail: Career icon in missions mode, existing Sandbox placeholder unchanged */}
-            <aside className="sidebar-right" style={{ width: mode === 'sandbox' ? 260 : RAIL_WIDTH }}>
-              {mode === 'missions' ? (
+            {/* Right rail: Career icon (missions only — sandbox has no career to open) */}
+            {mode === 'missions' && (
+              <aside className="sidebar-right" style={{ width: RAIL_WIDTH }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 10 }}>
-                  <RailButton icon="💼" label="Career" active={careerOpen}
+                  <RailButton icon={<IconBriefcase />} label="Career" active={careerOpen}
                     onClick={() => setCareerOpen(v => !v)} />
                 </div>
-              ) : (
-                <div style={{ padding: '16px 12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 32, marginBottom: 10, opacity: 0.25 }}>🧪</div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#333360', letterSpacing: 1, marginBottom: 8 }}>
-                    SANDBOX MODE
-                  </div>
-                  <div style={{ fontSize: 10, color: '#252545', lineHeight: 1.7 }}>
-                    Build any topology.<br/>
-                    No missions · No budget.<br/>
-                    Full CLI accuracy enforced.
-                  </div>
-                </div>
-              )}
-            </aside>
+              </aside>
+            )}
 
             {mode === 'missions' && (
               <CareerDock open={careerOpen} onClose={() => setCareerOpen(false)}>
@@ -656,12 +578,12 @@ function AppContent() {
       <DragOverlay>
         {activeDevice ? (
           <div style={{
-            padding: '5px 12px', background: '#12254a', border: '2px solid #4a90e2',
-            borderRadius: 6, color: '#e0e0e0', fontSize: 12, fontFamily: 'monospace',
+            padding: '5px 12px', background: '#162f46', border: '2px solid #4da6ff',
+            borderRadius: 6, color: '#e8eef2', fontSize: 13, fontFamily: 'var(--font-mono)',
             opacity: 0.9, boxShadow: '0 4px 16px rgba(0,0,0,0.6)', whiteSpace: 'nowrap',
           }}>
             {activeDevice.hostname}
-            <span style={{ color: '#555', marginLeft: 6 }}>({activeDevice.type})</span>
+            <span style={{ color: '#738ea2', marginLeft: 6 }}>({activeDevice.type})</span>
           </div>
         ) : null}
       </DragOverlay>

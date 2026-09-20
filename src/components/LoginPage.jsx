@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../state/AuthContext.jsx'
+import Faceplate from './Faceplate.jsx'
 
 const MAX_ATTEMPTS    = 5
 const LOCKOUT_SECONDS = 30
@@ -73,60 +74,57 @@ export default function LoginPage() {
 
   // ── Shared input style ──────────────────────────────────────────────────────
   const inputStyle = {
-    width: '100%', padding: '10px 12px', boxSizing: 'border-box',
-    background: '#07070d', border: '1px solid #1a1a3e',
-    borderRadius: 4, color: '#e0e0e0',
-    fontSize: 13, fontFamily: "'Courier New', Courier, monospace",
+    width: '100%', padding: '11px 12px', boxSizing: 'border-box',
+    background: 'var(--surface-well)', border: '1px solid var(--rule-strong)',
+    borderRadius: 8, color: 'var(--ink)',
+    fontSize: 16, fontFamily: 'inherit',
     outline: 'none', opacity: isLocked ? 0.5 : 1,
-    transition: 'border-color 0.15s',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
   }
   const labelStyle = {
-    display: 'block', fontSize: 10, color: '#555',
-    letterSpacing: 1.5, marginBottom: 6,
+    display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ink-2)',
+    marginBottom: 6,
   }
+  const focusOn  = e => { e.target.style.borderColor = 'var(--signal)'; e.target.style.boxShadow = '0 0 0 3px rgba(77,166,255,.22)' }
+  const focusOff = e => { e.target.style.borderColor = 'var(--rule-strong)'; e.target.style.boxShadow = 'none' }
 
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      background: '#07070d', fontFamily: "'Courier New', Courier, monospace",
-      padding: 24,
+      background: 'var(--surface-ground)', padding: 24,
     }}>
 
-      {/* Logo */}
-      <div style={{ marginBottom: 40, textAlign: 'center', userSelect: 'none' }}>
-        <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: 8, color: '#e0e0e0' }}>
-          NETSIM
-        </div>
-        <div style={{ fontSize: 10, color: '#4a90e2', letterSpacing: 4, marginTop: 6 }}>
-          NETWORK ENGINEER SIMULATOR
-        </div>
-        <div style={{
-          display: 'inline-block', marginTop: 14,
-          background: '#0a1f0a', border: '1px solid #1e5c1e',
-          color: '#50fa7b', fontSize: 9, letterSpacing: 3,
-          padding: '3px 12px', borderRadius: 2,
+      {/* Hero */}
+      <div style={{ marginBottom: 30, textAlign: 'center', userSelect: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Faceplate />
+        <h1 style={{ fontSize: 48, fontWeight: 700, letterSpacing: 0.2, color: 'var(--ink)', lineHeight: 1, marginTop: 22 }}>NetSim</h1>
+        <p style={{ fontSize: 19, color: 'var(--ink-2)', marginTop: 10 }}>
+          Configure real network gear. Get paid when it works.
+        </p>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14,
+          fontSize: 14, fontWeight: 600, color: 'var(--ink-2)',
+          border: '1px solid var(--rule-strong)', borderRadius: 999, padding: '3px 12px 3px 10px',
         }}>
-          BETA ACCESS
-        </div>
+          <i className="led amber" style={{ width: 7, height: 7 }} /> Beta access
+        </span>
       </div>
 
       {/* Card */}
       <div style={{
-        width: '100%', maxWidth: 380,
-        background: '#0d0d1a', border: '1px solid #1a1a3e',
-        borderRadius: 6, padding: '32px 32px 28px',
+        width: '100%', maxWidth: 400,
+        background: 'var(--surface-panel)', border: '1px solid var(--rule-strong)',
+        borderRadius: 14, padding: '28px 28px 26px',
+        boxShadow: 'var(--shadow-float)',
       }}>
-        <div style={{ fontSize: 10, color: '#444', letterSpacing: 2, marginBottom: 28, textAlign: 'center' }}>
-          SIGN IN TO CONTINUE
-        </div>
-
         <form onSubmit={handleSubmit} autoComplete="off" noValidate>
 
           {/* Username field */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>USERNAME</label>
+            <label htmlFor="login-username" style={labelStyle}>Username</label>
             <input
+              id="login-username"
               ref={userRef}
               type="text"
               value={username}
@@ -135,49 +133,48 @@ export default function LoginPage() {
               autoComplete="username"
               spellCheck={false}
               style={inputStyle}
-              onFocus={e  => { e.target.style.borderColor = '#2a5298' }}
-              onBlur={e   => { e.target.style.borderColor = '#1a1a3e' }}
+              onFocus={focusOn}
+              onBlur={focusOff}
             />
           </div>
 
           {/* Password field */}
-          <div style={{ marginBottom: 24 }}>
-            <label style={labelStyle}>PASSWORD</label>
+          <div style={{ marginBottom: 22 }}>
+            <label htmlFor="login-password" style={labelStyle}>Password</label>
             <div style={{ position: 'relative' }}>
               <input
+                id="login-password"
                 type={showPw ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 disabled={loading || isLocked}
                 autoComplete="current-password"
-                style={{ ...inputStyle, paddingRight: 56 }}
-                onFocus={e  => { e.target.style.borderColor = '#2a5298' }}
-                onBlur={e   => { e.target.style.borderColor = '#1a1a3e' }}
+                style={{ ...inputStyle, paddingRight: 64 }}
+                onFocus={focusOn}
+                onBlur={focusOff}
               />
               <button
                 type="button"
                 onClick={() => setShowPw(v => !v)}
-                tabIndex={-1}
                 style={{
-                  position: 'absolute', right: 0, top: 0, bottom: 0,
-                  width: 48, background: 'none', border: 'none',
-                  cursor: 'pointer', color: '#444',
-                  fontSize: 9, letterSpacing: 0.5, fontFamily: 'inherit',
+                  position: 'absolute', right: 4, top: 4, bottom: 4,
+                  padding: '0 10px', background: 'none', border: 'none', borderRadius: 6,
+                  cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14, fontWeight: 600,
                 }}
                 aria-label={showPw ? 'Hide password' : 'Show password'}
               >
-                {showPw ? 'HIDE' : 'SHOW'}
+                {showPw ? 'Hide' : 'Show'}
               </button>
             </div>
           </div>
 
           {/* Error / lockout message */}
           {error && (
-            <div style={{
+            <div role="alert" style={{
               marginBottom: 16, padding: '9px 12px',
-              background: '#140808', border: '1px solid #3a1010',
-              borderRadius: 4, color: '#ff5555', fontSize: 11,
-              lineHeight: 1.5,
+              background: '#211412', border: '1px solid #4a2521',
+              borderRadius: 8, color: '#ff8078', fontSize: 14.5,
+              lineHeight: 1.45,
             }}>
               {isLocked
                 ? `Locked — try again in ${countdown}s`
@@ -189,33 +186,21 @@ export default function LoginPage() {
           {/* Submit */}
           <button
             type="submit"
+            className="btn primary"
             disabled={!canSubmit}
-            style={{
-              width: '100%', padding: '11px 0',
-              background: canSubmit ? '#2a5298' : '#0d0d2a',
-              color:      canSubmit ? '#ffffff' : '#333',
-              border: '1px solid ' + (canSubmit ? '#2a5298' : '#1a1a3e'),
-              borderRadius: 4,
-              fontSize: 12, fontWeight: 700, letterSpacing: 1.5,
-              cursor: canSubmit ? 'pointer' : 'not-allowed',
-              fontFamily: 'inherit', transition: 'background 0.15s, color 0.15s',
-            }}
-            onMouseEnter={e => { if (canSubmit) e.currentTarget.style.background = '#3a62a8' }}
-            onMouseLeave={e => { if (canSubmit) e.currentTarget.style.background = '#2a5298' }}
+            style={{ width: '100%', padding: '11px 0', fontSize: 16.5 }}
           >
-            {loading ? 'VERIFYING...' : isLocked ? `LOCKED (${countdown}s)` : 'SIGN IN'}
+            {loading ? 'Verifying…' : isLocked ? `Locked (${countdown}s)` : 'Sign in'}
           </button>
 
         </form>
       </div>
 
       {/* Honest security disclaimer */}
-      <div style={{ marginTop: 32, maxWidth: 380, textAlign: 'center' }}>
-        <p style={{ fontSize: 9, color: '#2a2a3a', lineHeight: 1.8, margin: 0 }}>
-          Beta testing access only. Credentials stored as bcrypt hashes — not suitable
-          for protecting sensitive personal data. Do not reuse passwords from other accounts.
-        </p>
-      </div>
+      <p style={{ marginTop: 26, maxWidth: 400, textAlign: 'center', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+        Beta testing access only. Credentials are stored as bcrypt hashes — not suitable
+        for protecting sensitive personal data. Don&apos;t reuse passwords from other accounts.
+      </p>
 
     </div>
   )

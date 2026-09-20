@@ -45,6 +45,25 @@ Add an entry only when the code/tests don't already make it obvious. Format:
 - **xterm instances lose scrollback when switching devices** → tabs must stay mounted;
   inactive tabs use `display:none`, never unmount.
 
+## UI
+- **xterm text overlaps or wraps after changing its font** → xterm measures cell width
+  when the terminal is created; a web font that hasn't loaded yet gives wrong metrics →
+  create on the system stack, `document.fonts.load()` the app font, then set
+  `term.options.fontFamily` (changing the string forces a re-measure) and `fit()`.
+- **`show ip interface brief` wraps ("down do / wn")** → the row is 81 columns and a
+  wider mono font shrinks the window below that → keep the default terminal ≥ ~85
+  columns. Wrapped `show` output teaches the wrong picture of real gear.
+- **A restyle script that rewrites `color:` misses hover handlers** → they assign
+  `e.currentTarget.style.color = '#…'`, so text snaps back to an old dim colour on
+  mouse-leave → grep `style\.color *=` after any palette change. Likewise string
+  sizes (`fontSize: '11px'`) are invisible to numeric-literal transforms — grep both.
+- **`.device-node` looks like a hook but was never applied in the DOM** → tests and
+  scripts can't find devices by it → locate a placed device by its hostname text
+  (`getByText('R1', { exact: true })`). The dead CSS rule was removed.
+- **`admin_down` rendered near-invisible** (`#30414d` on graphite) in the tooltip,
+  inspector and firewall console → it is a *required* teaching state (Prompt 5), so it
+  must stay readable; use `--ink-3` and an unlit LED, not a low-contrast colour.
+
 ## Tooling / environment
 - **`find` and `grep` in this shell are functions wrapping the Claude binary** and can
   print `error: unknown option '-S'` / `'-G'` → use `command find` / `command grep`

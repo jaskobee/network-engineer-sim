@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import Faceplate from './Faceplate.jsx'
+import DifficultyBars from './DifficultyBars.jsx'
+import { IconCart, IconDiagram, IconTerminal, IconBriefcase } from './icons.jsx'
 
 const TOURED_KEY     = 'netsim_v1_toured'
 const DIFFICULTY_KEY = 'netsim_v1_difficulty'
@@ -11,159 +14,140 @@ function markTourSeen() {
   localStorage.setItem(TOURED_KEY, '1')
 }
 
+// `icon` on the UI-tour steps is the same glyph as the real control it points at.
 const STEPS = [
   {
-    icon: '🌐',
+    hero: 'faceplate',
     title: 'Welcome to NetSim',
     body: "A networking sim where the fundamentals are 100% real — actual CLI commands, actual routing, switching, and troubleshooting — but you learn them by running your own network engineering company, not by memorizing a manual.",
-    arrow: null,
   },
   {
-    icon: '🎓',
-    title: 'Your Story',
+    title: 'Your story',
     body: "You just got certified — no big company job lined up, so you're going independent. Your first lead: an old friend just opened a small shop and needs their network set up. Not glamorous, but everyone starts somewhere.",
-    arrow: null,
   },
   {
-    icon: '🚀',
-    title: 'Where This Goes',
+    title: 'Where this goes',
     body: "Every job builds your reputation. Happy clients keep coming back — and they grow. A router and a couple of PCs today can become Wi-Fi, VLANs, and firewalls tomorrow. Junior engineer today, enterprise architect eventually — how far you take it is up to you.",
-    arrow: null,
   },
   {
-    icon: '🛒',
-    title: 'Buy Devices',
-    body: "Head to the Shop on the left sidebar. Buy a Router and a PC to get started on your first job. Right-click a placed device and Power On before configuring.",
-    arrow: 'left',
+    icon: <IconCart size={26} />,
+    title: 'Buy devices',
+    body: "Open the Shop from the left rail. Buy a Router and a PC to get started on your first job. Right-click a placed device and choose Power On before configuring.",
+    arrow: { symbol: '◀', label: 'Shop on the left' },
   },
   {
-    icon: '🗺️',
-    title: 'Build Your Network',
+    icon: <IconDiagram size={26} />,
+    title: 'Build your network',
     body: "Drag devices from Inventory onto the map. Right-click a device and choose Connect Cable to wire them together.",
-    arrow: 'center',
+    arrow: { symbol: '▲', label: 'Map in the center' },
   },
   {
-    icon: '⌨️',
-    title: 'Configure via Terminal',
+    icon: <IconTerminal size={26} />,
+    title: 'Configure via terminal',
     body: "Right-click any powered device → Open Terminal. Assign IPs, bring interfaces up with 'no shutdown', and test with ping.",
-    arrow: 'down',
+    arrow: { symbol: '▼', label: 'Terminal at the bottom' },
   },
   {
-    icon: '📋',
-    title: 'Accept a Job First',
-    body: "Check the Job Board on the right. Accept a job to see your tasks. Complete all tasks to earn money and unlock bigger contracts!",
-    arrow: 'right',
+    icon: <IconBriefcase size={26} />,
+    title: 'Accept a job first',
+    body: "Open Career from the right rail and pick a job. Accept it to see your tasks. Complete them all to earn money and unlock bigger contracts.",
+    arrow: { symbol: '▶', label: 'Career on the right' },
   },
-  {
-    icon: '⚙️',
-    title: 'Choose Your Challenge',
-    body: null, // rendered as difficulty picker
-    arrow: null,
-    isDifficultyStep: true,
-  },
-  {
-    icon: '🏢',
-    title: 'Name Your Company',
-    body: null, // rendered as CompanyNameStep
-    arrow: null,
-    isCompanyStep: true,
-  },
+  { title: 'Choose your challenge', isDifficultyStep: true },
+  { title: 'Name your company', isCompanyStep: true },
 ]
 
 const COMPANY_AVATARS = ['💼', '🛠️', '🌐', '📡', '🔧', '⚡']
-
-const ARROW = {
-  left:   { symbol: '◀', label: 'Shop on the left' },
-  center: { symbol: '▲', label: 'Map in the center' },
-  down:   { symbol: '▼', label: 'Terminal at the bottom' },
-  right:  { symbol: '▶', label: 'Job Board on the right' },
-}
 
 const DIFFICULTIES = [
   {
     id: 'beginner',
     label: 'Beginner',
-    icon: '🟢',
+    level: 1,
     desc: 'Step-by-step hints shown for each task. Commands suggested in the task panel.',
   },
   {
     id: 'advanced',
     label: 'Advanced',
-    icon: '🟡',
+    level: 2,
     desc: 'Task descriptions only — no command hints. Use "help" or "man <cmd>" in the terminal for guidance.',
   },
   {
     id: 'networkEngineer',
     label: 'Network Engineer',
-    icon: '🔴',
+    level: 3,
     desc: 'No hints. Realistic help output. You should know your commands.',
   },
 ]
 
 function DifficultyPicker({ selected, onChange }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
-      {DIFFICULTIES.map(d => (
-        <div
-          key={d.id}
-          onClick={() => onChange(d.id)}
-          style={{
-            padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
-            border: `2px solid ${selected === d.id ? '#4a90e2' : '#1a1a3e'}`,
-            background: selected === d.id ? '#0a1830' : '#07080f',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { if (selected !== d.id) e.currentTarget.style.borderColor = '#2a3060' }}
-          onMouseLeave={e => { if (selected !== d.id) e.currentTarget.style.borderColor = '#1a1a3e' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 14 }}>{d.icon}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: selected === d.id ? '#e0e0e0' : '#888' }}>{d.label}</span>
-            {selected === d.id && (
-              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#4a90e2', fontWeight: 700 }}>SELECTED</span>
-            )}
-          </div>
-          <div style={{ fontSize: 11, color: '#555', lineHeight: 1.5 }}>{d.desc}</div>
-        </div>
-      ))}
+    <div role="radiogroup" aria-label="Difficulty" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {DIFFICULTIES.map(d => {
+        const on = selected === d.id
+        return (
+          <button
+            key={d.id}
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(d.id)}
+            style={{
+              textAlign: 'left', padding: '11px 14px', borderRadius: 10, cursor: 'pointer',
+              border: `1px solid ${on ? 'var(--signal-strong)' : 'var(--rule-strong)'}`,
+              background: on ? 'var(--signal-wash)' : 'var(--surface-raised)',
+              color: 'inherit', transition: 'background 0.12s, border-color 0.12s',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
+              <span style={{ fontSize: 16.5, fontWeight: 700, color: on ? 'var(--ink)' : 'var(--ink-2)' }}>{d.label}</span>
+              <span style={{ marginLeft: 'auto' }}><DifficultyBars level={d.level} max={3} /></span>
+            </div>
+            <div style={{ fontSize: 14.5, color: 'var(--ink-3)', lineHeight: 1.45 }}>{d.desc}</div>
+          </button>
+        )
+      })}
     </div>
   )
 }
 
 function CompanyNameStep({ name, onChangeName, avatar, onChangeAvatar }) {
   return (
-    <div style={{ textAlign: 'left' }}>
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 16 }}>
+    <div>
+      <div role="radiogroup" aria-label="Company icon" style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {COMPANY_AVATARS.map(a => (
           <button
             key={a}
+            role="radio"
+            aria-checked={avatar === a}
+            aria-label={`Icon ${a}`}
             onClick={() => onChangeAvatar(a)}
             style={{
-              width: 36, height: 36, fontSize: 17, borderRadius: 8, cursor: 'pointer',
-              background: avatar === a ? '#0f1e3a' : '#07080f',
-              border: `2px solid ${avatar === a ? '#4a90e2' : '#1a1a3e'}`,
+              width: 40, height: 40, fontSize: 20, borderRadius: 8, cursor: 'pointer',
+              background: avatar === a ? 'var(--signal-wash)' : 'var(--surface-raised)',
+              border: `1px solid ${avatar === a ? 'var(--signal-strong)' : 'var(--rule-strong)'}`,
             }}
           >{a}</button>
         ))}
       </div>
-      <label style={{ display: 'block', fontSize: 10, color: '#555', letterSpacing: 0.5, marginBottom: 6 }}>
-        COMPANY NAME
+      <label htmlFor="company-name" style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6 }}>
+        Company name
       </label>
       <input
+        id="company-name"
         autoFocus
         value={name}
         onChange={e => onChangeName(e.target.value)}
         placeholder="e.g. Ping Networks"
         maxLength={40}
         style={{
-          width: '100%', boxSizing: 'border-box', padding: '10px 12px', fontSize: 14,
-          background: '#07080f', color: '#e0e0e0', border: '1px solid #1a1a3e',
-          borderRadius: 8, outline: 'none',
+          width: '100%', boxSizing: 'border-box', padding: '11px 12px', fontSize: 16.5,
+          background: 'var(--surface-well)', color: 'var(--ink)', border: '1px solid var(--rule-strong)',
+          borderRadius: 8, outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s',
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = '#4a90e2' }}
-        onBlur={e => { e.currentTarget.style.borderColor = '#1a1a3e' }}
+        onFocus={e => { e.currentTarget.style.borderColor = 'var(--signal)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(77,166,255,.22)' }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'var(--rule-strong)'; e.currentTarget.style.boxShadow = 'none' }}
       />
-      <div style={{ fontSize: 11, color: '#444', marginTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 14.5, color: 'var(--ink-3)', marginTop: 8, lineHeight: 1.5 }}>
         Every network engineer needs a name on the door. This is yours.
       </div>
     </div>
@@ -200,106 +184,76 @@ export default function WelcomeModal({ onDone }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 3000,
-      background: 'rgba(4,4,12,0.88)',
+      background: 'rgba(6,10,13,0.86)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{
-        background: '#0d1226',
-        border: '1px solid #2a5298',
-        borderRadius: 12,
-        width: 420, padding: '32px 36px',
-        boxShadow: '0 8px 60px rgba(0,0,0,0.8)',
-        position: 'relative',
-        textAlign: 'center',
+      <div role="dialog" aria-modal="true" aria-label={current.title} style={{
+        background: 'var(--surface-panel)',
+        border: '1px solid var(--rule-strong)',
+        borderRadius: 14,
+        width: 480, maxWidth: '94vw', padding: '28px 32px 26px',
+        boxShadow: 'var(--shadow-float)',
       }}>
-        {/* Step dots */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 24 }}>
+        {/* Progress: one LED per step — lit up to where you are */}
+        <div aria-label={`Step ${step + 1} of ${STEPS.length}`} style={{ display: 'flex', gap: 7, marginBottom: 24 }}>
           {STEPS.map((_, i) => (
-            <div key={i} style={{
-              width: i === step ? 18 : 6, height: 6, borderRadius: 3,
-              background: i === step ? '#4a90e2' : i < step ? '#1e3a6a' : '#1a1a3e',
-              transition: 'all 0.25s',
-            }} />
+            <i key={i} className={`led ${i < step ? 'green' : i === step ? 'blue' : ''}`} style={{ width: 8, height: 8 }} />
           ))}
         </div>
 
+        {current.hero === 'faceplate' && <div style={{ marginBottom: 20 }}><Faceplate /></div>}
+        {current.icon && (
+          <div style={{
+            width: 48, height: 48, display: 'grid', placeItems: 'center', marginBottom: 16,
+            color: 'var(--signal)', background: 'var(--signal-wash)',
+            border: '1px solid var(--signal-deep)', borderRadius: 10,
+          }}>{current.icon}</div>
+        )}
+
+        <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.15, marginBottom: 10 }}>
+          {current.title}
+        </h2>
+
         {current.isDifficultyStep ? (
           <>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>{current.icon}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#e0e0e0', marginBottom: 4 }}>
-              {current.title}
-            </div>
-            <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>
-              You can change this anytime from the header.
-            </div>
+            <p style={{ fontSize: 15.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+              You can change this anytime from Settings.
+            </p>
             <DifficultyPicker selected={selDiff} onChange={setSelDiff} />
           </>
         ) : current.isCompanyStep ? (
-          <>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>{current.icon}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#e0e0e0', marginBottom: 16 }}>
-              {current.title}
-            </div>
+          <div style={{ marginTop: 16 }}>
             <CompanyNameStep
               name={companyName} onChangeName={setCompanyName}
               avatar={companyAvatar} onChangeAvatar={setCompanyAvatar}
             />
-          </>
+          </div>
         ) : (
           <>
-            {/* Icon */}
-            <div style={{ fontSize: 48, marginBottom: 12 }}>{current.icon}</div>
-            {/* Title */}
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#e0e0e0', marginBottom: 10 }}>
-              {current.title}
-            </div>
-            {/* Body */}
-            <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 20 }}>
+            <p style={{ fontSize: 17, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: '52ch' }}>
               {current.body}
-            </div>
-            {/* Directional indicator */}
-            {current.arrow && ARROW[current.arrow] && (
+            </p>
+            {current.arrow && (
               <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '6px 14px', borderRadius: 20,
-                background: '#070d1a', border: '1px solid #1a3060',
-                fontSize: 11, color: '#4a90e2', marginBottom: 20,
+                display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16,
+                padding: '5px 12px', borderRadius: 999,
+                background: 'var(--surface-well)', border: '1px solid var(--rule-strong)',
+                fontSize: 14.5, color: 'var(--ink-2)',
               }}>
-                <span style={{ fontSize: 14 }}>{ARROW[current.arrow].symbol}</span>
-                {ARROW[current.arrow].label}
+                <span style={{ fontSize: 13, color: 'var(--signal)' }}>{current.arrow.symbol}</span>
+                {current.arrow.label}
               </div>
             )}
           </>
         )}
 
         {/* Buttons */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 24 }}>
-          {!isLast && (
-            <button
-              onClick={skip}
-              style={{
-                padding: '8px 18px', fontSize: 12, fontWeight: 600,
-                background: 'transparent', color: '#444',
-                border: '1px solid #1a1a3e', borderRadius: 6, cursor: 'pointer',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#888' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#444' }}
-            >
-              Skip Tour
-            </button>
-          )}
-          <button
-            onClick={next}
-            style={{
-              padding: '8px 28px', fontSize: 13, fontWeight: 700,
-              background: '#2a5298', color: '#e0e0e0',
-              border: 'none', borderRadius: 6, cursor: 'pointer',
-              letterSpacing: 0.5, transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#3a6ab8' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#2a5298' }}
-          >
-            {isLast ? "LET'S GO!" : 'Next'}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', marginTop: 28 }}>
+          {!isLast ? (
+            <button className="btn ghost" onClick={skip} style={{ padding: '8px 14px', fontSize: 15 }}>Skip Tour</button>
+          ) : <span />}
+          <button className="btn primary" onClick={next} style={{ padding: '9px 28px', fontSize: 16.5 }}>
+            {isLast ? 'Start my company' : 'Next'}
           </button>
         </div>
       </div>

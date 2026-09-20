@@ -18,8 +18,8 @@ function Section({ icon, title, children }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <span style={{ fontSize: 13 }}>{icon}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#4a90e2', letterSpacing: 0.8, textTransform: 'uppercase' }}>{title}</span>
+        <span style={{ fontSize: 15.5 }}>{icon}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#4da6ff', letterSpacing: 0.4, textTransform: 'uppercase' }}>{title}</span>
       </div>
       <div style={{ paddingLeft: 4 }}>{children}</div>
     </div>
@@ -28,9 +28,9 @@ function Section({ icon, title, children }) {
 
 function Row({ label, value, accent }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '2px 0', fontSize: 11 }}>
-      <span style={{ color: '#667' }}>{label}</span>
-      <span style={{ color: accent ?? '#d0d0d0', fontFamily: 'monospace', textAlign: 'right' }}>{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '2px 0', fontSize: 14 }}>
+      <span style={{ color: '#738ea2' }}>{label}</span>
+      <span style={{ color: accent ?? '#d9e2e8', fontFamily: 'var(--font-mono)', textAlign: 'right' }}>{value}</span>
     </div>
   )
 }
@@ -66,7 +66,7 @@ export default function ConfigSummary({ device }) {
 
   if (nothingConfigured) {
     return (
-      <div style={{ fontSize: 11, color: '#333', textAlign: 'center', padding: '24px 8px' }}>
+      <div style={{ fontSize: 14, color: '#7491a4', textAlign: 'center', padding: '24px 8px' }}>
         Nothing configured on this device yet.
       </div>
     )
@@ -80,7 +80,7 @@ export default function ConfigSummary({ device }) {
             <Row
               label="Default Gateway"
               value={defaultRoute.next_hop ?? defaultRoute.exit_interface ?? '—'}
-              accent="#50fa7b"
+              accent="#3ee08f"
             />
           )}
           {staticRoutes.map((r, i) => (
@@ -96,7 +96,7 @@ export default function ConfigSummary({ device }) {
       {hasDhcpServer && (
         <Section icon="📡" title="DHCP Server">
           {dhcpPools.map((p, i) => (
-            <div key={i} style={{ marginBottom: 6, padding: '6px 8px', background: '#07070d', borderRadius: 4 }}>
+            <div key={i} style={{ marginBottom: 6, padding: '6px 8px', background: '#090c0f', borderRadius: 4 }}>
               <Row label="Pool" value={p.name} />
               <Row label="Network" value={`${p.network}/${maskToPrefixLen(p.mask)}`} />
               {p.default_router && <Row label="Gateway handed out" value={p.default_router} />}
@@ -110,7 +110,7 @@ export default function ConfigSummary({ device }) {
       {hasDhcpClient && (
         <Section icon="📥" title="DHCP Client">
           {dhcpClientIfaces.map(i => (
-            <Row key={i.name} label={`${i.name} received via DHCP`} value={i.ip ?? '—'} accent="#8be9fd" />
+            <Row key={i.name} label={`${i.name} received via DHCP`} value={i.ip ?? '—'} accent="#66d4ea" />
           ))}
         </Section>
       )}

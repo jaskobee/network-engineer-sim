@@ -62,6 +62,21 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 - **Contract SLA time is real wall-clock** (`Date.now()`), tuned for a 20–60 min
   session; paused while a job-board mission is active.
 
+## UI design system (2026-09-20)
+
+- **Colour is signal.** A quiet cool-graphite UI where the only saturated colours are
+  what a port LED would say (green up/done, amber attention/down, red fault) plus one
+  blue for what you can act on. *Why:* it keeps the LED metaphor meaningful — colouring
+  a firewall red or a PC green by category makes "green = up" unreadable.
+- **Two self-hosted typefaces** (`src/assets/fonts`, SIL OFL): Barlow Semi Condensed for
+  UI, Atkinson Hyperlegible Mono for data and the terminal. *Why:* the mono was chosen
+  because IPs, interface names and commands must keep `0/O` and `1/l/I` apart; both are
+  bundled so the app stays install-free/offline and makes no third-party requests.
+- **Mission progress is drawn as a patch cable** (`.step`): one LED per task, cable lit
+  up to the current step. Difficulty is drawn as signal-strength bars, not stars.
+- **Sentence case, no tracked-caps eyebrows, no emoji as controls.** Emoji stay only
+  where they are player content (client/company avatars).
+
 ## Tooling
 
 - **Vitest is the test runner**; networking behaviour is locked in by tests. Broken

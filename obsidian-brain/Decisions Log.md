@@ -72,6 +72,17 @@ changing it; never silently work around one. Grouped here the same way as the so
   session; paused while a job-board mission is active. See
   [[Career Layer]].
 
+## UI design system (2026-09-20)
+
+- **Colour is signal** — graphite UI; saturated colour means state only (green up/done,
+  amber attention/down, red fault, blue actionable). *Why:* colouring things by category
+  (a red firewall, a green PC) makes "green = up" unreadable. See [[UI Component Map]].
+- **Two self-hosted typefaces** — Barlow Semi Condensed (UI) and Atkinson Hyperlegible Mono
+  (data/terminal). *Why:* the mono keeps `0/O` and `1/l/I` distinct for addresses and
+  commands; self-hosted keeps the app install-free and offline.
+- **Mission progress is a patch cable; difficulty is signal bars.** Sentence case, no
+  emoji as controls.
+
 ## Tooling
 
 - **Vitest is the test runner**; networking behavior is locked in by tests. Broken

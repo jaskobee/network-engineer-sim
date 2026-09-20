@@ -29,3 +29,30 @@ paths:
 8. When a UI change alters how a player *learns* something (hint text, error wording,
    status labels like up/up vs administratively down), it is a networking change:
    check it against `docs/NETWORKING_ACCURACY.md` Prompt 5/8.
+
+## Design system (since 2026-09-20)
+
+9. **Tokens, not new hex.** `index.css` `:root` defines surfaces (`--surface-*`), text
+   (`--ink`, `--ink-2`, `--ink-3`), `--signal*`, `--led-*`, radii, `--font-ui`,
+   `--font-mono`. New/edited UI uses `var(--…)`; don't introduce fresh hex for
+   surfaces or text. (Older inline hex is the remapped palette — fine to leave.)
+10. **Colour is signal.** Surfaces and text stay graphite. Saturated colour means
+    *state* only: green = up/done, amber = attention or down, red = fault/failure,
+    blue = actionable/selected. Never colour by category (a firewall is not red, a PC
+    is not green). Interface state keeps three distinct looks — up / down /
+    administratively down — per `docs/NETWORKING_ACCURACY.md` Prompt 5, and
+    `admin_down` must stay legible.
+11. **Type.** `--font-ui` (Barlow Semi Condensed) for everything; `--font-mono`
+    (Atkinson Hyperlegible Mono) only for data — IPs, hostnames, interface names,
+    commands. Sentence-case labels; no tracked all-caps eyebrows. Text ≥ 13px (mono
+    chips ≥ 12.5px) and ≥ 4.5:1 on its surface (`--ink-3` is the dimmest allowed).
+12. **Icons** come from `components/icons.jsx` (SVG, `currentColor`). No emoji as UI
+    controls — emoji only as *content* (client and company avatars).
+13. **Reuse the primitives** before inventing one-offs: `.btn` (`.primary .ghost
+    .danger .icon .on`), `.led` (`.green .amber .red .blue .breathe`), `.step`
+    (mission progress as a patch cable), `.seg`, `.utab`, `.lap-tab`, `CatalogCard`,
+    `DifficultyBars`, `DeviceIcons`.
+14. **Terminal**: xterm uses Atkinson Mono 13px and loads it *before* re-measuring
+    (see `TerminalPane.jsx`). Keep the default window wide enough (~85 columns) that IOS
+    `show` output never wraps — wrapped output misrepresents real gear.
+

@@ -24,31 +24,31 @@ import { ticketUrgency } from '../engine/contractClock.js'
 // ── Shared micro-styles ───────────────────────────────────────────────────────
 
 const S = {
-  btn: (color = '#4a90e2') => ({
-    padding: '4px 12px', fontSize: 10, fontWeight: 700,
+  btn: (color = '#4da6ff') => ({
+    padding: '4px 12px', fontSize: 13, fontWeight: 700,
     background: color + '22', color, border: `1px solid ${color}66`,
-    borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
+    borderRadius: 3, cursor: 'pointer', letterSpacing: 0.3,
   }),
   dangerBtn: {
-    padding: '4px 12px', fontSize: 10, fontWeight: 700,
-    background: '#ff555522', color: '#ff5555', border: '1px solid #ff555566',
-    borderRadius: 3, cursor: 'pointer', letterSpacing: 0.5,
+    padding: '4px 12px', fontSize: 13, fontWeight: 700,
+    background: '#ff625922', color: '#ff6259', border: '1px solid #ff625966',
+    borderRadius: 3, cursor: 'pointer', letterSpacing: 0.3,
   },
-  label: { fontSize: 9, color: '#555', letterSpacing: 0.5, marginBottom: 3, display: 'block' },
+  label: { fontSize: 12, color: '#738ea2', letterSpacing: 0.3, marginBottom: 3, display: 'block' },
   input: {
-    width: '100%', background: '#07070d', color: '#c0c0e0',
-    border: '1px solid #1a1a3e', borderRadius: 3, padding: '4px 6px',
-    fontSize: 11, fontFamily: 'monospace',
+    width: '100%', background: '#090c0f', color: '#c0cee0',
+    border: '1px solid #202b33', borderRadius: 3, padding: '4px 6px',
+    fontSize: 12.5, fontFamily: 'var(--font-mono)',
   },
   select: {
-    width: '100%', background: '#07070d', color: '#c0c0e0',
-    border: '1px solid #1a1a3e', borderRadius: 3, padding: '4px 6px',
-    fontSize: 11,
+    width: '100%', background: '#090c0f', color: '#c0cee0',
+    border: '1px solid #202b33', borderRadius: 3, padding: '4px 6px',
+    fontSize: 14,
   },
   row: { display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 },
   section: { marginBottom: 14 },
-  sectionTitle: { fontSize: 9, color: '#4a90e2', fontWeight: 700, letterSpacing: 1, marginBottom: 6 },
-  mono: { fontFamily: 'monospace', fontSize: 10 },
+  sectionTitle: { fontSize: 12, color: '#4da6ff', fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 },
+  mono: { fontFamily: 'var(--font-mono)', fontSize: 12 },
 }
 
 // ── Tab: MISSIONS ─────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ function MissionsTab() {
             onClick={() => { devSetActiveMission(jumpId); notify(`Jumped to ${jumpId}`) }}
           >GO</button>
         </div>
-        <div style={{ fontSize: 9, color: '#444', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: '#7490a2', lineHeight: 1.5 }}>
           Skips prerequisite gate. Clears current workspace and places ISP.
         </div>
       </div>
@@ -87,10 +87,10 @@ function MissionsTab() {
       <div style={S.section}>
         <div style={S.sectionTitle}>UNLOCK ALL MISSIONS</div>
         <div style={S.row}>
-          <button style={S.btn('#50fa7b')} onClick={() => { devUnlockAllMissions(); notify('All missions unlocked') }}>
+          <button style={S.btn('#3ee08f')} onClick={() => { devUnlockAllMissions(); notify('All missions unlocked') }}>
             UNLOCK ALL
           </button>
-          <span style={{ fontSize: 9, color: '#333360' }}>
+          <span style={{ fontSize: 12, color: '#708fa6' }}>
             Marks all as completed (reward=$0 to signal dev action)
           </span>
         </div>
@@ -108,7 +108,7 @@ function MissionsTab() {
           <button style={S.btn()} onClick={() => { devSetBalance(balance); notify(`Balance set to $${balance}`) }}>
             SET
           </button>
-          <span style={{ fontSize: 9, color: '#444' }}>current: ${budget}</span>
+          <span style={{ fontSize: 12, color: '#7490a2' }}>current: ${budget}</span>
         </div>
       </div>
 
@@ -126,22 +126,22 @@ function MissionsTab() {
           >
             FORCE COMPLETE
           </button>
-          <span style={{ fontSize: 9, color: '#444' }}>
+          <span style={{ fontSize: 12, color: '#7490a2' }}>
             {activeMissionId ? `active: ${activeMissionId}` : 'no active mission'}
           </span>
         </div>
-        <div style={{ fontSize: 9, color: '#333360' }}>
+        <div style={{ fontSize: 12, color: '#708fa6' }}>
           Triggers reward + unlock flow without solving tasks.
         </div>
       </div>
 
-      <div style={{ fontSize: 9, color: '#444', borderTop: '1px solid #1a1a3e', paddingTop: 8 }}>
-        Mode: <span style={{ color: '#e0e0e0' }}>{mode}</span> ·
-        Completed: <span style={{ color: '#e0e0e0' }}>{completedMissions.length}/{MISSIONS.length}</span>
+      <div style={{ fontSize: 12, color: '#7490a2', borderTop: '1px solid #202b33', paddingTop: 8 }}>
+        Mode: <span style={{ color: '#e8eef2' }}>{mode}</span> ·
+        Completed: <span style={{ color: '#e8eef2' }}>{completedMissions.length}/{MISSIONS.length}</span>
       </div>
 
       {msg && (
-        <div style={{ marginTop: 8, padding: '4px 8px', background: '#1a4a1a', color: '#50fa7b', fontSize: 10, borderRadius: 3 }}>
+        <div style={{ marginTop: 8, padding: '4px 8px', background: '#1e402f', color: '#3ee08f', fontSize: 13, borderRadius: 3 }}>
           ✓ {msg}
         </div>
       )}
@@ -174,12 +174,12 @@ function PresetsTab() {
   }
 
   function resultColor(r) {
-    if (!r) return '#444'
-    if (r.type === 'error') return '#ff5555'
-    if (r.type === 'ping')  return r.reachable ? '#50fa7b' : '#ffb86c'
-    if (r.type === 'webui') return r.reachable ? '#50fa7b' : '#ffb86c'
-    if (r.type === 'dhcp')  return r.assigned  ? '#50fa7b' : '#ffb86c'
-    return '#444'
+    if (!r) return '#32414b'
+    if (r.type === 'error') return '#ff6259'
+    if (r.type === 'ping')  return r.reachable ? '#3ee08f' : '#ffb42e'
+    if (r.type === 'webui') return r.reachable ? '#3ee08f' : '#ffb42e'
+    if (r.type === 'dhcp')  return r.assigned  ? '#3ee08f' : '#ffb42e'
+    return '#32414b'
   }
 
   function resultLabel(r) {
@@ -212,23 +212,23 @@ function PresetsTab() {
         <div style={S.sectionTitle}>SELECT PRESET</div>
 
         <div style={{ marginBottom: 6 }}>
-          <div style={{ fontSize: 9, color: '#50fa7b', marginBottom: 3 }}>▶ WORKING</div>
+          <div style={{ fontSize: 12, color: '#3ee08f', marginBottom: 3 }}>▶ WORKING</div>
           {working.map(p => (
             <label key={p.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4, cursor: 'pointer' }}>
               <input type="radio" name="preset" value={p.id} checked={selectedId === p.id} onChange={() => setSelectedId(p.id)} />
-              <span style={{ fontSize: 10, color: selectedId === p.id ? '#e0e0e0' : '#888' }}>{p.label}</span>
+              <span style={{ fontSize: 13, color: selectedId === p.id ? '#e8eef2' : '#738ea2' }}>{p.label}</span>
             </label>
           ))}
         </div>
 
         <div>
-          <div style={{ fontSize: 9, color: '#ffb86c', marginBottom: 3 }}>✗ BROKEN (should fail)</div>
+          <div style={{ fontSize: 12, color: '#ffb42e', marginBottom: 3 }}>✗ BROKEN (should fail)</div>
           {broken.map(p => (
             <label key={p.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4, cursor: 'pointer' }}>
               <input type="radio" name="preset" value={p.id} checked={selectedId === p.id} onChange={() => setSelectedId(p.id)} />
-              <span style={{ fontSize: 10, color: selectedId === p.id ? '#e0e0e0' : '#888' }}>
+              <span style={{ fontSize: 13, color: selectedId === p.id ? '#e8eef2' : '#738ea2' }}>
                 {p.label}
-                {p.expectedFailure && <span style={{ color: '#ff555588', marginLeft: 4 }}>({p.expectedFailure})</span>}
+                {p.expectedFailure && <span style={{ color: '#ff625988', marginLeft: 4 }}>({p.expectedFailure})</span>}
               </span>
             </label>
           ))}
@@ -236,21 +236,21 @@ function PresetsTab() {
       </div>
 
       {selected && (
-        <div style={{ fontSize: 9, color: '#444', marginBottom: 10, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 12, color: '#7490a2', marginBottom: 10, lineHeight: 1.6 }}>
           {selected.description}
         </div>
       )}
 
-      <button style={{ ...S.btn('#4a90e2'), opacity: applying ? 0.5 : 1 }} onClick={apply} disabled={applying}>
+      <button style={{ ...S.btn('#4da6ff'), opacity: applying ? 0.5 : 1 }} onClick={apply} disabled={applying}>
         {applying ? 'BUILDING…' : '▶ APPLY PRESET'}
       </button>
-      <span style={{ fontSize: 9, color: '#333360', marginLeft: 8 }}>Switches to Sandbox · clears existing topology</span>
+      <span style={{ fontSize: 12, color: '#708fa6', marginLeft: 8 }}>Switches to Sandbox · clears existing topology</span>
 
       {result && (
         <div style={{
-          marginTop: 10, padding: '6px 8px', background: '#0a0f1e',
+          marginTop: 10, padding: '6px 8px', background: '#0c141c',
           border: `1px solid ${resultColor(result)}44`, borderRadius: 4,
-          fontSize: 10, color: resultColor(result), fontFamily: 'monospace', lineHeight: 1.5,
+          fontSize: 12, color: resultColor(result), fontFamily: 'var(--font-mono)', lineHeight: 1.5,
         }}>
           {resultLabel(result)}
         </div>
@@ -281,33 +281,33 @@ function InspectorTab() {
   return (
     <div>
       <div style={{ ...S.row, marginBottom: 10 }}>
-        <span style={{ fontSize: 9, color: '#555' }}>TOPOLOGY:</span>
+        <span style={{ fontSize: 12, color: '#738ea2' }}>TOPOLOGY:</span>
         {(['sandbox', 'missions']).map(t => (
           <button
             key={t}
             onClick={() => setShowTopo(t)}
             style={{
-              ...S.btn(showTopo === t ? '#4a90e2' : '#333360'),
+              ...S.btn(showTopo === t ? '#4da6ff' : '#344653'),
               padding: '3px 8px',
             }}
           >{t.toUpperCase()}</button>
         ))}
-        <span style={{ fontSize: 9, color: '#333360', marginLeft: 4 }}>{devices.length} device{devices.length !== 1 ? 's' : ''}</span>
+        <span style={{ fontSize: 12, color: '#708fa6', marginLeft: 4 }}>{devices.length} device{devices.length !== 1 ? 's' : ''}</span>
       </div>
 
       {/* Ping check */}
-      <div style={{ ...S.section, background: '#07070d', padding: 8, borderRadius: 4, border: '1px solid #1a1a3e' }}>
+      <div style={{ ...S.section, background: '#090c0f', padding: 8, borderRadius: 4, border: '1px solid #202b33' }}>
         <div style={S.sectionTitle}>PING CHECK</div>
         <div style={S.row}>
           <input placeholder="src IP" value={pingSrc} onChange={e => setPingSrc(e.target.value)}
             style={{ ...S.input, width: 110 }} />
-          <span style={{ color: '#444', fontSize: 12 }}>→</span>
+          <span style={{ color: '#7490a2', fontSize: 14.5 }}>→</span>
           <input placeholder="dst IP" value={pingDst} onChange={e => setPingDst(e.target.value)}
             style={{ ...S.input, width: 110 }} />
           <button style={S.btn()} onClick={runPing}>CHECK</button>
         </div>
         {pingResult && (
-          <div style={{ fontSize: 10, fontFamily: 'monospace', color: pingResult.reachable ? '#50fa7b' : '#ffb86c', marginTop: 4 }}>
+          <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: pingResult.reachable ? '#3ee08f' : '#ffb42e', marginTop: 4 }}>
             {pingResult.reachable
               ? `✓ reachable`
               : `✗ ${pingResult.failureReason}${pingResult.failurePoint ? ` @ ${pingResult.failurePoint}` : ''}`}
@@ -318,7 +318,7 @@ function InspectorTab() {
       {/* Device list */}
       <div style={{ marginTop: 8 }}>
         {devices.length === 0 && (
-          <div style={{ fontSize: 10, color: '#333360', textAlign: 'center', padding: 16 }}>
+          <div style={{ fontSize: 13, color: '#708fa6', textAlign: 'center', padding: 16 }}>
             No devices in {showTopo} topology
           </div>
         )}
@@ -334,30 +334,30 @@ function DeviceCard({ dev }) {
   const dhcpCount  = (dev.dhcp_bindings || []).length
 
   return (
-    <div style={{ marginBottom: 6, border: '1px solid #1a1a3e', borderRadius: 4, background: '#07070d' }}>
+    <div style={{ marginBottom: 6, border: '1px solid #202b33', borderRadius: 4, background: '#090c0f' }}>
       <div
         onClick={() => setOpen(o => !o)}
         style={{
           padding: '5px 8px', cursor: 'pointer', display: 'flex', gap: 8, alignItems: 'center',
-          borderBottom: open ? '1px solid #1a1a3e' : 'none',
+          borderBottom: open ? '1px solid #202b33' : 'none',
         }}
       >
-        <span style={{ fontSize: 9, color: open ? '#4a90e2' : '#444' }}>{open ? '▾' : '▸'}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#c0c0e0', fontFamily: 'monospace' }}>
+        <span style={{ fontSize: 12, color: open ? '#4da6ff' : '#7490a2' }}>{open ? '▾' : '▸'}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#c0cee0', fontFamily: 'var(--font-mono)' }}>
           {dev.hostname}
         </span>
-        <span style={{ fontSize: 9, color: '#444' }}>{dev.type}</span>
-        <span style={{ fontSize: 9, color: dev.powered ? '#50fa7b' : '#555', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 12, color: '#7490a2' }}>{dev.type}</span>
+        <span style={{ fontSize: 12, color: dev.powered ? '#3ee08f' : '#738ea2', marginLeft: 'auto' }}>
           {dev.powered ? 'ON' : 'OFF'}
         </span>
       </div>
 
       {open && (
-        <div style={{ padding: '6px 8px', fontSize: 10 }}>
+        <div style={{ padding: '6px 8px', fontSize: 13 }}>
           {/* Interfaces */}
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 6 }}>
             <thead>
-              <tr style={{ color: '#444', fontSize: 9 }}>
+              <tr style={{ color: '#7490a2', fontSize: 12 }}>
                 <th style={{ textAlign: 'left', paddingBottom: 3 }}>Interface</th>
                 <th style={{ textAlign: 'left' }}>IP / Mask</th>
                 <th style={{ textAlign: 'left' }}>Status</th>
@@ -366,18 +366,18 @@ function DeviceCard({ dev }) {
             </thead>
             <tbody>
               {dev.interfaces.map(iface => (
-                <tr key={iface.name} style={{ borderTop: '1px solid #0d0d20' }}>
-                  <td style={{ padding: '2px 4px 2px 0', fontFamily: 'monospace', color: '#8888cc', fontSize: 9 }}>
+                <tr key={iface.name} style={{ borderTop: '1px solid #12181c' }}>
+                  <td style={{ padding: '2px 4px 2px 0', fontFamily: 'var(--font-mono)', color: '#88a6cc', fontSize: 11.5 }}>
                     {iface.name}
                   </td>
-                  <td style={{ padding: '2px 4px 2px 0', fontFamily: 'monospace', color: '#c0c0e0', fontSize: 9 }}>
+                  <td style={{ padding: '2px 4px 2px 0', fontFamily: 'var(--font-mono)', color: '#c0cee0', fontSize: 11.5 }}>
                     {iface.ip ? `${iface.ip}/${iface.subnet_mask ?? '?'}` : '—'}
                   </td>
-                  <td style={{ padding: '2px 4px 2px 0', fontSize: 9,
-                    color: iface.status === 'up' ? '#50fa7b' : iface.status === 'admin_down' ? '#ff5555' : '#ffb86c' }}>
+                  <td style={{ padding: '2px 4px 2px 0', fontSize: 12,
+                    color: iface.status === 'up' ? '#3ee08f' : iface.status === 'admin_down' ? '#ff6259' : '#ffb42e' }}>
                     {iface.status}
                   </td>
-                  <td style={{ padding: '2px 0', fontSize: 9, color: '#555' }}>
+                  <td style={{ padding: '2px 0', fontSize: 12, color: '#738ea2' }}>
                     {iface.vlan != null ? `VLAN${iface.vlan}` : ''}
                     {iface.switchport_mode ? ` ${iface.switchport_mode}` : ''}
                   </td>
@@ -389,9 +389,9 @@ function DeviceCard({ dev }) {
           {/* Routing table */}
           {routeCount > 0 && (
             <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 9, color: '#555', marginBottom: 2 }}>ROUTES ({routeCount})</div>
+              <div style={{ fontSize: 12, color: '#738ea2', marginBottom: 2 }}>ROUTES ({routeCount})</div>
               {dev.routing_table.map((rt, i) => (
-                <div key={i} style={{ fontFamily: 'monospace', fontSize: 9, color: '#8be9fd' }}>
+                <div key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: '#66d4ea' }}>
                   {rt.network}/{rt.mask} via {rt.next_hop ?? rt.exit_interface ?? '?'}
                 </div>
               ))}
@@ -401,9 +401,9 @@ function DeviceCard({ dev }) {
           {/* DHCP bindings */}
           {dhcpCount > 0 && (
             <div>
-              <div style={{ fontSize: 9, color: '#555', marginBottom: 2 }}>DHCP BINDINGS ({dhcpCount})</div>
+              <div style={{ fontSize: 12, color: '#738ea2', marginBottom: 2 }}>DHCP BINDINGS ({dhcpCount})</div>
               {dev.dhcp_bindings.map((b, i) => (
-                <div key={i} style={{ fontFamily: 'monospace', fontSize: 9, color: '#ffb86c' }}>
+                <div key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: '#ffb42e' }}>
                   {b.ip} — {b.client_id} [{b.pool_name}]
                 </div>
               ))}
@@ -443,21 +443,21 @@ function SmokeTab() {
 
   return (
     <div>
-      <div style={{ marginBottom: 10, fontSize: 9, color: '#444', lineHeight: 1.6 }}>
+      <div style={{ marginBottom: 10, fontSize: 12, color: '#7490a2', lineHeight: 1.6 }}>
         Runs every foundation smoke test (T1–T6b) against the real engine.
         <br />
-        <span style={{ color: '#ff555588' }}>⚠ Clears sandbox · destroys current topology</span>
+        <span style={{ color: '#ff625988' }}>⚠ Clears sandbox · destroys current topology</span>
       </div>
 
-      <button style={{ ...S.btn('#8be9fd'), opacity: running ? 0.5 : 1 }} onClick={run} disabled={running}>
+      <button style={{ ...S.btn('#66d4ea'), opacity: running ? 0.5 : 1 }} onClick={run} disabled={running}>
         {running ? '⏳ RUNNING…' : '▶ RUN ALL SMOKE TESTS'}
       </button>
 
       {results && (
         <div style={{ marginTop: 10 }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, marginBottom: 8,
-            color: passed === total ? '#50fa7b' : '#ffb86c',
+            fontSize: 13, fontWeight: 700, marginBottom: 8,
+            color: passed === total ? '#3ee08f' : '#ffb42e',
           }}>
             {passed}/{total} passed
           </div>
@@ -466,18 +466,18 @@ function SmokeTab() {
               key={r.id}
               style={{
                 padding: '5px 8px', marginBottom: 4, borderRadius: 3,
-                background: r.pass ? '#0a2010' : '#200a0a',
-                border: `1px solid ${r.pass ? '#50fa7b33' : '#ff555533'}`,
+                background: r.pass ? '#0d1e16' : '#1f0e0d',
+                border: `1px solid ${r.pass ? '#3ee08f33' : '#ff625933'}`,
               }}
             >
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: r.detail ? 2 : 0 }}>
-                <span style={{ fontSize: 12, lineHeight: 1 }}>{r.pass ? '✓' : '✗'}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, color: r.pass ? '#50fa7b' : '#ff5555' }}>
+                <span style={{ fontSize: 14.5, lineHeight: 1 }}>{r.pass ? '✓' : '✗'}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: r.pass ? '#3ee08f' : '#ff6259' }}>
                   {r.name}
                 </span>
               </div>
               {r.detail && (
-                <div style={{ fontSize: 9, color: '#888', fontFamily: 'monospace', paddingLeft: 20, marginTop: 2 }}>
+                <div style={{ fontSize: 11.5, color: '#738ea2', fontFamily: 'var(--font-mono)', paddingLeft: 20, marginTop: 2 }}>
                   {r.detail}
                 </div>
               )}
@@ -512,7 +512,7 @@ function ContractsTab() {
     <div>
       <div style={S.section}>
         <div style={S.sectionTitle}>FAST-FORWARD CONTRACT CLOCK</div>
-        <div style={{ fontSize: 9, color: '#444', marginBottom: 8, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 12, color: '#7490a2', marginBottom: 8, lineHeight: 1.6 }}>
           Moves every contract/ticket timestamp backward by N minutes, then runs
           a real tickContracts() check — never fakes an outcome, just lets you
           see SLA issue/warn/expire without waiting real minutes.
@@ -524,11 +524,11 @@ function ContractsTab() {
             onChange={e => setMinutes(e.target.value)}
             style={{ ...S.input, width: 70 }}
           />
-          <span style={{ fontSize: 9, color: '#444' }}>minutes</span>
+          <span style={{ fontSize: 12, color: '#7490a2' }}>minutes</span>
           <button style={S.btn()} onClick={fastForward}>⏩ FAST-FORWARD</button>
         </div>
         {msg && (
-          <div style={{ marginTop: 8, padding: '4px 8px', background: '#1a4a1a', color: '#50fa7b', fontSize: 10, borderRadius: 3 }}>
+          <div style={{ marginTop: 8, padding: '4px 8px', background: '#1e402f', color: '#3ee08f', fontSize: 13, borderRadius: 3 }}>
             ✓ {msg}
           </div>
         )}
@@ -537,33 +537,33 @@ function ContractsTab() {
       <div style={S.section}>
         <div style={S.sectionTitle}>CONTRACTS ({contractList.length})</div>
         {contractList.length === 0 && (
-          <div style={{ fontSize: 10, color: '#333360' }}>No active contracts yet.</div>
+          <div style={{ fontSize: 13, color: '#708fa6' }}>No active contracts yet.</div>
         )}
         {contractList.map(c => {
           const client = clients[c.clientId]
           const ticket = c.openTicketId ? activeTickets[c.openTicketId] : null
           return (
-            <div key={c.id} style={{ marginBottom: 8, padding: 8, background: '#07070d', border: '1px solid #1a1a3e', borderRadius: 4 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#c0c0e0' }}>
-                {client?.companyName ?? c.clientId} {client?.dormant && <span style={{ color: '#ff5555' }}>(DORMANT)</span>}
+            <div key={c.id} style={{ marginBottom: 8, padding: 8, background: '#090c0f', border: '1px solid #202b33', borderRadius: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#c0cee0' }}>
+                {client?.companyName ?? c.clientId} {client?.dormant && <span style={{ color: '#ff6259' }}>(DORMANT)</span>}
               </div>
-              <div style={{ fontSize: 9, color: '#555', marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: '#738ea2', marginTop: 2 }}>
                 satisfaction: {client?.satisfaction ?? '?'} · missed: {client?.consecutiveMissedTickets ?? 0} ·
                 lastTicketAt: {c.lastTicketAt ? new Date(c.lastTicketAt).toLocaleTimeString() : 'never'}
               </div>
               {ticket ? (
                 <>
-                  <div style={{ fontSize: 9, color: '#8be9fd', marginTop: 2, fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: 11.5, color: '#66d4ea', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
                     ticket: {ticket.title} — {ticketUrgency(ticket, Date.now())}
                   </div>
-                  <div style={{ fontSize: 8, color: '#556', marginTop: 2, fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: 11, color: '#738fa2', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
                     now-issuedAt: {Math.round((Date.now() - ticket.issuedAt) / 1000)}s ·
                     pausedMs: {Math.round((ticket.pausedMs ?? 0) / 1000)}s ·
                     effective: {Math.round(((Date.now() - ticket.issuedAt) - (ticket.pausedMs ?? 0)) / 1000)}s
                   </div>
                 </>
               ) : (
-                <div style={{ fontSize: 9, color: '#333360', marginTop: 2 }}>no open ticket</div>
+                <div style={{ fontSize: 12, color: '#708fa6', marginTop: 2 }}>no open ticket</div>
               )}
             </div>
           )
@@ -608,23 +608,23 @@ function UtilsTab() {
       <div style={S.section}>
         <div style={S.sectionTitle}>FORCE REFRESH</div>
         <button style={S.btn()} onClick={refresh}>↻ REFRESH</button>
-        <span style={{ fontSize: 9, color: '#333360', marginLeft: 8 }}>Bumps the active tick counter</span>
+        <span style={{ fontSize: 12, color: '#708fa6', marginLeft: 8 }}>Bumps the active tick counter</span>
       </div>
 
       <div style={S.section}>
         <div style={S.sectionTitle}>EXPORT SANDBOX</div>
-        <div style={{ fontSize: 9, color: '#444', marginBottom: 6, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: '#7490a2', marginBottom: 6, lineHeight: 1.5 }}>
           Serialises sandbox topology + placements to JSON.
           Copies to clipboard (or opens in new tab if clipboard unavailable).
         </div>
-        <button style={S.btn('#50fa7b')} onClick={doExport}>
+        <button style={S.btn('#3ee08f')} onClick={doExport}>
           {copyMsg ? '✓ COPIED' : '⬆ EXPORT JSON'}
         </button>
       </div>
 
       <div style={S.section}>
         <div style={S.sectionTitle}>IMPORT SANDBOX</div>
-        <div style={{ fontSize: 9, color: '#444', marginBottom: 6, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: '#7490a2', marginBottom: 6, lineHeight: 1.5 }}>
           Paste JSON exported from a previous session. Switches to sandbox and
           replaces current topology.
         </div>
@@ -636,11 +636,11 @@ function UtilsTab() {
             ...S.input, height: 80, resize: 'vertical', display: 'block', marginBottom: 6,
           }}
         />
-        <button style={S.btn('#8be9fd')} onClick={doImport}>⬇ IMPORT</button>
+        <button style={S.btn('#66d4ea')} onClick={doImport}>⬇ IMPORT</button>
         {importMsg && (
           <span style={{
-            marginLeft: 8, fontSize: 10,
-            color: importMsg.startsWith('✓') ? '#50fa7b' : '#ff5555',
+            marginLeft: 8, fontSize: 13,
+            color: importMsg.startsWith('✓') ? '#3ee08f' : '#ff6259',
           }}>{importMsg}</span>
         )}
       </div>
