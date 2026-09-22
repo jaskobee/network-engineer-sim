@@ -137,3 +137,11 @@ export const IconPlug = p => (
 export const IconShield = p => (
   <Icon {...p}><path d="M12 3 4.5 6v5.5c0 4.4 3 7.9 7.5 9.5 4.5-1.6 7.5-5.1 7.5-9.5V6z" /></Icon>
 )
+
+// One block of addresses split in half, and one half split again — a subnet plan.
+export const IconSubnets = p => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M11 4v16M11 12h10M16 12v8" />
+  </Icon>
+)

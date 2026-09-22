@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { deviceCatalog } from '../data/deviceCatalog.js'
 import { useGame } from '../state/GameContext.jsx'
 import CatalogCard from './CatalogCard.jsx'
+import SubnetPlanner from './SubnetPlanner.jsx'
+import { IconSubnets } from './icons.jsx'
 
 const ISP_CATALOG_ENTRY = {
   type: 'isp',
@@ -12,6 +15,7 @@ const ISP_CATALOG_ENTRY = {
 
 export default function SandboxPalette() {
   const { addSandboxDevice, clearSandbox, devices } = useGame()
+  const [plannerOpen, setPlannerOpen] = useState(false)
 
   function handleClear() {
     if (devices.length === 0 || window.confirm('Clear all sandbox devices?')) clearSandbox()
@@ -32,6 +36,21 @@ export default function SandboxPalette() {
         </div>
         <button className="btn danger" style={{ padding: '3px 10px', fontSize: 13 }} onClick={handleClear}>Clear</button>
       </div>
+
+      {/* Tools */}
+      <div style={{ padding: '10px 10px 0', flexShrink: 0 }}>
+        <button
+          className={`btn${plannerOpen ? ' on' : ''}`}
+          style={{ width: '100%', justifyContent: 'flex-start' }}
+          aria-pressed={plannerOpen}
+          onClick={() => setPlannerOpen(o => !o)}
+          title="Plan an address layout: divide a network into subnets and see the summaries"
+        >
+          <IconSubnets size={18} />
+          Subnet planner
+        </button>
+      </div>
+      {plannerOpen && <SubnetPlanner onClose={() => setPlannerOpen(false)} />}
 
       {/* Device cards */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 14px' }}>

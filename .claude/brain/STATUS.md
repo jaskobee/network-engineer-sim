@@ -1,9 +1,9 @@
 # STATUS — where NetSim is right now
 
-_Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design). Keep this describing **now**; remove finished items._
+_Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now**; remove finished items._
 
 ## Health
-- `npm test` → **806 tests / 33 files passing** (Vitest 4).
+- `npm test` → **833 tests / 34 files passing** (Vitest 4).
 - `npx vite build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
 
@@ -65,6 +65,11 @@ _Last refreshed: 2026-09-20 (paced tickets, job offers, topology tab, DNS design
   on Linux, `netsh … dns` / `nslookup` on Windows, `ip name-server` / `ip domain-lookup` on routers and
   switches, GUI fields in the host window, UDP/53 in the capture, two dev presets (16 total). Only the public
   resolvers answer; see `docs/NETWORKING_ACCURACY.md` §DNS rules.
+- **Sandbox subnet planner** (`engine/subnetPlanner.js`, `components/SubnetPlanner.jsx`, button in
+  `SandboxPalette`): davidc.net-style divide/join table (binary tree, pre-order `0/1` code), per-row
+  range / broadcast / hosts / optional wildcard, a label per subnet, Join cells = summary routes, and an
+  address-space note (RFC 1918 / 5737 / 6598 / special blocks). A paper tool — writes no device state;
+  kept in localStorage `netsim_subnet_planner`.
 
 ## In flight / recently touched
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
