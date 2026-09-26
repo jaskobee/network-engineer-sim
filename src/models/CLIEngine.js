@@ -807,6 +807,7 @@ export class CLIEngine {
         if (iface.ip && iface.subnet_mask) L.push(` ip address ${iface.ip} ${iface.subnet_mask}`)
         else L.push(` no ip address`)
         for (const h of (iface.helper_addresses ?? [])) L.push(` ip helper-address ${h}`)
+        if (device.type === 'router' && iface.proxy_arp === false) L.push(` no ip proxy-arp`)
         if (iface.nat_inside)  L.push(` ip nat inside`)
         if (iface.nat_outside) L.push(` ip nat outside`)
         if (iface.status === 'admin_down') L.push(` shutdown`)
@@ -822,6 +823,7 @@ export class CLIEngine {
           L.push(` encapsulation dot1Q ${iface.vlanTag}${iface.native ? ' native' : ''}`)
         if (iface.ip && iface.subnet_mask) L.push(` ip address ${iface.ip} ${iface.subnet_mask}`)
         else L.push(` no ip address`)
+        if (iface.proxy_arp === false) L.push(` no ip proxy-arp`)
         if (iface.sub_shutdown) L.push(` shutdown`)
         L.push('!')
       }
@@ -864,6 +866,7 @@ export class CLIEngine {
     if (iface.description) lines.push(`  Description: ${iface.description}`)
     lines.push(`  Internet address is ${cidr}`)
     lines.push(`  Connected to: ${iface.connected_to || 'nothing'}`)
+    if (device.type === 'router') lines.push(`  Proxy ARP is ${iface.proxy_arp === false ? 'disabled' : 'enabled'}`)
     return lines
   }
 
@@ -1196,6 +1199,15 @@ export class CLIEngine {
       return []
     }
 
+    // ── ip proxy-arp (interface_config, router only; on by default) ─────────
+    if (sub === 'proxy-arp') {
+      if (!['interface_config', 'subif_config'].includes(device.config_mode) || device.type !== 'router') return this._invalidInput()
+      const iface = device.getInterface(device.active_interface)
+      if (!iface) return ['% No active interface']
+      iface.proxy_arp = true
+      return []
+    }
+
     // ── ip nat (interface_config or global_config, router + firewall) ─────────
     if (sub === 'nat') {
       if (device.type !== 'router' && device.type !== 'firewall') return [
@@ -1392,6 +1404,15 @@ export class CLIEngine {
         } else {
           iface.helper_addresses = []
         }
+        return []
+      }
+
+      // no ip proxy-arp
+      if (sub2 === 'proxy-arp') {
+        if (!['interface_config', 'subif_config'].includes(mode) || device.type !== 'router') return this._invalidInput()
+        const iface = device.getInterface(device.active_interface)
+        if (!iface) return ['% No active interface']
+        iface.proxy_arp = false
         return []
       }
 
@@ -1939,7 +1960,7 @@ function _iosFailureMsg(failureReason) {
     case 'no_return_path':   return 'Request timed out (no return path configured)'
     case 'vlan_isolated':    return 'Destination host unreachable (VLAN boundary)'
     case 'gateway_unreachable': return 'Destination host unreachable'
-    case 'subnet_mismatch':  return 'Destination host unreachable (subnet mismatch)'
+    case 'subnet_mismatch':  return 'No reply (subnet mask mismatch — the far end puts this address outside its subnet)'
     case 'nat_required':         return 'Destination host unreachable (NAT required — private source address is not internet-routable)'
     case 'blocked_by_firewall': return 'Destination host unreachable (packet blocked by firewall policy — check zone rules and ensure return path is permitted)'
     default: return failureReason ?? null

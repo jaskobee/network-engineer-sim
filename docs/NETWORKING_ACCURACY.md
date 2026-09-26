@@ -230,6 +230,38 @@ code comment that flags it as a simplification rather than presenting it as trut
 
 ---
 
+## L2 delivery and proxy ARP rules
+
+Implemented in `src/models/Topology.js` (`_l2TargetFor`, `_acceptsFrame`, used by `_bfsReach`
+and `findPath`) and `src/models/CLIEngine.js`. Enforced by `src/models/__tests__/proxyArp.test.js`
+(PA1–PA6) and `subnetMismatch.test.js` (SM1–SM7).
+
+1. **A frame is picked up only by the device it is addressed to.** Each L3 hop decides from its
+   own address and mask: on-link destination → it ARPs for the destination; otherwise → it ARPs
+   for the route's next hop (its gateway). A switch floods the frame through the VLAN, but other
+   devices ignore it. Another router on the segment never routes a packet the host sent to its
+   gateway.
+2. **Routers and firewalls answer ARP per interface**, only for the address of the (sub)interface
+   the request arrived on.
+3. **Proxy ARP (IOS `ip proxy-arp`) is on by default** on router interfaces and subinterfaces;
+   `no ip proxy-arp` turns it off (shown in `show running-config`; `show ip interface` prints
+   `Proxy ARP is enabled|disabled`). A router answers an ARP for a remote address when the ingress
+   interface has proxy ARP on and it has a **specific** route (connected or static, not
+   0.0.0.0/0) to it out of a **different** interface. Not available on the L2 switch or the
+   firewall (real ASA proxy ARP is a NAT feature with different syntax).
+4. **Consequence: a too-wide host mask usually still works through a Cisco router.** It fails
+   (`subnet_mismatch`, Linux `From <self> … Destination Host Unreachable`) only when no router
+   proxies. A too-narrow mask fails when the host has no gateway (`connect: Network is
+   unreachable` as sender; plain timeouts when it is the receiver, `lostOnReturn`).
+
+### Simplifications (documented, not bugs)
+- **The ISP cloud is not modelled at L2**: it accepts any frame sent to it.
+- **ICMP redirects are not simulated** (a router hairpinning a packet back out the ingress
+  interface forwards it; real IOS also sends a redirect).
+- **`Local Proxy ARP`, `ip arp` static entries and ARP timeouts are not modelled.**
+
+---
+
 ## DHCP rules (added sprint: router-as-server + relay)
 
 The following invariants are implemented in `src/models/DHCPEngine.js` and enforced by

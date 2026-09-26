@@ -3,7 +3,7 @@
 _Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now**; remove finished items._
 
 ## Health
-- `npm test` → **833 tests / 34 files passing** (Vitest 4).
+- `npm test` → **861 tests / 36 files passing** (Vitest 4).
 - `npx vite build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
 
@@ -83,8 +83,8 @@ _Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now
 1. **Act 2 — fault-injection / troubleshooting missions**: pre-broken topologies, no
    step-by-step hints, diagnose with `show` commands. Design in
    `docs/NETSIM_FAULTS_AND_FEATURES.md`. Use `/fault-scenario`.
-2. Refine generic reason codes: `subnet_mismatch` first, then `gateway_unreachable`,
-   `ip_conflict`, `duplex_mismatch` (all currently fall through to `no_route`).
+2. Refine generic reason codes: `gateway_unreachable`, `ip_conflict`, `duplex_mismatch`
+   (still fall through to `no_route`). `subnet_mismatch` is done (both mask directions, both ends).
 3. More clients/missions on the declarative DSL (`/new-mission`); more service tickets.
 4. Admin-laptop tool family from `docs/ADMIN_LAPTOP_AND_TOOLS.md` — port scanner and
    WireFish are still spec-only; the Phase 3 packet-engine refactor needs an owner decision.

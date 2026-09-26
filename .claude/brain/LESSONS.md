@@ -47,6 +47,15 @@ Add an entry only when the code/tests don't already make it obvious. Format:
 - **Fixing a "lenient" command can expose a missing prerequisite step, not a bug** → hosts boot
   `admin_down`, so `ip route add default` before `ip link set eth0 up` now fails with the real
   `Nexthop has invalid gateway` (plus a hint). That is why missions teach addr → up → route.
+- **The search used to let any router on a segment route any flooded frame** (so proxy ARP was
+  silently always on, and a router the host never pointed at could carry its traffic) → frames
+  now carry the address they were sent to (`l2Target`); only its owner or a proxy-ARPing router
+  picks them up. When a scenario "should" work through a router, check that the host's mask or
+  gateway actually sends to that router. A wrong-mask fault only shows symptoms with
+  `no ip proxy-arp` on the router (too wide) or no gateway on the host (too narrow).
+- **One reason code can have different symptoms depending on which end is wrong**
+  (`subnet_mismatch`: never sent / ARP unanswered / reply never sent) → shells choose output
+  from `lostOnReturn` and `topology.hasRouteTo()`, not from the reason alone.
 
 ## React / state
 - **A `setInterval` in a component acts on old state forever** (the ticket spam: a new ticket + email
@@ -93,6 +102,9 @@ Add an entry only when the code/tests don't already make it obvious. Format:
   print `error: unknown option '-S'` / `'-G'` → use `command find` / `command grep`
   (or the Grep/Glob tools) when a plain shell call misbehaves.
 - **`npx vite build` warns about chunk size for xterm** → expected, not a failure.
+- **`npm ci` fails with EPERM (chmod) when the repo lives on `/mnt/c` in WSL** (drvfs mounted
+  without metadata) → mount C: with `metadata` in `/etc/wsl.conf`, keep the repo in the WSL
+  filesystem, or run tests from a copy there.
 - **Driving the app from Playwright** → typing into xterm needs a click on `.xterm` first;
   a terminal opens *over* the device you right-clicked, so close it (title "Close
   terminal") before the next right-click; IOS `ping` takes ~5.5 s, so poll for its result

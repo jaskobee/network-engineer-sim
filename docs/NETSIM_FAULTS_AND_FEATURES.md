@@ -49,7 +49,7 @@ a boolean, so it can express *degraded* links and *why* a ping failed.
 | `no_route`           | `U.U.U` (unreachable)| `Destination Net Unreachable`      | Router has no matching route          |
 | `host_no_gateway`    | n/a (host)           | `connect: Network is unreachable`  | Host has no default route             |
 | `gateway_unreachable`| n/a (host)           | `Destination Host Unreachable`     | Gateway set but ARP fails / off-subnet|
-| `subnet_mismatch`    | `.....` timeout      | `Destination Host Unreachable`     | Wrong mask → host mis-decides L2 vs L3|
+| `subnet_mismatch`    | `.....` timeout      | sender's mask too narrow: `connect: Network is unreachable`; too wide (no proxy ARP): `Destination Host Unreachable`; receiver's mask: timeout, no per-packet line | Wrong mask → host mis-decides L2 vs L3|
 | `admin_down`         | `.....`              | timeout / no reply                 | Interface `shutdown`                  |
 | `link_down`          | `.....`              | timeout                            | Cable/peer down (down/down)           |
 | `no_return_path`     | `.....` timeout      | timeout                            | Request left, no route back           |
@@ -97,10 +97,16 @@ how it's FIXED. All behavior must match CCNA/Network+ reality.
 **A. Wrong subnet mask**
 - Model: set interface `prefix` to an incorrect value.
 - Manifests: the host computes local-vs-remote using *its own* mask. If it wrongly
-  thinks a remote host is local, it ARPs on-segment and times out
-  (`subnet_mismatch`); if it wrongly thinks a local host is remote, it forwards to
-  the gateway unnecessarily. checkPing already produces this if it decides routing
-  from the source's mask — do NOT shortcut it.
+  thinks a local host is remote, it forwards to the gateway — which works if it has
+  one that can reach the peer, and otherwise fails with `subnet_mismatch`
+  (implemented: as sender it never transmits; as receiver it never replies, so the
+  sender sees timeouts — `lostOnReturn`). If it wrongly thinks a remote host is local
+  (mask too wide), it ARPs on-segment; the router's proxy ARP (IOS `ip proxy-arp`, on
+  by default) answers when it has a specific route there, and the ping *works*. With
+  `no ip proxy-arp` on the host-facing interface nobody answers → `subnet_mismatch`,
+  Linux `From <self> … Destination Host Unreachable`. So a too-wide-mask fault needs
+  `no ip proxy-arp` in the scenario to show symptoms. Decided from each host's own
+  mask — do NOT shortcut it.
 - Reveal: `show ip interface`, `show running-config`, `ip addr`.
 - Fix: correct the mask/prefix.
 

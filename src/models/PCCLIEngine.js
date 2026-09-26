@@ -27,8 +27,8 @@ export class PCCLIEngine {
     }
   }
 
-  // Fires onPacket(index, reachable, targetIp, srcIp, failureReason, ttl, rtt) once per echo,
-  // ~1100 ms apart.  Returns a cancel() function.
+  // Fires onPacket(index, reachable, targetIp, srcIp, failureReason, ttl, rtt, lostOnReturn)
+  // once per echo, ~1100 ms apart.  Returns a cancel() function.
   // `displayName`: the name the user typed, when targetIp is what it resolved to.
   executePingAsync(device, targetIp, { onStart, onPacket, onDone, displayName = null } = {}) {
     if (!isValidIp(targetIp)) {
@@ -52,14 +52,14 @@ export class PCCLIEngine {
     this.topology.recordCapture(srcIp, targetIp, result)
 
     // "Network is unreachable" class: show error immediately and exit without packet loop
-    if (!result.reachable && _isNetworkUnreachable(result.failureReason)) {
+    if (!result.reachable && _isNetworkUnreachable(result, this.topology.hasRouteTo(device, targetIp))) {
       const lines = [`ping: connect: Network is unreachable`]
       const r = result.failureReason
       if      (r === 'host_no_gateway') lines.push(`  (no default gateway — run: ip route add default via <gw>)`)
       else if (r === 'no_route')        lines.push(`  (no route to ${targetIp} — check static routes on routers)`)
       else if (r === 'admin_down')      lines.push(`  (interface is admin-down — run: ip link set eth0 up)`)
       else if (r === 'link_down')       lines.push(`  (link is down — check cable connection)`)
-      else if (r === 'subnet_mismatch') lines.push(`  (IP/mask mismatch — verify subnet configuration)`)
+      else if (r === 'subnet_mismatch') lines.push(`  (${targetIp} is outside this host's subnet and there is no gateway — check the mask: ip addr show eth0)`)
       onStart?.(lines)
       onDone?.([], false)
       return () => {}
@@ -80,7 +80,7 @@ export class PCCLIEngine {
         if (result.reachable) lines.push(_rttStatsLine(rtts))
         onDone?.(lines, result.reachable); return
       }
-      onPacket?.(i, result.reachable, targetIp, srcIp, result.failureReason, ttl, rtts[i]); i++
+      onPacket?.(i, result.reachable, targetIp, srcIp, result.failureReason, ttl, rtts[i], result.lostOnReturn); i++
       timers.push(setTimeout(fire, 1100))
     }
     fire()
@@ -223,9 +223,15 @@ export class PCCLIEngine {
       lines.push(`--- ${label} ping statistics ---`)
       lines.push(`${packetCount} packets transmitted, ${packetCount} received, 0% packet loss, time ${(packetCount - 1) * 1000 + 3}ms`)
       lines.push(_rttStatsLine(rtts))
-    } else if (_isNetworkUnreachable(result.failureReason)) {
+    } else if (_isNetworkUnreachable(result, this.topology.hasRouteTo(device, target))) {
       // Local failure — no packets sent, immediate error
       lines.push('ping: connect: Network is unreachable')
+    } else if (result.lostOnReturn) {
+      // Echo delivered, reply never came: iputils prints nothing per packet, only the summary
+      const packetCount = Math.min(count, 4)
+      lines.push('')
+      lines.push(`--- ${label} ping statistics ---`)
+      lines.push(`${packetCount} packets transmitted, 0 received, 100% packet loss, time ${(packetCount - 1) * 1000 + 3}ms`)
     } else {
       // Remote ICMP unreachable or timeout
       const packetCount = Math.min(count, 4)
@@ -880,10 +886,14 @@ const _RESOLV_UPSTREAM = [
 
 // Returns true for failures where Linux shows "Network is unreachable" (local error,
 // no packets sent) rather than per-packet "Destination Host Unreachable" (ICMP error).
-function _isNetworkUnreachable(failureReason) {
+// A failure the far end caused (lostOnReturn) is never a local error: the echo went out.
+// subnet_mismatch is local only when the host had no route at all (mask too narrow); with
+// a too-wide mask it ARPed on-link and nobody answered → per-packet Destination Host Unreachable.
+function _isNetworkUnreachable({ failureReason, lostOnReturn }, hostHasRoute) {
+  if (lostOnReturn) return false
+  if (failureReason === 'subnet_mismatch') return !hostHasRoute
   return failureReason === 'no_route' ||
          failureReason === 'host_no_gateway' ||
-         failureReason === 'subnet_mismatch' ||
          failureReason === 'admin_down' ||
          failureReason === 'link_down'
 }

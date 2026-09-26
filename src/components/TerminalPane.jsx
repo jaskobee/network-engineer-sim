@@ -425,7 +425,7 @@ function TermSession({ session, isActive }) {
           const cancel = eng.executePingAsync(device, resolvedPingTarget, {
             displayName: resolvedPingTarget !== pingTarget ? pingTarget : null,
             onStart: lines => lines.forEach(l => term.writeln(l)),
-            onPacket: (i, reachable, _tgt, srcIp, failureReason, ttl, rtt) => {
+            onPacket: (i, reachable, _tgt, srcIp, failureReason, ttl, rtt, lostOnReturn) => {
               const pktSrcIp = srcIp ?? device.interfaces.find(f => f.status === 'up' && f.ip)?.ip
               if (isWindows) {
                 if (reachable) {
@@ -440,9 +440,10 @@ function TermSession({ session, isActive }) {
                     ? `${pingTarget} (${resolvedPingTarget})`
                     : pingTarget
                   term.writeln(`\x1b[32m64 bytes from ${fromLabel}: icmp_seq=${i + 1} ttl=${ttl ?? 64} time=${rtt != null ? rtt.toFixed(3) : '?'} ms\x1b[0m`)
-                } else {
+                } else if (!lostOnReturn) {
                   // "Network is unreachable" cases are handled by early-exit in executePingAsync
-                  // and never reach onPacket, so here we always show the ICMP error variant.
+                  // and never reach onPacket. A reply lost on the way back prints nothing per
+                  // packet (iputils only reports it in the summary); anything else shows the ICMP error.
                   term.writeln(`\x1b[31mFrom ${pktSrcIp ?? ''} icmp_seq=${i + 1} Destination Host Unreachable\x1b[0m`)
                 }
               } else {

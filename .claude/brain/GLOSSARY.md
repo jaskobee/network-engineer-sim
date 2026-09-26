@@ -40,7 +40,7 @@ TELNET 23, RDP 3389, SMTP 25).
 | `vlan_isolated` | Wrong VLAN / VLAN not carried on trunk / access-mode ROAS uplink | implemented |
 | `nat_required` | RFC 1918 source egressing to ISP without translation | implemented |
 | `blocked_by_firewall` | Dropped by zone policy (`failurePoint` = firewall id) | implemented |
-| `subnet_mismatch` | Wrong mask → host mis-decides L2 vs L3 | **falls through to `no_route`** |
+| `subnet_mismatch` | Two ends of one segment disagree about the mask: a host with no route for the peer, whose own mask excludes it while the peer's includes it. `failurePoint` = that host; `lostOnReturn` true when it is the *receiver* (echo delivered, reply never sent → plain timeouts). A too-*wide* mask fails only when no router proxy-ARPs (`no ip proxy-arp`, or no specific route) | implemented |
 | `gateway_unreachable` | Gateway set but off-subnet / unreachable | **falls through** |
 | `ip_conflict` | Duplicate IP | **falls through** |
 | `duplex_mismatch` | Up/up but lossy | **falls through** |

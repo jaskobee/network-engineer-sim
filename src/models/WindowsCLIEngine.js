@@ -60,7 +60,10 @@ export class WindowsCLIEngine {
     this.topology.recordCapture(srcIp, targetIp, result)
 
     // Local failure: show general failure immediately, no per-packet loop
-    if (!result.reachable && _isLocalError(result.failureReason)) {
+    // subnet_mismatch is local only when the adapter had no route at all (mask too narrow)
+    const sent = this.topology.hasRouteTo(device, targetIp)
+    if (!result.reachable && !result.lostOnReturn && _isLocalError(result.failureReason) &&
+        !(result.failureReason === 'subnet_mismatch' && sent)) {
       const hint = _localErrorHint(result.failureReason)
       const startLines = [`Pinging ${who} with 32 bytes of data:`, `PING: transmit failed. General failure.`]
       if (hint) startLines.push(`  (${hint})`)
@@ -829,6 +832,7 @@ function _localErrorHint(r) {
   if (r === 'no_route')        return 'No route to host — verify gateway and routing'
   if (r === 'admin_down')      return 'The adapter is disabled — enable it with: netsh interface set interface name="Ethernet0" admin=enabled'
   if (r === 'link_down')       return 'Cable not connected — attach a cable from the floorplan'
+  if (r === 'subnet_mismatch') return 'The destination is outside this adapter\'s subnet and there is no gateway — check the subnet mask with: ipconfig'
   return null
 }
 

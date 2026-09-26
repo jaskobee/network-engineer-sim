@@ -288,32 +288,33 @@ export class Topology {
       if (fwd.failureReason === 'vlan_isolated')
         return _pingResult(false, 'vlan_isolated', fwd.failurePoint)
 
-      // Post-BFS refinements for PC/server when BFS returned 'no_route'.
+      // Post-BFS refinements for end hosts when BFS returned 'no_route'.
       // Routers, and any failure reason other than no_route, are left unchanged.
-      if (fwd.failureReason === 'no_route' &&
-          (srcDevice.type === 'pc' || srcDevice.type === 'server')) {
+      if (fwd.failureReason === 'no_route' && _isEndHost(srcDevice)) {
         const upIfaces = srcDevice.interfaces.filter(i => i.status === 'up' && i.ip && i.subnet_mask)
         const dstIsLocal = upIfaces.some(iface =>
           networkAddress(dstIp, iface.subnet_mask) === networkAddress(iface.ip, iface.subnet_mask)
         )
         if (dstIsLocal) {
-          // Src thinks dst is on the same subnet — BFS failed only because of VLAN
-          // isolation at the switch (or no physical path at all).
+          // Src thinks dst is on its own subnet and ARPs for it — but dst's own mask says
+          // they are not on one subnet (src's mask is too wide), and no router answered
+          // by proxy ARP. The two ends disagree about the mask.
+          if (this._findDeviceByIp(dstIp) && !this._subnetCovers(dstIp, srcIp)) {
+            return _pingResult(false, 'subnet_mismatch', srcDevice.id)
+          }
+          // Otherwise BFS failed only because of VLAN isolation at the switch (or no
+          // physical path at all).
           const vlanIsolated = _checkVlanIsolation(srcDevice, srcIp, dstIp, this)
           if (vlanIsolated) return _pingResult(false, 'vlan_isolated', null)
           return _pingResult(false, 'no_route', null)
         }
         // Dst is off-subnet from src's perspective.
-        // subnet_mismatch: dst is up, and from dst's own mask src falls in the same subnet.
-        const dstDev = this._findDeviceByIp(dstIp)
-        if (dstDev) {
-          const dstIface = dstDev.interfaces.find(
-            i => i.ip === dstIp && i.status === 'up' && i.subnet_mask
-          )
-          if (dstIface &&
-              networkAddress(srcIp, dstIface.subnet_mask) === networkAddress(dstIp, dstIface.subnet_mask)) {
-            return _pingResult(false, 'subnet_mismatch', null)
-          }
+        // subnet_mismatch: src has no route for dst, so it never transmits — yet dst's own
+        // mask puts src on dst's subnet: the two ends of the link disagree about the mask.
+        // (With a route, src handed the echo to a gateway; the failure is further along.)
+        if (this._findExitInterfaces(srcDevice, dstIp).length === 0 &&
+            this._subnetCovers(dstIp, srcIp)) {
+          return _pingResult(false, 'subnet_mismatch', srcDevice.id)
         }
         // host_no_gateway: dst is off all connected subnets and there is no
         // default route with a next-hop reachable via a connected subnet.
@@ -335,10 +336,35 @@ export class Topology {
     const dstDevice = this._findDeviceByIp(dstIp)
     if (dstDevice) {
       const ret = this._bfsReach(dstDevice, srcIp, dstIp, true, service)
-      if (!ret.reachable) return _pingResult(false, 'no_return_path', ret.failurePoint)
+      if (!ret.reachable) {
+        // subnet_mismatch on the way back: src's mask put dst on-link, so the echo was
+        // delivered directly (ARP worked) — but dst's mask puts src off-link and dst has
+        // no route to it, so the reply is never sent. The sender only sees timeouts.
+        if (_isEndHost(dstDevice) &&
+            this._findExitInterfaces(dstDevice, srcIp).length === 0 &&
+            this._subnetCovers(srcIp, dstIp)) {
+          return _pingResult(false, 'subnet_mismatch', dstDevice.id, true)
+        }
+        return _pingResult(false, 'no_return_path', ret.failurePoint, true)
+      }
     }
 
     return _pingResult(true, null, null)
+  }
+
+  // Would `device` put anything on the wire toward ip — does a connected subnet or a
+  // route cover it? (No → the host's own stack refuses: "Network is unreachable".)
+  hasRouteTo(device, ip) {
+    return this._findExitInterfaces(device, ip).length > 0
+  }
+
+  // True when the up interface that owns ownerIp puts otherIp in its own subnet,
+  // i.e. the device at ownerIp would treat otherIp as on-link.
+  _subnetCovers(ownerIp, otherIp) {
+    const owner = this._findDeviceByIp(ownerIp)
+    const iface = owner?.interfaces.find(i => i.ip === ownerIp && i.status === 'up' && i.subnet_mask)
+    return !!iface &&
+      networkAddress(otherIp, iface.subnet_mask) === networkAddress(ownerIp, iface.subnet_mask)
   }
 
   // BFS from srcDevice looking for an interface owning dstIp.
@@ -357,11 +383,31 @@ export class Topology {
     let fwBlockedAt = null   // device id where the firewall dropped it
 
     while (queue.length > 0) {
-      const { device, ingressVlan, ingressIfaceId } = queue.shift()
+      // l2Target: the IP the frame is addressed to (the sender's ARP target) — the
+      // destination when the last L3 hop saw it on-link, else that hop's next hop.
+      // null = not constrained (first hop from a switch SVI, or out of the ISP cloud).
+      const { device, ingressVlan, ingressIfaceId, l2Target = null } = queue.shift()
+
+      // ROAS: when a tagged frame arrives at a router via a trunk (ingressVlan set),
+      // the router must have a subinterface whose encapsulation dot1Q matches that tag
+      // and is up.  Without a match, the frame is discarded at L2/L3 boundary.
+      if (ingressVlan !== null && device.type === 'router') {
+        const accepted = device.interfaces.some(i =>
+          i.parent && i.vlanTag === ingressVlan && i.status === 'up'
+        )
+        if (!accepted) { vlanBlocked = true; continue }
+      }
+
+      // A switch floods the frame everywhere in the VLAN, but only the device it is
+      // addressed to picks it up (or a router answering by proxy ARP).
+      if (ingressIfaceId && device.type !== 'switch' &&
+          !this._acceptsFrame(device, l2Target, dstIp, ingressIfaceId, ingressVlan)) continue
+
       // Switches can be visited multiple times with different VLAN contexts (different
-      // L2 forwarding domains).  Non-switch devices (routers, PCs) are visited once.
+      // L2 forwarding domains) and frames addressed to different next hops.  Non-switch
+      // devices (routers, PCs) are visited once.
       const visitKey = device.type === 'switch'
-        ? `${device.id}:${ingressVlan}`
+        ? `${device.id}:${ingressVlan}:${l2Target}`
         : device.id
       if (visited.has(visitKey)) continue
       visited.add(visitKey)
@@ -374,21 +420,13 @@ export class Topology {
         if (!isLocal) return { reachable: true }
       }
 
-      // ROAS: when a tagged frame arrives at a router via a trunk (ingressVlan set),
-      // the router must have a subinterface whose encapsulation dot1Q matches that tag
-      // and is up.  Without a match, the frame is discarded at L2/L3 boundary.
-      if (ingressVlan !== null && device.type === 'router') {
-        const accepted = device.interfaces.some(i =>
-          i.parent && i.vlanTag === ingressVlan && i.status === 'up'
-        )
-        if (!accepted) { vlanBlocked = true; continue }
-      }
-
       // Does this device own the destination IP on an up interface?
+      // (A switch's SVI only answers frames addressed to it, not ones passing through.)
       for (const iface of device.interfaces) {
         if (iface.ip === dstIp && iface.status === 'up') {
           // SVI can only be reached from within its own VLAN (L2 boundary)
           if (iface.svi && ingressVlan !== null && iface.vlan !== ingressVlan) continue
+          if (device.type === 'switch' && l2Target !== null && l2Target !== dstIp) continue
           return { reachable: true }
         }
       }
@@ -509,7 +547,8 @@ export class Topology {
         }
         // else: non-trunk link to non-switch device — no VLAN context
 
-        queue.push({ device: remoteDevice, ingressVlan: nextVlan, ingressIfaceId: physIface.connected_to })
+        const nextTarget = device.type === 'switch' ? l2Target : this._l2TargetFor(device, dstIp)
+        queue.push({ device: remoteDevice, ingressVlan: nextVlan, ingressIfaceId: physIface.connected_to, l2Target: nextTarget })
       }
     }
 
@@ -531,18 +570,22 @@ export class Topology {
     if (srcIp === dstIp) return [srcDevice.id]
 
     const startVlan = _getStartVlan(srcDevice, srcIp)
-    const mk = (devId, vlan) => `${devId}:${vlan ?? 'x'}`
+    // Same delivery rule as _bfsReach: a frame is picked up only by the device it is
+    // addressed to (l2Target) or a proxy-ARPing router; switches are keyed by it too.
+    const mk = (dev, vlan, target) => dev.type === 'switch'
+      ? `${dev.id}:${vlan ?? 'x'}:${target}`
+      : `${dev.id}:${vlan ?? 'x'}`
 
     const visited = new Set()
     const states  = new Map() // stateKey -> { parentKey, deviceId }
 
-    const srcKey = mk(srcDevice.id, startVlan)
+    const srcKey = mk(srcDevice, startVlan, null)
     visited.add(srcKey)
     states.set(srcKey, { parentKey: null, deviceId: srcDevice.id })
-    const queue = [{ device: srcDevice, ingressVlan: startVlan, key: srcKey }]
+    const queue = [{ device: srcDevice, ingressVlan: startVlan, key: srcKey, l2Target: null }]
 
     while (queue.length > 0) {
-      const { device, ingressVlan, key } = queue.shift()
+      const { device, ingressVlan, key, l2Target } = queue.shift()
 
       // ISP device: path terminates here for any internet (non-local) destination
       if (device.type === 'isp') {
@@ -556,6 +599,7 @@ export class Topology {
       for (const iface of device.interfaces) {
         if (iface.ip === dstIp && iface.status === 'up') {
           if (iface.svi && ingressVlan !== null && iface.vlan !== ingressVlan) continue
+          if (device.type === 'switch' && l2Target !== null && l2Target !== dstIp) continue
           return _rebuildPath(key, states)
         }
       }
@@ -581,11 +625,14 @@ export class Topology {
         } else if (device.type === 'switch' && exitIface.switchport_mode === 'trunk') {
           nextVlan = ingressVlan
         }
-        const nextKey = mk(remoteDev.id, nextVlan)
+        const nextTarget = device.type === 'switch' ? l2Target : this._l2TargetFor(device, dstIp)
+        if (remoteDev.type !== 'switch' &&
+            !this._acceptsFrame(remoteDev, nextTarget, dstIp, physIface.connected_to, nextVlan)) continue
+        const nextKey = mk(remoteDev, nextVlan, nextTarget)
         if (visited.has(nextKey)) continue
         visited.add(nextKey)
         states.set(nextKey, { parentKey: key, deviceId: remoteDev.id })
-        queue.push({ device: remoteDev, ingressVlan: nextVlan, key: nextKey })
+        queue.push({ device: remoteDev, ingressVlan: nextVlan, key: nextKey, l2Target: nextTarget })
       }
     }
 
@@ -660,6 +707,61 @@ export class Topology {
     }
 
     return exits
+  }
+
+  // The address an L3 device ARPs for when it sends toward dstIp — i.e. who the frame is
+  // addressed to. Mirrors _findExitInterfaces: on-link → dstIp itself; via a route → the
+  // route's next hop (an exit-interface-only route ARPs for dstIp, relying on proxy ARP).
+  // The ISP cloud is not modelled at L2: null (any device may take the frame).
+  _l2TargetFor(device, dstIp) {
+    if (device.type === 'isp') return null
+    const onLink = device.interfaces.some(i =>
+      i.status === 'up' && i.ip && i.subnet_mask &&
+      networkAddress(i.ip, i.subnet_mask) === networkAddress(dstIp, i.subnet_mask))
+    if (onLink) return dstIp
+    let best = null, bestLen = -1
+    for (const r of device.routing_table) {
+      if (networkAddress(dstIp, r.mask) !== r.network) continue
+      const len = maskToPrefixLen(r.mask)
+      if (len > bestLen) { bestLen = len; best = r }
+    }
+    return best?.next_hop ?? dstIp
+  }
+
+  // Does `device` pick up a frame addressed to l2Target that arrived on ingressIfaceId?
+  //  - yes if it owns l2Target (it is the destination, or the next hop the sender chose);
+  //  - a router also answers ARP for dstIp by PROXY ARP (IOS `ip proxy-arp`, on by
+  //    default) when the ingress interface has it enabled and the router has a specific
+  //    route to dstIp out of a different interface. IOS does not proxy from the default
+  //    route alone — otherwise it would answer every ARP on the segment.
+  //  - the ISP cloud takes anything (it is not modelled at L2).
+  _acceptsFrame(device, l2Target, dstIp, ingressIfaceId, ingressVlan = null) {
+    if (l2Target === null || device.type === 'isp') return true
+
+    // Routers and firewalls answer ARP per interface: only for the address of the
+    // (sub)interface the request arrived on. End hosts have one NIC.
+    const isL3 = device.type === 'router' || device.type === 'firewall'
+    const physName = ingressIfaceId.slice(ingressIfaceId.indexOf(':') + 1)
+    const ingress = isL3 && ingressVlan !== null
+      ? device.interfaces.find(i => i.parent === physName && i.vlanTag === ingressVlan)
+      : device.getInterface(physName)
+    if (isL3) {
+      if (ingress?.ip === l2Target && ingress.status === 'up') return true
+    } else if (device.interfaces.some(i => i.ip === l2Target && i.status === 'up')) {
+      return true
+    }
+
+    if (device.type !== 'router' || l2Target !== dstIp) return false
+    if (!ingress || ingress.status !== 'up' || !ingress.ip || ingress.proxy_arp === false) return false
+
+    const connected = device.interfaces.some(i =>
+      i.status === 'up' && i.ip && i.subnet_mask &&
+      networkAddress(i.ip, i.subnet_mask) === networkAddress(dstIp, i.subnet_mask))
+    const specific = connected || device.routing_table.some(r =>
+      r.mask !== '0.0.0.0' && networkAddress(dstIp, r.mask) === r.network)
+    if (!specific) return false
+    const exits = this._findExitInterfaces(device, dstIp, ingressVlan)
+    return exits.length > 0 && !exits.includes(ingress)
   }
 
   _findDeviceByIp(ip) {
@@ -938,7 +1040,7 @@ function _captureDropInfo(reason, fpName) {
     case 'vlan_isolated':      return `VLAN boundary — no L3 routing between VLANs`
     case 'nat_required':       return `RFC 1918 source — NAT required${at}`
     case 'blocked_by_firewall':return `Blocked by firewall policy${at} [no matching permit rule]`
-    case 'subnet_mismatch':    return `Subnet mismatch — verify IP/mask configuration`
+    case 'subnet_mismatch':    return `Subnet mask mismatch${at} — the two ends disagree about the subnet`
     default:                   return `Destination unreachable (${reason ?? 'unknown'})`
   }
 }
@@ -948,7 +1050,9 @@ function _captureDropInfo(reason, fpName) {
 //   'subnet_mismatch' | 'admin_down' | 'link_down' | 'no_return_path' |
 //   'vlan_isolated' | 'ip_conflict' | 'duplex_mismatch' | 'nat_required' |
 //   'blocked_by_firewall'
-function _pingResult(reachable, failureReason, failurePoint) {
+// lostOnReturn: the echo reached the destination but no reply came back (the sender
+// saw only timeouts — no local error and no ICMP error). Shells use it to pick output.
+function _pingResult(reachable, failureReason, failurePoint, lostOnReturn = false) {
   return {
     reachable,
     degraded:      false,
@@ -958,5 +1062,12 @@ function _pingResult(reachable, failureReason, failurePoint) {
     rttMs:         reachable ? 2 : 0,
     failureReason: reachable ? null : (failureReason ?? 'no_route'),
     failurePoint:  reachable ? null : (failurePoint  ?? null),
+    lostOnReturn:  !reachable && lostOnReturn,
   }
+}
+
+// End hosts (not routers/switches/firewalls) decide on-link vs gateway from their own
+// address and mask, and have no routing protocol to fall back on.
+function _isEndHost(device) {
+  return device.type === 'pc' || device.type === 'server' || device.type === 'laptop'
 }

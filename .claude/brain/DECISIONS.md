@@ -40,6 +40,12 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 - **A fault is real misconfigured state, not a branch in ping logic.** Faults mutate the
   same fields the CLI mutates; symptoms emerge from the accurate engine. (Basis of Act 2
   and of service tickets.)
+- **Proxy ARP is modelled, on by default** (IOS `ip proxy-arp` / `no ip proxy-arp`, routers
+  only). *Why:* a host with a too-wide mask really does reach remote hosts through a Cisco
+  router; failing it would teach something real gear contradicts. The search engine delivers a
+  frame only to the device it is addressed to (the sender's on-link destination or next hop),
+  and routers answer ARP per interface. Owner's choice over "fail it as a simplification".
+  (2026-09-26)
 
 ## Architecture
 
