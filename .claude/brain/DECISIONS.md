@@ -13,6 +13,12 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   2026-10-05). Cloud behaviour is governed by `docs/AZURE_ACCURACY.md` (same status as the
   networking spec); a rule marked TO-VERIFY is never implemented — stop and flag. NetSim
   never connects to real Azure or handles real cloud credentials. One phase at a time.
+- **Cloud is a separate section with its own progress** (owner, 2026-10-06): next to Missions/Sandbox,
+  own missions, progress and sandbox; the on-prem game stays untouched (supersedes the roadmap's original
+  "one economy, one career"). It teaches the *whole* Azure infrastructure and architecture, not only
+  networking. First release = core landing zone + governance (management groups, subscriptions, RGs,
+  VNet/NSG, VM, storage, RBAC, Azure Policy — roadmap Phases 1a/1b, after the Phase 0.5 spec work);
+  players build on a visual canvas with portal-style forms first, `az` CLI later on the same model.
 - **Stay on the web, no game engine** (see `docs/ADMIN_LAPTOP_AND_TOOLS.md` §0).
   The UI is terminals, tables, forms — DOM territory. Install-free is a core advantage
   over Packet Tracer / GNS3.
