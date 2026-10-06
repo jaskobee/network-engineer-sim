@@ -17,15 +17,20 @@ Composite string `"<deviceId>:<ifaceName>"`, e.g. `"dev-1:GigabitEthernet0/0"`.
 Split on the **first** `:` only. `normalizeIfName()` in `Device.js` expands
 abbreviations (`gi0/0`, `fa0/1`). Linux shell maps `eth0` ↔ `Ethernet0/0`.
 
-## `checkPing` result (`Topology.checkPing(srcIp, dstIp, service?)`)
+## `checkPing` result — the PathResult contract (`src/core/pathResult.js`)
 ```js
-{ reachable, failureReason, failurePoint /* device id or iface id */ }
+// Topology.checkPing(srcIp, dstIp, service?)
+{ reachable, degraded, sent, received, lossPct, rttMs, failureReason, failurePoint /* device id */ }
 ```
 `service` defaults to `{ protocol: 'icmp', port: null }`; named services resolve
 through the well-known port table (HTTP 80, HTTPS 443, SSH 22, DNS udp/53, FTP 21,
 TELNET 23, RDP 3389, SMTP 25).
 
 ### `failureReason` codes
+The emitted codes are registered in `src/core/failureReasons.js` (engine code uses `REASON.NO_ROUTE` etc.;
+`src/core/__tests__/failureReasons.test.js` fails if a test expects an unregistered code). Rows marked
+*falls through* are planned and not in the registry yet.
+
 | Code | Meaning | Status |
 |---|---|---|
 | `no_route` | No matching route on a router (or generic fallthrough) | implemented |
@@ -40,12 +45,12 @@ TELNET 23, RDP 3389, SMTP 25).
 | `vlan_isolated` | Wrong VLAN / VLAN not carried on trunk / access-mode ROAS uplink | implemented |
 | `nat_required` | RFC 1918 source egressing to ISP without translation | implemented |
 | `blocked_by_firewall` | Dropped by zone policy (`failurePoint` = firewall id) | implemented |
-| `subnet_mismatch` | Wrong mask → host mis-decides L2 vs L3 | **falls through to `no_route`** |
+| `subnet_mismatch` | Wrong mask → host mis-decides L2 vs L3. Emitted when a PC/server source sees the destination as off-subnet but the destination's own mask puts the source on-link | implemented for pc/server sources; other cases still `no_route` |
 | `gateway_unreachable` | Gateway set but off-subnet / unreachable | **falls through** |
 | `ip_conflict` | Duplicate IP | **falls through** |
 | `duplex_mismatch` | Up/up but lossy | **falls through** |
 
-## DNS (`src/models/dns.js`)
+## DNS (`src/onprem/dns.js`)
 - **`device.dns_servers`** — name servers set by hand, in order (`resolvectl dns`, `netsh … set dns`, `ip name-server`).
   **`device.dhcp_dns_servers`** — what a DHCP lease supplied. `effectiveDnsServers(device)` = the first if non-empty, else the
   second; `dnsSource(device)` → `'static' | 'dhcp' | 'none'`. **`device.domain_lookup`** (router/switch, default `true`) = IOS `ip domain-lookup`.

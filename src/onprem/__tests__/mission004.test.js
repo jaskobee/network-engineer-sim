@@ -24,7 +24,7 @@ import { describe, it, expect } from 'vitest'
 import { Device, createIspDevice } from '../Device.js'
 import { Topology } from '../Topology.js'
 import { CLIEngine } from '../CLIEngine.js'
-import { PCCLIEngine } from '../PCCLIEngine.js'
+import { PCCLIEngine } from '../../guest/PCCLIEngine.js'
 import { MISSION_TASKS } from '../../data/missionTasks.js'
 
 // ── Device factories ───────────────────────────────────────────────────────────

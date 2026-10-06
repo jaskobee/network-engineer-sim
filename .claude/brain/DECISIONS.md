@@ -9,6 +9,10 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   something a learner must unlearn for CCNA / Network+ / a real job, it doesn't ship.
   Unavoidable simplifications are labelled as such in-game or in a code comment.
   `docs/NETWORKING_ACCURACY.md` is the hard spec.
+- **Three tracks: On-prem, Cloud (Azure first), Hybrid** (`docs/HYBRID_PLATFORM_ROADMAP.md`,
+  2026-10-05). Cloud behaviour is governed by `docs/AZURE_ACCURACY.md` (same status as the
+  networking spec); a rule marked TO-VERIFY is never implemented — stop and flag. NetSim
+  never connects to real Azure or handles real cloud credentials. One phase at a time.
 - **Stay on the web, no game engine** (see `docs/ADMIN_LAPTOP_AND_TOOLS.md` §0).
   The UI is terminals, tables, forms — DOM territory. Install-free is a core advantage
   over Packet Tracer / GNS3.
@@ -23,7 +27,7 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   `ip route`, no `no switchport`. Management via one SVI. It never routes between VLANs.
   Inter-VLAN routing = router-on-a-stick. A separate "Layer 3 Switch" device type may
   be added later; the plain switch stays L2. Contract comment lives at the top of
-  `src/models/CLIEngine.js`.
+  `src/onprem/CLIEngine.js`.
 - **A ping succeeds only if both forward AND return paths forward** (`checkPing` runs
   the BFS both ways; one-way routing yields `no_return_path`).
 - **Each OS keeps its own idioms**: IOS on router/switch/firewall, iproute2 on
@@ -44,8 +48,22 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 ## Architecture
 
 - **JavaScript only, no TypeScript.**
-- **`src/models/` is a pure headless core** — zero React/DOM imports. The UI is
+- **The engine is a pure headless core** (`src/core`, `src/guest`, `src/onprem`, `src/engine`) —
+  zero React/DOM imports, enforced by `src/core/__tests__/architecture.test.js`. The UI is
   disposable; the engine is the asset.
+- **Folder boundaries, not packages** (Phase 0, 2026-10-06; roadmap §3.1). `core` imports only
+  `core`; `onprem` ↔ `cloud` never; only `hybrid` imports both; `onprem` never imports `guest`.
+  Both host shells (Linux *and* Windows) live in `guest/` so cloud VMs can reuse them.
+  *Known coupling:* `guest` → `onprem` for the DHCP client and DNS resolver — listed in the
+  architecture test and to be resolved before cloud VMs reuse the shell (Phase 2), because an
+  Azure NIC gets its address from the platform, not from a player-run DHCP server.
+- **Failure reasons are a registry** (`src/core/failureReasons.js`): engine code emits
+  `REASON.*`, never literals; emitted strings never change. Only codes the engine really emits
+  are registered — planned ones join when implemented. (2026-10-06)
+- **Saves gain `schemaVersion: 1` next to the existing `version: 2`, and every device a
+  `domain` (`onprem`).** Missing fields default (old saves load unchanged). *Why not bump
+  `version`:* autosave loading drops any other value, so a bump would silently discard every
+  player's save. Owner's choice, 2026-10-06.
 - **Mutation + tick**: engines mutate `Device`/`Topology` in place, then `refresh()`
   bumps a tick in `GameContext`. No immutable-state rewrite.
 - **No giant GameManager.** `GameContext` owns topology/engine/CLI plumbing and knows

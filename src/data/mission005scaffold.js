@@ -7,7 +7,7 @@
  * Setting device.powered = true is a physical act (plugging in), not a CLI config.
  */
 
-import { Device } from '../models/Device.js'
+import { Device } from '../onprem/Device.js'
 import { deviceCatalog } from './deviceCatalog.js'
 
 const cat = (type) => deviceCatalog.find(e => e.type === type)

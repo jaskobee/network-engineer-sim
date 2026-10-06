@@ -1,9 +1,9 @@
 # STATUS — where NetSim is right now
 
-_Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now**; remove finished items._
+_Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep this describing **now**; remove finished items._
 
 ## Health
-- `npm test` → **833 tests / 34 files passing** (Vitest 4).
+- `npm test` → **861 tests / 38 files passing** (Vitest 4).
 - `npx vite build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
 
@@ -59,7 +59,7 @@ _Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now
   devices (`blueprint.topology`); legacy 003–005 diagrams fixed and covered by a layout test.
 - **Host Configure GUI** (right-click → Configure GUI on PC/server/laptop) writes through the CLI
   engines; inspector quick IP edit uses the same path.
-- **DNS phase 1** (`models/dns.js`): names resolve only through a configured name server the host can
+- **DNS phase 1** (`onprem/dns.js`): names resolve only through a configured name server the host can
   really reach (UDP/53 through routing, NAT, firewall) — no built-in table. Name-server *lists*
   (`dns_servers` by hand over `dhcp_dns_servers` from the lease), `resolvectl` / `nslookup` / `cat resolv.conf`
   on Linux, `netsh … dns` / `nslookup` on Windows, `ip name-server` / `ip domain-lookup` on routers and
@@ -72,6 +72,13 @@ _Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now
   kept in localStorage `netsim_subnet_planner`.
 
 ## In flight / recently touched
+- **Hybrid platform roadmap** (`docs/HYBRID_PLATFORM_ROADMAP.md`, cloud spec `docs/AZURE_ACCURACY.md`).
+  **Phase 0 (kernel extraction) done on branch `phase-0-kernel-extraction`**, not merged yet: `src/models` split
+  into `src/core` (ipUtils, `failureReasons` registry, `pathResult` contract, `saveFormat`), `src/guest` (Linux +
+  Windows shells) and `src/onprem` (Device, Topology, IOS, DHCP, DNS); architecture test; saves carry
+  `schemaVersion: 1` + per-device `domain`. Zero behaviour change. Next roadmap step is cloud Phase 1 (resource
+  model + validator) — its open questions (Azure icons/naming, the TO-VERIFY rules in §A/§B/§H) come first, and
+  how it orders against DNS phase 2 / Act 2 below is the owner's call.
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
   UX UI and gameplay", "fix mission view and visual floor plan", "floor clean up").
 - New mission + narrative type ("full new playstyle") — the client/career layer above.
@@ -83,8 +90,9 @@ _Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now
 1. **Act 2 — fault-injection / troubleshooting missions**: pre-broken topologies, no
    step-by-step hints, diagnose with `show` commands. Design in
    `docs/NETSIM_FAULTS_AND_FEATURES.md`. Use `/fault-scenario`.
-2. Refine generic reason codes: `subnet_mismatch` first, then `gateway_unreachable`,
-   `ip_conflict`, `duplex_mismatch` (all currently fall through to `no_route`).
+2. Refine generic reason codes: `subnet_mismatch` is emitted only for PC/server sources (routers and other
+   cases still get `no_route`); then `gateway_unreachable`, `ip_conflict`, `duplex_mismatch` (fall through to
+   `no_route`). Register each in `src/core/failureReasons.js` when it ships.
 3. More clients/missions on the declarative DSL (`/new-mission`); more service tickets.
 4. Admin-laptop tool family from `docs/ADMIN_LAPTOP_AND_TOOLS.md` — port scanner and
    WireFish are still spec-only; the Phase 3 packet-engine refactor needs an owner decision.
@@ -92,6 +100,15 @@ _Last refreshed: 2026-09-22 (sandbox subnet planner). Keep this describing **now
    click-to-connect cabling.
 
 ## Known rough edges
+- **Found during Phase 0, not fixed (no-behaviour-change phase):**
+  - The admin laptop's `os_type` is not saved (`serializeDevice` / `deviceFromSave`): a laptop switched to Windows
+    comes back as Linux after a reload or import.
+  - Dev-mode sandbox export (`devExportSandbox` in `GameContext`) keeps its own copy of the device serializer and
+    drops `dns_servers`, `dhcp_dns_servers`, `domain_lookup`; it should reuse `serializeDevice`.
+  - IOS `ping` prints a `% <reason>` line after `.....` (`_iosFailureMsg`, e.g. `% Network is unreachable`) — real
+    IOS prints no such line (it shows `U`/`.` per echo); needs an accuracy-gate decision.
+  - Dev preset `roas-access-broken` is labelled `vlan_isolated` but the engine returns `no_route` (known in
+    `presets.test.js`, excluded there; `LESSONS.md` still calls it the canonical `vlan_isolated` case). Decide which is right.
 - **Host-shell simplifications still open** (documented, not bugs): every interface boots
   `admin_down` (real Linux/Windows hosts boot with the adapter up) — fixing it properly means
   deriving link state from power (a never-powered switch already forwards) *and* rewriting the

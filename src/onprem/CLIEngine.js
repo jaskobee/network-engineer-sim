@@ -19,7 +19,8 @@
  */
 
 import { normalizeIfName, getParentIfName, createSubinterface, refreshSubifs } from './Device.js'
-import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen } from './ipUtils.js'
+import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen } from '../core/ipUtils.js'
+import { REASON } from '../core/failureReasons.js'
 import { resolveName } from './dns.js'
 
 export class CLIEngine {
@@ -523,7 +524,7 @@ export class CLIEngine {
   }
 
   // A hostname given to `ping`, resolved the way IOS does it: only while `ip domain-lookup` is on,
-  // by asking the configured `ip name-server`s over the real network (models/dns.js).
+  // by asking the configured `ip name-server`s over the real network (onprem/dns.js).
   // → { ok: true, ip, lines }  lines = what IOS prints before the ping starts
   //   { ok: false, lines }     lines = the failure, in IOS's words
   // Also used by TerminalPane, which runs the animated ping once the name is an address.
@@ -1932,16 +1933,16 @@ function _getSrcIp(topology, device, dstIp) {
 // Map checkPing failureReason enum to human-readable IOS error strings.
 function _iosFailureMsg(failureReason) {
   switch (failureReason) {
-    case 'admin_down':       return 'Source interface is administratively down'
-    case 'link_down':        return 'Network is unreachable'
-    case 'no_route':         return 'Network is unreachable'
-    case 'host_no_gateway':  return 'Network is unreachable'
-    case 'no_return_path':   return 'Request timed out (no return path configured)'
-    case 'vlan_isolated':    return 'Destination host unreachable (VLAN boundary)'
+    case REASON.ADMIN_DOWN:       return 'Source interface is administratively down'
+    case REASON.LINK_DOWN:        return 'Network is unreachable'
+    case REASON.NO_ROUTE:         return 'Network is unreachable'
+    case REASON.HOST_NO_GATEWAY:  return 'Network is unreachable'
+    case REASON.NO_RETURN_PATH:   return 'Request timed out (no return path configured)'
+    case REASON.VLAN_ISOLATED:    return 'Destination host unreachable (VLAN boundary)'
     case 'gateway_unreachable': return 'Destination host unreachable'
-    case 'subnet_mismatch':  return 'Destination host unreachable (subnet mismatch)'
-    case 'nat_required':         return 'Destination host unreachable (NAT required — private source address is not internet-routable)'
-    case 'blocked_by_firewall': return 'Destination host unreachable (packet blocked by firewall policy — check zone rules and ensure return path is permitted)'
+    case REASON.SUBNET_MISMATCH:  return 'Destination host unreachable (subnet mismatch)'
+    case REASON.NAT_REQUIRED:         return 'Destination host unreachable (NAT required — private source address is not internet-routable)'
+    case REASON.BLOCKED_BY_FIREWALL: return 'Destination host unreachable (packet blocked by firewall policy — check zone rules and ensure return path is permitted)'
     default: return failureReason ?? null
   }
 }

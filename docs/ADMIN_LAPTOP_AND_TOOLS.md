@@ -20,7 +20,7 @@ decision (stay on the web) and the one architectural fork this feature exposes.
 | Is the laptop a real topology node? | **Yes — always** | It has a NIC, IP, gateway, MAC, and a switch port. If it is a floating panel that always works, the lesson is deleted. |
 | Does the GUI have its own config store? | **No** | Firewall GUI and CLI mutate the **same** device state. A rule added in the GUI appears in `show running-config` and vice versa. |
 | Visual juice (packet animation) | Canvas/WebGL layer (e.g. PixiJS) **for the map only**, if/when needed | Everything else stays DOM. Not part of this spec. |
-| Portability hedge | Keep `src/models/` a **pure headless JS core** with zero React/DOM imports | The UI is disposable; the engine is the asset. Enforce as a package boundary. |
+| Portability hedge | Keep the engine (`src/core`, `src/guest`, `src/onprem`, `src/engine`) a **pure headless JS core** with zero React/DOM imports | The UI is disposable; the engine is the asset. Enforce as a package boundary. |
 
 ---
 
@@ -61,7 +61,7 @@ network lets it reach.**
 
 ### Model
 - New device type `laptop` (or `admin_laptop`) in `data/deviceCatalog.js` and
-  `models/Device.js`. One NIC (`eth0`), same interface model as `pc`.
+  `onprem/Device.js`. One NIC (`eth0`), same interface model as `pc`.
 - Uses the existing **`PCCLIEngine`** (Linux shell) for its terminal — no new CLI engine.
   `ip addr`, `ip route`, `dhclient`, `ping` all work as they do on a PC.
 - Adds a **tools layer** on top: a windowed UI surface (browser, scanner, analyzer)
@@ -276,9 +276,9 @@ software licenses (buy WireFish, buy the scanner). This:
 - provides a natural gate: "you're not ready for packet analysis yet"
 
 ### Engine purity boundary
-Formalize `src/models/` as a headless core: no React, no DOM, no browser globals. It must
+Formalize the engine folders (`src/core`, `src/guest`, `src/onprem`, `src/engine`) as a headless core: no React, no DOM, no browser globals. It must
 run in Node for tests, and could later run server-side for authoritative multiplayer state.
-Add a lint rule or an explicit note if enforcement is cheap.
+Enforced since Phase 0 by `src/core/__tests__/architecture.test.js` (imports only; browser globals are not scanned).
 
 ### Mastery scoring interaction
 GUI config is realistic for firewalls, but scoring should reward CLI fluency. Some missions

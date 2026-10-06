@@ -3,7 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useGame } from '../state/GameContext.jsx'
-import { isValidIp } from '../models/ipUtils.js'
+import { isValidIp } from '../core/ipUtils.js'
 import { pingTargetOf } from '../engine/pingTarget.js'
 import { playPingSuccess, playPingFail } from '../utils/sounds.js'
 
@@ -398,7 +398,7 @@ function TermSession({ session, isActive }) {
         const pingTarget = isPingCmd ? pingTargetOf(tokens, isWindows ? 'windows' : isPC ? 'linux' : 'ios') : null
 
         // A name is resolved by the device's own resolver — the configured name servers, over the real
-        // network (models/dns.js) — and fails the way that OS fails: no fake "internet" table any more.
+        // network (onprem/dns.js) — and fails the way that OS fails: no fake "internet" table any more.
         let resolvedPingTarget = pingTarget
         let resolveLines = []
         let resolveFailed = false

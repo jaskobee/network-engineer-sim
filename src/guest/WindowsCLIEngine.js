@@ -1,9 +1,10 @@
 import {
   isValidIp, isValidMask, networkAddress, maskToPrefixLen,
   ipToNum, isHostAddress,
-} from './ipUtils.js'
-import { performDHCP, releaseDHCP } from './DHCPEngine.js'
-import { resolveName, queryServer, effectiveDnsServers, dnsSource, reverseName, normalizeName } from './dns.js'
+} from '../core/ipUtils.js'
+import { REASON } from '../core/failureReasons.js'
+import { performDHCP, releaseDHCP } from '../onprem/DHCPEngine.js'
+import { resolveName, queryServer, effectiveDnsServers, dnsSource, reverseName, normalizeName } from '../onprem/dns.js'
 
 // Windows CMD-style CLI for the Admin Laptop when device.os_type === 'windows'.
 // Commands: ipconfig, route, netsh, ping, arp, hostname, cls, help.
@@ -653,7 +654,7 @@ export class WindowsCLIEngine {
     if (!servers.length) return [`*** Default servers are not available`, `Server:  UnKnown`, `Address:  127.0.0.1`, ``, `*** UnKnown can't find ${asked}: No response from server`]
     const r = resolveName(this.topology, device, asked, { capture: true })
     if (r.ok) return [...this._nsHeader(r.server), ...this._nsAnswer(asked, r.ip)]
-    if (r.reason === 'dns_nxdomain') return [...this._nsHeader(r.server), `*** ${reverseName(r.server) ?? 'UnKnown'} can't find ${asked}: Non-existent domain`]
+    if (r.reason === REASON.DNS_NXDOMAIN) return [...this._nsHeader(r.server), `*** ${reverseName(r.server) ?? 'UnKnown'} can't find ${asked}: Non-existent domain`]
     return timedOut(servers[0])
   }
 
@@ -821,14 +822,14 @@ function _tokenize(input) {
 }
 
 function _isLocalError(r) {
-  return r === 'no_route' || r === 'host_no_gateway' || r === 'admin_down' || r === 'link_down' || r === 'subnet_mismatch'
+  return r === REASON.NO_ROUTE || r === REASON.HOST_NO_GATEWAY || r === REASON.ADMIN_DOWN || r === REASON.LINK_DOWN || r === REASON.SUBNET_MISMATCH
 }
 
 function _localErrorHint(r) {
-  if (r === 'host_no_gateway') return 'No default gateway — set one with: netsh interface ip set address "Ethernet0" static <ip> <mask> <gw>'
-  if (r === 'no_route')        return 'No route to host — verify gateway and routing'
-  if (r === 'admin_down')      return 'The adapter is disabled — enable it with: netsh interface set interface name="Ethernet0" admin=enabled'
-  if (r === 'link_down')       return 'Cable not connected — attach a cable from the floorplan'
+  if (r === REASON.HOST_NO_GATEWAY) return 'No default gateway — set one with: netsh interface ip set address "Ethernet0" static <ip> <mask> <gw>'
+  if (r === REASON.NO_ROUTE)        return 'No route to host — verify gateway and routing'
+  if (r === REASON.ADMIN_DOWN)      return 'The adapter is disabled — enable it with: netsh interface set interface name="Ethernet0" admin=enabled'
+  if (r === REASON.LINK_DOWN)       return 'Cable not connected — attach a cable from the floorplan'
   return null
 }
 

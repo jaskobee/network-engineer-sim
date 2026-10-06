@@ -17,11 +17,11 @@
  * N9  - the DHCP server re-offers a client its existing binding (RFC 2131 §4.3.1)
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { Device } from '../Device.js'
-import { Topology } from '../Topology.js'
-import { CLIEngine } from '../CLIEngine.js'
+import { Device } from '../../onprem/Device.js'
+import { Topology } from '../../onprem/Topology.js'
+import { CLIEngine } from '../../onprem/CLIEngine.js'
 import { PCCLIEngine } from '../PCCLIEngine.js'
-import { performDHCP, releaseDHCP } from '../DHCPEngine.js'
+import { performDHCP, releaseDHCP } from '../../onprem/DHCPEngine.js'
 
 const make = (type, model, n, prefix, start = 0) => {
   const d = new Device({ type, model, portCount: n, portPrefix: prefix, portStart: start })

@@ -4,10 +4,10 @@
  * These tests catch a preset silently drifting out of sync with engine rules.
  */
 import { describe, it, expect } from 'vitest'
-import { Topology } from '../../models/Topology.js'
-import { CLIEngine } from '../../models/CLIEngine.js'
-import { PCCLIEngine } from '../../models/PCCLIEngine.js'
-import { Device, createIspDevice, createAdminLaptop } from '../../models/Device.js'
+import { Topology } from '../../onprem/Topology.js'
+import { CLIEngine } from '../../onprem/CLIEngine.js'
+import { PCCLIEngine } from '../../guest/PCCLIEngine.js'
+import { Device, createIspDevice, createAdminLaptop } from '../../onprem/Device.js'
 import { deviceCatalog } from '../../data/deviceCatalog.js'
 import { PRESETS, buildPreset } from '../presets.js'
 

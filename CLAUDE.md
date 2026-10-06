@@ -22,8 +22,9 @@ Network+ standard. Accuracy is the product.
    (pc/server), Windows CMD (admin laptop). No leakage.
 6. **Dev mode drives the real engine, never bypasses it.** No direct state writes in
    presets/tests; dev UI is compiled out of production (`import.meta.env.DEV`).
-7. **JavaScript only, no TypeScript.** `src/models/` and `src/engine/` stay free of
-   React/DOM imports.
+7. **JavaScript only, no TypeScript.** `src/core/`, `src/guest/`, `src/onprem/` and
+   `src/engine/` stay free of React/DOM imports (enforced by
+   `src/core/__tests__/architecture.test.js`).
 
 ## Stack
 Vite 5 · React 18 · @dnd-kit · @xterm/xterm 5.5 · React Context (`GameContext` via
@@ -31,6 +32,25 @@ Vite 5 · React 18 · @dnd-kit · @xterm/xterm 5.5 · React Context (`GameContex
 
 - `npm run dev` → Vite dev server (5173, or 5174 if busy)
 - `npm test` → Vitest · `npx vite build` → only the xterm chunk-size warning is OK
+
+## Platform scope (updated 2026-10-05)
+NetSim covers three tracks: On-prem (IOS + Linux), Cloud (Azure first), Hybrid.
+- Cloud behavior is governed by docs/AZURE_ACCURACY.md (hard spec, same status as
+  NETWORKING_ACCURACY.md). Never implement a rule marked TO-VERIFY — stop and flag.
+- Code boundaries: src/core never imports onprem/cloud/hybrid; onprem and cloud never
+  import each other; only src/hybrid may import both. Enforced by an architecture test.
+- NetSim never connects to real Azure or handles real cloud credentials.
+- Roadmap and phase order: docs/HYBRID_PLATFORM_ROADMAP.md.
+
+### Code layout
+| Folder | Holds |
+|---|---|
+| `src/core/` | Shared kernel, imports nothing else: `ipUtils`, `failureReasons` (registry + `REASON.*`), `pathResult` (the `checkPing` contract), `saveFormat` (`schemaVersion`, per-node `domain`) |
+| `src/guest/` | Host OS shells: `PCCLIEngine` (Linux iproute2), `WindowsCLIEngine` (CMD). Known couplings to `onprem` (DHCP client, DNS resolver) are listed in the architecture test |
+| `src/onprem/` | On-prem plane: `Device`, `Topology` (`checkPing`/BFS), `CLIEngine` (IOS), `DHCPEngine`, `dns` (resolver) |
+| `src/cloud/`, `src/hybrid/` | Not yet — roadmap Phases 1 and 5 |
+| `src/engine/` | Game logic on top of the planes: mission DSL, career, tickets, GUI→CLI planners |
+| `src/components/`, `src/state/` | React UI and contexts |
 
 ## The brain — read before working
 Project knowledge lives in `.claude/brain/` (versioned; see `.claude/brain/README.md`):
@@ -41,7 +61,7 @@ Project knowledge lives in `.claude/brain/` (versioned; see `.claude/brain/READM
   React state.
 
 Path-scoped rules in `.claude/rules/` attach automatically when you edit
-`src/models|engine`, missions/data, `src/devMode`, UI/state, or `.github`.
+`src/core|guest|onprem|engine`, missions/data, `src/devMode`, UI/state, or `.github`.
 
 ### Skills (invoke them; the user can too with `/name`)
 | Skill | Use when |

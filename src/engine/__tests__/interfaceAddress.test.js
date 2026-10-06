@@ -14,11 +14,11 @@
  * A6 - clearing an address
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { Device, createAdminLaptop, createIspDevice } from '../../models/Device.js'
-import { Topology } from '../../models/Topology.js'
-import { CLIEngine } from '../../models/CLIEngine.js'
-import { PCCLIEngine } from '../../models/PCCLIEngine.js'
-import { WindowsCLIEngine } from '../../models/WindowsCLIEngine.js'
+import { Device, createAdminLaptop, createIspDevice } from '../../onprem/Device.js'
+import { Topology } from '../../onprem/Topology.js'
+import { CLIEngine } from '../../onprem/CLIEngine.js'
+import { PCCLIEngine } from '../../guest/PCCLIEngine.js'
+import { WindowsCLIEngine } from '../../guest/WindowsCLIEngine.js'
 import { planAddressEdit, runAddressPlan } from '../interfaceAddress.js'
 import { readAdapter } from '../hostConfig.js'
 

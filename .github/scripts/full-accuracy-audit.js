@@ -51,13 +51,15 @@ const TRACKING_LABEL = 'accuracy-audit'
 // truncation. Raise it if the source set genuinely outgrows this budget.
 const MAX_FILE_CHARS = 150_000
 const SOURCES = [
-  'src/models/CLIEngine.js',
-  'src/models/PCCLIEngine.js',
-  'src/models/WindowsCLIEngine.js',
-  'src/models/Topology.js',
-  'src/models/Device.js',
-  'src/models/DHCPEngine.js',
-  'src/models/ipUtils.js',
+  'src/onprem/CLIEngine.js',
+  'src/guest/PCCLIEngine.js',
+  'src/guest/WindowsCLIEngine.js',
+  'src/onprem/Topology.js',
+  'src/onprem/Device.js',
+  'src/onprem/DHCPEngine.js',
+  'src/onprem/dns.js',
+  'src/core/ipUtils.js',
+  'src/core/failureReasons.js',
   'src/data/deviceCatalog.js',
   'src/data/missions.js',
   'src/data/mission005scaffold.js',

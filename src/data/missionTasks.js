@@ -1,4 +1,4 @@
-import { networkAddress } from '../models/ipUtils.js'
+import { networkAddress } from '../core/ipUtils.js'
 
 // ── Mission 001 ───────────────────────────────────────────────────────────────
 

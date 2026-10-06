@@ -7,10 +7,10 @@
  * met=false after it, and met=true again once the player does the fix — with a ping to prove it.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { Device } from '../../models/Device.js'
-import { Topology } from '../../models/Topology.js'
-import { CLIEngine } from '../../models/CLIEngine.js'
-import { PCCLIEngine } from '../../models/PCCLIEngine.js'
+import { Device } from '../../onprem/Device.js'
+import { Topology } from '../../onprem/Topology.js'
+import { CLIEngine } from '../../onprem/CLIEngine.js'
+import { PCCLIEngine } from '../../guest/PCCLIEngine.js'
 import { deviceCatalog } from '../../data/deviceCatalog.js'
 import { SERVICE_TICKET_TEMPLATES, createTicketInstance } from '../../data/serviceTickets.js'
 import { buildRuntimeFromDefinition } from '../missionEngine.js'

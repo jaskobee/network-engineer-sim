@@ -22,7 +22,8 @@
  * A records only, no recursion depth, no TCP fallback, no source ports (same 4-tuple
  * simplification as the firewall).
  */
-import { isValidIp } from './ipUtils.js'
+import { isValidIp } from '../core/ipUtils.js'
+import { REASON } from '../core/failureReasons.js'
 
 /** What a DNS query looks like to the firewall: UDP, destination port 53. */
 export const DNS_SERVICE = Object.freeze({ protocol: 'udp', port: 53 })
@@ -144,7 +145,7 @@ export function resolveName(topology, device, name, opts = {}) {
   if ((opts.localNames ?? ['localhost']).includes(asked)) return { ...base, ok: true, ip: '127.0.0.1', reason: null, local: true }
 
   const servers = effectiveDnsServers(device)
-  if (!servers.length) return { ...base, ok: false, ip: null, reason: 'dns_no_server' }
+  if (!servers.length) return { ...base, ok: false, ip: null, reason: REASON.DNS_NO_SERVER }
 
   const tried = []
   for (const server of servers) {
@@ -154,9 +155,9 @@ export function resolveName(topology, device, name, opts = {}) {
       return { ...base, servers, tried, ok: true, ip: q.ip, reason: null, server, authoritative: q.authoritative }
     }
     if (q.outcome === 'nxdomain') {
-      return { ...base, servers, tried, ok: false, ip: null, reason: 'dns_nxdomain', server }
+      return { ...base, servers, tried, ok: false, ip: null, reason: REASON.DNS_NXDOMAIN, server }
     }
   }
   const refused = tried.every(t => t.outcome === 'refused')
-  return { ...base, servers, tried, ok: false, ip: null, reason: refused ? 'dns_refused' : 'dns_unreachable' }
+  return { ...base, servers, tried, ok: false, ip: null, reason: refused ? REASON.DNS_REFUSED : REASON.DNS_UNREACHABLE }
 }
