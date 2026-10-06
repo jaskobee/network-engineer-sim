@@ -67,6 +67,7 @@ function Tree({ cloud, selected, onSelect }) {
 // ── Details per kind ─────────────────────────────────────────────────────────
 
 function ManagementGroupDetails({ cloud, mg, run }) {
+  const { mission } = useCloud()   // missions hand out their subscriptions — no shortcut there
   const root = isRoot(cloud, mg.id)
   const depth = managementGroupDepth(cloud, mg.id)
   const [newId, setNewId] = useState('')
@@ -117,7 +118,7 @@ function ManagementGroupDetails({ cloud, mg, run }) {
         </Form>
       )}
 
-      {root && (
+      {root && !mission && (
         <Form title="Add a subscription — simulated shortcut" submit="Add subscription"
           onSubmit={() => run(op.addSubscription, { displayName: subName },
             r => { setSubName(''); return { kind: 'sub', id: r.id } })}>

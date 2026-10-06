@@ -21,6 +21,10 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   players build on a visual canvas with portal-style forms first, `az` CLI later on the same model.
 - **New game resets the on-prem game only; the Cloud section has its own Start over** (owner, 2026-10-06). The sweep is a
   prefix rule (`resetGuard.sweptByNewGame`: every `netsim*` key except `netsim_cloud*`).
+- **The cloud builder follows the real Azure portal workflow** (owner, 2026-10-07): every create is Review + create
+  (validation first, nothing deployed on failure), the VM wizard creates the VM's NIC and optional public IP with it, a
+  standalone NIC can't get a public IP at create (N4). Names NetSim gives auto-created resources (`<vm>-nic`, `<vm>-ip`) and
+  all tenant/subscription GUIDs are made up — allowed by the owner. Each cloud mission runs in its own customer tenant.
 - **RBAC principals are fictional users and groups** (owner, 2026-10-06): a small labelled set per mission,
   no Entra ID model, labelled in-game as a simplification. *Why:* RBAC is the lesson; modelling Entra would
   be a project of its own.

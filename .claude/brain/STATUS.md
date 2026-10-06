@@ -3,7 +3,7 @@
 _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep this describing **now**; remove finished items._
 
 ## Health
-- `npm test` → **962 tests / 45 files passing** (Vitest 4).
+- `npm test` → **982 tests / 47 files passing** (Vitest 4).
 - `npx vite build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
 
@@ -99,7 +99,11 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
   (with VM and public IP), plus NSGs / disks / storage "not inside a virtual network"; create forms for VNet, NSG, public IP,
   NIC, VM, disk, storage (`NetworkForms.jsx`) and detail panels (`NetworkDetails.jsx`: subnet reserved addresses + usable count,
   NSG custom + default rules, associate NSG, add subnet/rule, storage network access). NSG rules are stored and shown, not yet
-  evaluated (Phase 2). Next is step 6 (cloud missions). Unverified cases are refused as `not_modelled` (plan §6a), never guessed.
+  evaluated (Phase 2). **Step 6 done:** portal workflow — every create is Review + create (dry-run validation, review, Create);
+  VM wizard (Basics/Disks/Networking) creates its NIC + optional public IP all-or-nothing (`operations.deployVirtualMachine`);
+  three missions in `src/cloud/missions/` (Landing zone basics, First workload, Storage for the app), each in its own customer
+  tenant with made-up GUIDs, objectives = pure checks, end-to-end tests; Missions tab + mission bar. Cloud slice now
+  { sandbox, mission, completedMissions }. Next is step 7 (cloud accuracy gate, GLOSSARY, final browser pass). Unverified cases are refused as `not_modelled` (plan §6a), never guessed.
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
   UX UI and gameplay", "fix mission view and visual floor plan", "floor clean up").
 - New mission + narrative type ("full new playstyle") — the client/career layer above.

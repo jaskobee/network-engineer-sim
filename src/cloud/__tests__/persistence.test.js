@@ -1,17 +1,18 @@
 /**
- * Cloud save slice — PHASE_1A step 2, roadmap §3.5.
+ * Cloud save slice — PHASE_1A steps 2 and 6, roadmap §3.5.
  *
- * P1  a save carries kind, schemaVersion and domain 'cloud' on every node
- * P2  save → load is lossless (a whole workload, references intact)
- * P3  a file without schemaVersion / domain still loads; a foreign domain or a newer schema is refused
+ * P1  a save carries kind, schemaVersion and domain 'cloud' on every node of every tenant
+ * P2  save → load is lossless: sandbox, an active mission's tenant, completed missions
+ * P3  tolerant of missing fields and of the pre-mission layout; strict about wrong ones
  * P4  an unreadable save is kept under a backup key, never silently destroyed
  * P5  the cloud slice has its own key, apart from the on-prem save and the career slice
  */
 import { describe, it, expect } from 'vitest'
 import * as op from '../operations.js'
 import {
-  serializeCloud, deserializeCloud, loadCloud, saveCloud, CLOUD_SAVE_KEY, CLOUD_UNREADABLE_KEY,
+  serializeCloud, deserializeCloud, serializeTenant, loadCloud, saveCloud, CLOUD_SAVE_KEY, CLOUD_UNREADABLE_KEY,
 } from '../persistence.js'
+import { findCloudMission } from '../missions/index.js'
 import { SCHEMA_VERSION, DOMAINS } from '../../core/saveFormat.js'
 import { must, at, networkState } from './fixtures.js'
 
@@ -24,49 +25,67 @@ function memoryStorage(initial = {}) {
   }
 }
 
-function workloadState() {
+function workloadTenant() {
   const { state, webSubnetId } = networkState()
-  const nic = must(op.createNetworkInterface(state, { ...at(), name: 'nic-vm1', subnetId: webSubnetId }))
-  return must(op.createVirtualMachine(nic.state, {
-    ...at(), name: 'vm1', osType: 'Linux', size: 'Standard_B2s',
-    osDisk: { diskType: 'PremiumSSD' }, networkInterfaceIds: [nic.id],
+  return must(op.deployVirtualMachine(state, {
+    ...at(), name: 'vm1', osType: 'Linux', size: 'Standard_B2s', osDisk: { diskType: 'PremiumSSD' }, subnetId: webSubnetId,
   })).state
 }
 
+function slice() {
+  const lz = findCloudMission('cloud_landing_zone')
+  const missionTenant = must(op.createManagementGroup(lz.setup(), { id: 'mg-platform', displayName: 'Platform' })).state
+  return { sandbox: workloadTenant(), mission: { id: lz.id, tenant: missionTenant }, completedMissions: ['cloud_app_storage'] }
+}
+
+const COLLECTIONS = ['managementGroups', 'subscriptions', 'resourceGroups', 'resources']
+
 describe('P1 — what a cloud save contains', () => {
-  it('kind, schemaVersion and domain "cloud" on every node', () => {
-    const file = serializeCloud(workloadState())
+  it('kind, schemaVersion and domain "cloud" on every node of both tenants', () => {
+    const file = serializeCloud(slice())
     expect(file.kind).toBe('netsim-cloud')
     expect(file.schemaVersion).toBe(SCHEMA_VERSION)
     expect(DOMAINS).toContain('cloud')
-    for (const c of ['managementGroups', 'subscriptions', 'resourceGroups', 'resources'])
-      for (const node of Object.values(file[c])) expect(node.domain).toBe('cloud')
+    for (const t of [file.sandbox, file.mission.tenant])
+      for (const c of COLLECTIONS) for (const node of Object.values(t[c])) expect(node.domain).toBe('cloud')
   })
 })
 
 describe('P2 — round trip', () => {
-  it('save → JSON → load gives back the same state, references intact', () => {
-    const state = workloadState()
-    const back = deserializeCloud(JSON.parse(JSON.stringify(serializeCloud(state))))
+  it('save → JSON → load gives back the same slice, and the tenants are still live models', () => {
+    const s = slice()
+    const back = deserializeCloud(JSON.parse(JSON.stringify(serializeCloud(s))))
     expect(back.ok).toBe(true)
-    expect(back.state).toEqual(state)
-    // and it is still a live model: operations keep working on the loaded state
-    expect(op.createResourceGroup(back.state, { subscriptionId: Object.keys(state.subscriptions)[0], name: 'rg-more', location: 'westeurope' }).ok).toBe(true)
+    expect(back.state).toEqual(s)
+    const subId = Object.keys(s.sandbox.subscriptions)[0]
+    expect(op.createResourceGroup(back.state.sandbox, { subscriptionId: subId, name: 'rg-more', location: 'westeurope' }).ok).toBe(true)
   })
 })
 
 describe('P3 — tolerant of missing fields, strict about wrong ones', () => {
-  const file = () => JSON.parse(JSON.stringify(serializeCloud(workloadState())))
-  it('no schemaVersion and no domain fields → still loads as a cloud tenant', () => {
+  const file = () => JSON.parse(JSON.stringify(serializeCloud(slice())))
+  it('no schemaVersion and no domain fields → still loads', () => {
     const f = file()
     delete f.schemaVersion
-    for (const c of ['managementGroups', 'subscriptions', 'resourceGroups', 'resources'])
-      for (const n of Object.values(f[c])) delete n.domain
+    for (const t of [f.sandbox, f.mission.tenant]) for (const c of COLLECTIONS) for (const n of Object.values(t[c])) delete n.domain
     expect(deserializeCloud(f).ok).toBe(true)
+  })
+  it('a pre-mission save (tenant at the top level) loads as the sandbox', () => {
+    const t = workloadTenant()
+    const old = { kind: 'netsim-cloud', schemaVersion: 1, ...serializeTenant(t) }
+    expect(deserializeCloud(old)).toEqual({ ok: true, state: { sandbox: t, mission: null, completedMissions: [] } })
+  })
+  it('an unknown mission is dropped, and so is its completion record', () => {
+    const f = file()
+    f.mission.id = 'cloud_not_a_mission'
+    f.completedMissions.push('cloud_not_a_mission')
+    const r = deserializeCloud(f)
+    expect(r.state.mission).toBe(null)
+    expect(r.state.completedMissions).toEqual(['cloud_app_storage'])
   })
   it('a node from another domain is refused', () => {
     const f = file()
-    Object.values(f.resources)[0].domain = 'onprem'
+    Object.values(f.sandbox.resources)[0].domain = 'onprem'
     expect(deserializeCloud(f)).toMatchObject({ ok: false })
   })
   it('a save from a newer schema is refused rather than half-read', () => {
@@ -83,12 +102,12 @@ describe('P4 — storage', () => {
   it('nothing saved → no state, no notice', () => {
     expect(loadCloud(memoryStorage())).toEqual({ state: null })
   })
-  it('saveCloud then loadCloud restores the tenant under the cloud key', () => {
+  it('saveCloud then loadCloud restores the slice under the cloud key', () => {
     const s = memoryStorage()
-    const state = workloadState()
-    expect(saveCloud(s, state)).toBe(true)
+    const sl = slice()
+    expect(saveCloud(s, sl)).toBe(true)
     expect([...s.data.keys()]).toEqual([CLOUD_SAVE_KEY])
-    expect(loadCloud(s).state).toEqual(state)
+    expect(loadCloud(s).state).toEqual(sl)
   })
   it('an unreadable save is copied to the backup key and reported', () => {
     const s = memoryStorage({ [CLOUD_SAVE_KEY]: '{not json' })

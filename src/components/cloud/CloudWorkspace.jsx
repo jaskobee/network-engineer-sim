@@ -1,20 +1,22 @@
 /**
  * The Cloud section (roadmap Phase 1a, shipped as "Preview").
  *
- * Tabs: Management (step 4), Network (step 5) and Overview (the tenant, Start over).
- * Missions arrive in step 6; until then they're listed as coming, never shown
- * as dead buttons. Everything reads CloudContext; nothing assigns cloud state directly.
+ * Tabs: Missions (step 6), Management (step 4), Network (step 5) and Overview. While a
+ * mission runs, a mission bar stays visible on every tab and the views work in that
+ * customer's tenant; otherwise they work in the player's sandbox. Everything reads
+ * CloudContext; nothing assigns cloud state directly.
  */
 import { useState } from 'react'
 import { useCloud } from '../../state/CloudContext.jsx'
 import { managementGroupScope } from '../../cloud/model.js'
 import ManagementView from './ManagementView.jsx'
 import NetworkView from './NetworkView.jsx'
+import CloudMissions, { MissionBar } from './CloudMissions.jsx'
 
-const TABS = [['management', 'Management'], ['network', 'Network'], ['overview', 'Overview']]
+const TABS = [['missions', 'Missions'], ['management', 'Management'], ['network', 'Network'], ['overview', 'Overview']]
 
 function Overview() {
-  const { cloud, resetCloud } = useCloud()
+  const { cloud, resetCloud, mission } = useCloud()
   const root = cloud.managementGroups[cloud.tenantId]
   const counts = [
     ['Management groups', Object.keys(cloud.managementGroups).length],
@@ -24,13 +26,13 @@ function Overview() {
   ]
 
   function startOver() {
-    if (window.confirm('Start the Cloud section over with an empty tenant? Your on-prem game is not affected.')) resetCloud()
+    if (window.confirm('Start your sandbox over with an empty tenant? Missions and your on-prem game are not affected.')) resetCloud()
   }
 
   return (
     <div className="cloud-inner">
-      <section className="cloud-card" aria-label="Your tenant">
-        <h2>Your tenant</h2>
+      <section className="cloud-card" aria-label="Tenant">
+        <h2>{mission ? `${mission.def.client}'s tenant (mission)` : 'Your sandbox tenant'}</h2>
         <dl className="cloud-facts">
           <dt>Root management group</dt>
           <dd>{root.displayName}</dd>
@@ -46,20 +48,15 @@ function Overview() {
         </ul>
       </section>
 
-      <section className="cloud-card" aria-label="Coming next">
-        <h2>Coming next in this preview</h2>
-        <ul className="cloud-roadmap">
-          <li><strong>Build missions</strong> — landing zone basics, a first workload, and storage for an app.</li>
-        </ul>
-      </section>
-
       <p className="cloud-credit">
-        Azure icons are Microsoft's Azure architecture icons, used unmodified as training material under
-        Microsoft's icon terms.
+        Tenant and subscription IDs are made-up GUIDs. Azure icons are Microsoft&apos;s Azure architecture icons, used
+        unmodified as training material under Microsoft&apos;s icon terms.
       </p>
 
       <div className="cloud-actions">
-        <button className="btn danger" onClick={startOver}>Start over</button>
+        {mission
+          ? <p className="mv-note">You&apos;re in a mission. Leave it (Missions tab) to get back to your sandbox.</p>
+          : <button className="btn danger" onClick={startOver}>Start sandbox over</button>}
       </div>
     </div>
   )
@@ -67,7 +64,7 @@ function Overview() {
 
 export default function CloudWorkspace() {
   const { loadNotice, dismissLoadNotice } = useCloud()
-  const [tab, setTab] = useState('management')
+  const [tab, setTab] = useState('missions')
 
   return (
     <main className="cloud-workspace">
@@ -86,6 +83,8 @@ export default function CloudWorkspace() {
         </div>
       </header>
 
+      <MissionBar onOpen={() => setTab('missions')} />
+
       {loadNotice && (
         <div className="cloud-notice" role="status">
           <i className="led amber" />
@@ -94,6 +93,7 @@ export default function CloudWorkspace() {
         </div>
       )}
 
+      {tab === 'missions' && <CloudMissions onStarted={() => setTab('management')} />}
       {tab === 'management' && <ManagementView />}
       {tab === 'network' && <NetworkView />}
       {tab === 'overview' && <Overview />}

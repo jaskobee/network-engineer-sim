@@ -961,3 +961,39 @@ button:focus:not(:focus-visible) { outline: none; }
 .nv-review { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; background: var(--surface-panel); border: 1px solid var(--rule); border-radius: var(--radius-l); }
 .nv-valid { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--ink); }
 .nv-review-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Cloud missions */
+.cm-bar {
+  display: flex; align-items: center; gap: 12px; padding: 8px 24px;
+  font-size: 14.5px; color: var(--ink-2); background: var(--signal-wash); border-bottom: 1px solid var(--signal-deep);
+}
+.cm-bar-title { flex: 1; }
+.cm-bar strong { color: var(--ink); }
+.cm-leds { display: inline-flex; gap: 5px; }
+.cm-done { font-weight: 600; color: var(--led-green); }
+.cm-active h2 { margin: 2px 0 8px; }
+.cm-active h3 { margin: 16px 0 8px; font-size: 15.5px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.cm-client { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+.cm-brief { margin: 0 0 8px; font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 72ch; }
+.cm-objectives { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.cm-objectives li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--ink); }
+.cm-objectives li .led { margin-top: 6px; flex-shrink: 0; }
+.cm-objectives li.done > div > span { color: var(--ink-2); }
+.cm-objectives details { margin-top: 3px; font-size: 14px; color: var(--ink-3); }
+.cm-objectives summary { cursor: pointer; color: var(--signal); }
+.cm-objectives details p { margin: 4px 0 0; }
+.cm-debrief { margin-top: 14px; padding: 12px 14px; border: 1px solid #1f5a3c; border-radius: var(--radius-m); background: var(--surface-raised); }
+.cm-debrief h3 { margin-top: 0; }
+.cm-debrief ul { margin: 0; padding-left: 18px; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+.cm-learn { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.cm-learn a { color: var(--signal); }
+.cm-learn .mono { display: inline-block; min-width: 34px; color: var(--ink-3); }
+.cm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.cm-list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.cm-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px;
+  background: var(--surface-raised); border: 1px solid var(--rule); border-radius: var(--radius-m);
+}
+.cm-list strong { font-size: 15.5px; color: var(--ink); }
+.cm-list p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
+.cm-status { margin-left: 10px; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-3); }

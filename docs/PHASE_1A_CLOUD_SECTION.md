@@ -151,6 +151,9 @@ inventing an Azure rule:
 5. Network view + forms for VNet / subnet / NSG / public IP / NIC / VM / disk / storage.
    **Done 2026-10-06** — shared form parts in `components/cloud/formParts.jsx`.
 6. Cloud mission runtime + the three missions + their tests; cloud mission panel.
+   **Done 2026-10-07** — owner asked to follow the real Azure workflow: every create is now Review + create, the VM
+   wizard creates its own NIC/public IP (portal behaviour), the standalone NIC form has no public IP (N4). Each mission
+   runs in its own customer tenant (made-up GUIDs, allowed by the owner); the sandbox is kept.
 7. Cloud accuracy gate (spec §"Cloud accuracy gate"), browser check, brain update
    (STATUS, DECISIONS, GLOSSARY: cloud terms and outcomes).
 
