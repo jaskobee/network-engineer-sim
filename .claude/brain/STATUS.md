@@ -80,8 +80,10 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
   model + validator) — its open questions (Azure icons/naming, the TO-VERIFY rules in §A/§B/§H) come first, and
   how it orders against DNS phase 2 / Act 2 below is the owner's call.
 - **Cloud section scope agreed 2026-10-06** (roadmap §1/§4, DECISIONS): separate section, own progress; first release
-  = landing zone + governance on a canvas with forms. Next cloud step is **Phase 0.5** — extend and verify
-  `docs/AZURE_ACCURACY.md` for management groups, subscriptions, RGs, VM/NIC/disk, storage, RBAC and Policy.
+  = landing zone + governance on a canvas with forms. **Phase 0.5 research pass done 2026-10-06**: `docs/AZURE_ACCURACY.md`
+  sections I–Q (hierarchy, RGs, naming, compute, storage, public IP, RBAC, Policy, locks) added as **SOURCED** with Microsoft
+  Learn quotes; waiting on the owner to verify (SOURCED → VERIFIED) before Phase 1a code. Open flags inside the spec: NSG
+  default-rule name casing, the VNet FAQ DHCP contradiction (A7), `RequestDisallowedByPolicy` on create (P5), RBAC limits (O8).
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
   UX UI and gameplay", "fix mission view and visual floor plan", "floor clean up").
 - New mission + narrative type ("full new playstyle") — the client/career layer above.
