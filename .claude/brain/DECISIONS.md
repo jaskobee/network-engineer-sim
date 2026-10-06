@@ -19,6 +19,9 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   networking. First release = core landing zone + governance (management groups, subscriptions, RGs,
   VNet/NSG, VM, storage, RBAC, Azure Policy — roadmap Phases 1a/1b, after the Phase 0.5 spec work);
   players build on a visual canvas with portal-style forms first, `az` CLI later on the same model.
+- **RBAC principals are fictional users and groups** (owner, 2026-10-06): a small labelled set per mission,
+  no Entra ID model, labelled in-game as a simplification. *Why:* RBAC is the lesson; modelling Entra would
+  be a project of its own.
 - **Stay on the web, no game engine** (see `docs/ADMIN_LAPTOP_AND_TOOLS.md` §0).
   The UI is terminals, tables, forms — DOM territory. Install-free is a core advantage
   over Packet Tracer / GNS3.

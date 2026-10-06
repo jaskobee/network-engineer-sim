@@ -233,10 +233,10 @@ Claude Code receives **one phase at a time**.
    Model a compressed timer, labeled as compressed, so the lesson ("plan ahead")
    survives.
 6. **Product name**: "NetSim" still fits; confirm before any public launch.
-7. **Identities for RBAC** (before Phase 1b): role assignments need principals (users,
-   groups, managed identities). Entra ID modelling is listed as "later" in
-   `AZURE_ACCURACY.md`; decide on a small, labelled set of fictional principals vs a
-   minimal Entra model.
+7. **Identities for RBAC — decided 2026-10-06: fictional principals.** Role assignments
+   go to a small, labelled set of fictional users and groups (managed identities only if
+   a mission needs one). No Entra ID model; group membership is defined by the mission.
+   Labelled in-game as a simplification (`AZURE_ACCURACY.md` documented simplifications).
 8. **Policy depth** (before Phase 1b): which effects ship first (e.g. Deny, Audit,
    Modify/Append, DeployIfNotExists) and whether built-in policy definitions are
    reproduced by name — each one must match Microsoft's real definition.

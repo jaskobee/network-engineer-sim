@@ -734,7 +734,9 @@ diagnostic tools are modeled on Network Watcher, not invented.
 
 - Provisioning times are compressed.
 - Prices are approximate in-game values, not live Azure pricing.
-- Single tenant; Entra ID / identity modeling comes later.
+- Single tenant; no Entra ID model. RBAC principals are a small, labelled set of
+  fictional users and groups defined by each mission (decided 2026-10-06); real Entra
+  concepts (sign-in, MFA, guest users, PIM) are not simulated.
 - Control-plane propagation delays (e.g. Resource Graph latency) aren't modeled —
   including the up-to-30-minute management-group hierarchy cache (I11).
 - Resource moves complete instantly (real moves can lock both resource groups for up to
