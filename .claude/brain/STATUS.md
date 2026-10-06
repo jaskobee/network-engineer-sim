@@ -95,7 +95,11 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
   subscriptions → RGs → resources) + details with forms (create/rename/move/delete MG, simulated "add subscription" shortcut,
   move subscription, create/delete RG); refusals show NetSim's explanation, the rule ID and a Microsoft Learn link
   (`cloud/ruleSources.js`). Microsoft icons: 11 SVGs copied unmodified to `src/assets/azure-icons/` (NOTICE.md; always shown with
-  the service name, `components/cloud/AzureIcon.jsx`); the full download sits in git-ignored `vendor/`. Next is step 5 (network view). Unverified cases are refused as `not_modelled` (plan §6a), never guessed.
+  the service name, `components/cloud/AzureIcon.jsx`); the full download sits in git-ignored `vendor/`. **Step 5 done:** Network tab — per subscription, drawn region → VNet → subnet → NIC
+  (with VM and public IP), plus NSGs / disks / storage "not inside a virtual network"; create forms for VNet, NSG, public IP,
+  NIC, VM, disk, storage (`NetworkForms.jsx`) and detail panels (`NetworkDetails.jsx`: subnet reserved addresses + usable count,
+  NSG custom + default rules, associate NSG, add subnet/rule, storage network access). NSG rules are stored and shown, not yet
+  evaluated (Phase 2). Next is step 6 (cloud missions). Unverified cases are refused as `not_modelled` (plan §6a), never guessed.
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
   UX UI and gameplay", "fix mission view and visual floor plan", "floor clean up").
 - New mission + narrative type ("full new playstyle") — the client/career layer above.

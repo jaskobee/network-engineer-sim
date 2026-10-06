@@ -920,3 +920,39 @@ button:focus:not(:focus-visible) { outline: none; }
 .op-learn { color: var(--signal); font-size: 13.5px; }
 /* The result stays in view however far down the panel the button that caused it was. */
 .mv-right > .op-result { position: sticky; top: 0; z-index: 2; box-shadow: var(--shadow-float); }
+
+/* Network view: region → VNet → subnet → NIC diagram */
+.nv-left { overflow-y: auto; border-right: 1px solid var(--rule); padding: 14px 18px 30px; display: flex; flex-direction: column; gap: 16px; }
+.mv:has(.nv-left) { grid-template-columns: minmax(520px, 1fr) minmax(420px, 560px); }
+.nv-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.nv-sub { min-width: 260px; }
+.nv-empty { padding: 8px 2px; }
+.nv-region { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px dashed var(--rule-strong); border-radius: var(--radius-l); }
+.nv-region > h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink-2); }
+.nv-region h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.nv-pick { cursor: pointer; }
+.nv-pick:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.nv-pick[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--signal); }
+.nv-vnet { padding: 10px 12px; background: var(--surface-panel); border: 1px solid var(--rule-strong); border-radius: var(--radius-l); display: flex; flex-direction: column; gap: 10px; }
+.nv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.nv-cidr { font-size: 13.5px; color: var(--ink-2); }
+.nv-subnets { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.nv-subnet { padding: 9px 10px; background: var(--surface-raised); border: 1px solid var(--rule); border-radius: var(--radius-m); display: flex; flex-direction: column; gap: 8px; }
+.nv-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.nv-badge { font-size: 13px; padding: 1px 7px; color: var(--ink-2); background: var(--surface-well); border: 1px solid var(--rule); border-radius: var(--radius-s); }
+.nv-nic { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--rule); border-radius: var(--radius-m); background: var(--surface-panel); }
+.nv-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: var(--radius-m); }
+.nv-chip:hover { background: var(--surface-hover); }
+.nv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.nv-chips .nv-chip { background: var(--surface-panel); border: 1px solid var(--rule); }
+.nv-create { display: flex; flex-direction: column; gap: 12px; }
+.nv-create > h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.nv-checklist { display: flex; flex-direction: column; gap: 4px; }
+.nv-checklist label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.nv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.nv-rules { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.nv-rules caption { text-align: left; padding: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.nv-rules th { text-align: left; font-weight: 600; color: var(--ink-3); padding: 4px 6px; border-bottom: 1px solid var(--rule-strong); }
+.nv-rules td { padding: 4px 6px; color: var(--ink); border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.nv-rules .mono { font-family: var(--font-mono); font-size: 13px; }
+.nv-table-wrap { overflow-x: auto; flex-shrink: 0; }  /* a flex item with overflow set may otherwise shrink to nothing */

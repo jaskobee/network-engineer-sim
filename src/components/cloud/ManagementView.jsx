@@ -14,6 +14,7 @@ import {
 import { REGIONS, regionDisplayName } from '../../cloud/regions.js'
 import { AzureItem } from './AzureIcon.jsx'
 import OperationResult from './OperationResult.jsx'
+import { Field, Facts, Form } from './formParts.jsx'
 
 // ── Tree ─────────────────────────────────────────────────────────────────────
 
@@ -61,39 +62,6 @@ function Tree({ cloud, selected, onSelect }) {
   }
   walkMg(cloud.managementGroups[cloud.tenantId], 0)
   return <ul className="mv-tree" aria-label="Management hierarchy">{rows}</ul>
-}
-
-// ── Small form helpers ───────────────────────────────────────────────────────
-
-function Field({ label, hint, children }) {
-  return (
-    <label className="mv-field">
-      <span>{label}</span>
-      {children}
-      {hint && <small>{hint}</small>}
-    </label>
-  )
-}
-
-function Facts({ rows }) {
-  return (
-    <dl className="cloud-facts">
-      {rows.map(([k, v, mono]) => [
-        <dt key={`${k}-t`}>{k}</dt>,
-        <dd key={`${k}-d`} className={mono ? 'mono' : undefined}>{v}</dd>,
-      ])}
-    </dl>
-  )
-}
-
-function Form({ title, onSubmit, submit, children }) {
-  return (
-    <form className="mv-form" onSubmit={e => { e.preventDefault(); onSubmit() }}>
-      <h3>{title}</h3>
-      {children}
-      <div><button className="btn primary" type="submit">{submit}</button></div>
-    </form>
-  )
 }
 
 // ── Details per kind ─────────────────────────────────────────────────────────
@@ -221,7 +189,7 @@ function ResourceGroupDetails({ cloud, rg, run }) {
         ['Region', `${regionDisplayName(rg.location)} (metadata location)`],
         ['Subscription', cloud.subscriptions[rg.subscriptionId]?.displayName],
         ['Resource ID', rg.id, true],
-        ['Resources', resources.length ? resources.length : 'None yet — networks, VMs and storage arrive with the network view'],
+        ['Resources', resources.length ? resources.length : 'None yet — build networks, VMs and storage in the Network tab'],
       ]} />
       <div className="mv-danger">
         <button className="btn danger" onClick={() => {

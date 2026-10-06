@@ -149,6 +149,7 @@ inventing an Azure rule:
 4. Management view + forms for MG / subscription / RG.
    **Done 2026-10-06** — refusals link to the Microsoft Learn page behind each rule (`src/cloud/ruleSources.js`).
 5. Network view + forms for VNet / subnet / NSG / public IP / NIC / VM / disk / storage.
+   **Done 2026-10-06** — shared form parts in `components/cloud/formParts.jsx`.
 6. Cloud mission runtime + the three missions + their tests; cloud mission panel.
 7. Cloud accuracy gate (spec §"Cloud accuracy gate"), browser check, brain update
    (STATUS, DECISIONS, GLOSSARY: cloud terms and outcomes).

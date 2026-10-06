@@ -1,16 +1,17 @@
 /**
  * The Cloud section (roadmap Phase 1a, shipped as "Preview").
  *
- * Tabs: Overview (the tenant, Start over) and Management (PHASE_1A step 4). The network
- * view and missions arrive in steps 5–6; until then they're listed as coming, never shown
+ * Tabs: Management (step 4), Network (step 5) and Overview (the tenant, Start over).
+ * Missions arrive in step 6; until then they're listed as coming, never shown
  * as dead buttons. Everything reads CloudContext; nothing assigns cloud state directly.
  */
 import { useState } from 'react'
 import { useCloud } from '../../state/CloudContext.jsx'
 import { managementGroupScope } from '../../cloud/model.js'
 import ManagementView from './ManagementView.jsx'
+import NetworkView from './NetworkView.jsx'
 
-const TABS = [['management', 'Management'], ['overview', 'Overview']]
+const TABS = [['management', 'Management'], ['network', 'Network'], ['overview', 'Overview']]
 
 function Overview() {
   const { cloud, resetCloud } = useCloud()
@@ -48,7 +49,6 @@ function Overview() {
       <section className="cloud-card" aria-label="Coming next">
         <h2>Coming next in this preview</h2>
         <ul className="cloud-roadmap">
-          <li><strong>Network view</strong> — regions, virtual networks and subnets with their VMs, NICs and NSGs.</li>
           <li><strong>Build missions</strong> — landing zone basics, a first workload, and storage for an app.</li>
         </ul>
       </section>
@@ -94,7 +94,9 @@ export default function CloudWorkspace() {
         </div>
       )}
 
-      {tab === 'management' ? <ManagementView /> : <Overview />}
+      {tab === 'management' && <ManagementView />}
+      {tab === 'network' && <NetworkView />}
+      {tab === 'overview' && <Overview />}
     </main>
   )
 }

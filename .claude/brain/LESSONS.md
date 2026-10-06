@@ -88,6 +88,10 @@ Add an entry only when the code/tests don't already make it obvious. Format:
   appears after Apply) → clamping only at mount isn't enough → re-clamp from a
   `ResizeObserver` plus window `resize` (`HostConfigPanel`).
 
+- **A table inside a scroll wrapper vanished from a flex-column panel** → a flex item whose `overflow` isn't
+  `visible` gets `min-height: 0` and can shrink to nothing when the column is short → give such wrappers
+  `flex-shrink: 0` (`.nv-table-wrap` in the cloud network view).
+
 ## Tooling / environment
 - **`find` and `grep` in this shell are functions wrapping the Claude binary** and can
   print `error: unknown option '-S'` / `'-G'` → use `command find` / `command grep`

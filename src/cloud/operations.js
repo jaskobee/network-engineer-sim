@@ -11,7 +11,7 @@
  * instead of guessing what Azure does.
  */
 import { OUTCOME, refuse } from './outcomes.js'
-import { isRegion } from './regions.js'
+import { isRegion, regionDisplayName } from './regions.js'
 import {
   managementGroupNameReason, resourceGroupNameReason, virtualNetworkNameReason, subnetNameReason,
   networkInterfaceNameReason, networkSecurityGroupNameReason, publicIpNameReason, securityRuleNameReason,
@@ -382,7 +382,7 @@ export function createNetworkInterface(state, args) {
   if (vnet.subscriptionId !== subscriptionId)
     return refuse(OUTCOME.SUBSCRIPTION_MISMATCH, 'L2', 'A NIC can only join a virtual network in the same subscription.')
   if (vnet.location !== location)
-    return refuse(OUTCOME.REGION_MISMATCH, 'L2', `A NIC can only join a virtual network in the same region — ${vnet.name} is in ${vnet.location}.`)
+    return refuse(OUTCOME.REGION_MISMATCH, 'L2', `A NIC can only join a virtual network in the same region — ${vnet.name} is in ${regionDisplayName(vnet.location)}.`)
 
   const block = parseCidr(subnet.addressPrefix)
   const used = usedAddressesInSubnet(state, snId)
@@ -463,7 +463,7 @@ export function createVirtualMachine(state, args) {
     if (nic.subscriptionId !== subscriptionId)
       return refuse(OUTCOME.SUBSCRIPTION_MISMATCH, 'L2', `The VM must be in the same subscription as its NIC ${nic.name}.`)
     if (nic.location !== location)
-      return refuse(OUTCOME.REGION_MISMATCH, 'L2', `The VM must be in the same region as its NIC ${nic.name} (${nic.location}).`)
+      return refuse(OUTCOME.REGION_MISMATCH, 'L2', `The VM must be in the same region as its NIC ${nic.name} (${regionDisplayName(nic.location)}).`)
   }
   const os = DISK_TYPES[osDisk.diskType]
   if (!os) return refuse(OUTCOME.INVALID_VALUE, 'L7', 'Pick an OS disk type.')
