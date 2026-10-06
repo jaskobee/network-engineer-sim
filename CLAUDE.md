@@ -53,6 +53,7 @@ Path-scoped rules in `.claude/rules/` attach automatically when you edit
 | `/fault-scenario` | Act 2 troubleshooting scenarios, ticket faults, new reason codes |
 | `/verify-in-browser` | Confirming a change in the running app |
 | `/brain-update` | End of substantial work — keep the brain true |
+| `/karpathy-guidelines` | Writing/reviewing code — think first, keep it simple, surgical diffs, verifiable goals (vendored from forrestchang/andrej-karpathy-skills, MIT) |
 
 The **Superpowers** plugin (`superpowers@claude-plugins-official`, enabled in
 `.claude/settings.json`) adds general workflow skills (brainstorming, writing-plans,
