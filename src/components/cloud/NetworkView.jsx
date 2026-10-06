@@ -17,7 +17,7 @@ import { NetworkDetails } from './NetworkDetails.jsx'
 // Operations whose result id is a new resource the view should select afterwards.
 const CREATES = new Set([
   op.createVirtualNetwork, op.createNetworkSecurityGroup, op.createPublicIp, op.createNetworkInterface,
-  op.createVirtualMachine, op.createDisk, op.createStorageAccount,
+  op.createVirtualMachine, op.deployVirtualMachine, op.createDisk, op.createStorageAccount,
 ])
 
 function Pick({ sel, kind, id, onSelect, className, children }) {
@@ -169,7 +169,7 @@ export default function NetworkView() {
         <OperationResult result={result} onDismiss={() => setResult(null)} />
         {sel
           ? <NetworkDetails cloud={cloud} sel={sel} run={run} select={select} />
-          : <CreatePanel cloud={cloud} subscriptionId={subscriptionId} run={run} kind={createKind} onKind={setCreateKind} />}
+          : <CreatePanel cloud={cloud} subscriptionId={subscriptionId} run={run} report={setResult} kind={createKind} onKind={setCreateKind} />}
       </section>
     </div>
   )

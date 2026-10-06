@@ -19,6 +19,16 @@ export const VM_SIZES = Object.freeze(['Standard_B1s', 'Standard_B2s', 'Standard
 
 export const OS_TYPES = Object.freeze(['Linux', 'Windows'])
 
+/**
+ * Images offered by the VM wizard — real marketplace image names; the OS type decides the
+ * name rules (K1). Which image versions exist where is not modelled.
+ */
+export const VM_IMAGES = Object.freeze([
+  Object.freeze({ id: 'ubuntu-24_04-lts', displayName: 'Ubuntu Server 24.04 LTS', osType: 'Linux' }),
+  Object.freeze({ id: 'rhel-9', displayName: 'Red Hat Enterprise Linux 9', osType: 'Linux' }),
+  Object.freeze({ id: 'windows-server-2022-datacenter', displayName: 'Windows Server 2022 Datacenter', osType: 'Windows' }),
+])
+
 /** M1 — recommended storage account types and the redundancy each supports. */
 export const STORAGE_KINDS = Object.freeze({
   StorageV2: Object.freeze({

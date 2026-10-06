@@ -956,3 +956,8 @@ button:focus:not(:focus-visible) { outline: none; }
 .nv-rules td { padding: 4px 6px; color: var(--ink); border-bottom: 1px solid var(--rule); white-space: nowrap; }
 .nv-rules .mono { font-family: var(--font-mono); font-size: 13px; }
 .nv-table-wrap { overflow-x: auto; flex-shrink: 0; }  /* a flex item with overflow set may otherwise shrink to nothing */
+.nv-step { margin: 8px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 15px; font-weight: 700; color: var(--ink); }
+.mv-form > .nv-step:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.nv-review { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; background: var(--surface-panel); border: 1px solid var(--rule); border-radius: var(--radius-l); }
+.nv-valid { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.nv-review-actions { display: flex; gap: 8px; justify-content: flex-end; }

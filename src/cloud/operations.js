@@ -448,7 +448,7 @@ export function createDisk(state, args) {
 }
 
 export function createVirtualMachine(state, args) {
-  const { name, subscriptionId, location, osType, size, osDisk = {}, networkInterfaceIds = [], dataDiskIds = [] } = args
+  const { name, subscriptionId, location, osType, size, image = null, osDisk = {}, networkInterfaceIds = [], dataDiskIds = [] } = args
   if (!OS_TYPES.includes(osType)) return refuse(OUTCOME.INVALID_VALUE, 'K1', 'Pick Linux or Windows — the name rules differ.')
   const placed = checkPlacement(state, args) ?? checkNewResource(state, {
     ...args, type: TYPES.VIRTUAL_MACHINE, nameReason: n => virtualMachineNameReason(n, osType), label: `${osType} virtual machine`,
@@ -481,13 +481,47 @@ export function createVirtualMachine(state, args) {
     : []
   const next = clone(state)
   const vm = newResource(args, TYPES.VIRTUAL_MACHINE, name, {
-    osType, size, osDisk: { diskType: osDisk.diskType, sizeGiB: osSize },
+    osType, image, size, osDisk: { diskType: osDisk.diskType, sizeGiB: osSize },
     networkInterfaceIds: [...networkInterfaceIds], dataDiskIds: [...dataDiskIds],
   })
   next.resources[vm.id] = vm
   for (const nicId of networkInterfaceIds) next.resources[nicId].properties.virtualMachineId = vm.id
   for (const diskId of dataDiskIds) next.resources[diskId].properties.managedBy = vm.id
   return done(next, vm.id, warnings)
+}
+
+/**
+ * The portal's "Create a virtual machine" flow (Basics → Disks → Networking → Review +
+ * create): the wizard creates the VM's network interface — and, if asked, a Standard public
+ * IP — together with the VM. NIC page: "The portal does create a NIC with default settings
+ * and a public IP address when you create a VM." Everything is validated before anything is
+ * deployed, so a refusal leaves the tenant untouched (all or nothing).
+ *
+ * The extra resources are named `<vm>-nic` and `<vm>-ip` — NetSim's names; the portal picks
+ * its own. createVirtualMachine (existing NICs) stays for the CLI/PowerShell-style path.
+ */
+export function deployVirtualMachine(state, args) {
+  const { name, osType, subnetId: snId, publicIp = 'none', networkSecurityGroupId = null, dataDiskIds = [], ...rest } = args
+  // The VM's own rules first, so a bad VM name is reported as such (not as a NIC-name problem).
+  if (!OS_TYPES.includes(osType)) return refuse(OUTCOME.INVALID_VALUE, 'K1', 'Pick an image — Linux or Windows decides the name rules.')
+  const why = virtualMachineNameReason(name, osType)
+  if (why) return refuse(OUTCOME.NAME_INVALID, 'K', `The ${osType} virtual machine name ${why}.`)
+  if (!['none', 'new'].includes(publicIp)) return refuse(OUTCOME.INVALID_VALUE, 'N4', 'Public IP is "None" or "Create new".')
+  const placement = { subscriptionId: rest.subscriptionId, resourceGroup: rest.resourceGroup, location: rest.location, tags: rest.tags }
+
+  let s = state
+  let publicIpId = null
+  if (publicIp === 'new') {
+    const pip = createPublicIp(s, { ...placement, name: `${name}-ip` })
+    if (!pip.ok) return pip
+    s = pip.state
+    publicIpId = pip.id
+  }
+  const nic = createNetworkInterface(s, { ...placement, name: `${name}-nic`, subnetId: snId, publicIpId, networkSecurityGroupId })
+  if (!nic.ok) return nic
+  const vm = createVirtualMachine(nic.state, { ...rest, name, osType, networkInterfaceIds: [nic.id], dataDiskIds })
+  if (!vm.ok) return vm
+  return done(vm.state, vm.id, vm.warnings)
 }
 
 // ── Storage accounts (§M) ──────────────────────────────────────────────────

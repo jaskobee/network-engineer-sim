@@ -32,7 +32,7 @@ const BY_RULE = {
   K: 'naming', K1: 'naming', K2: 'storage',
   L1: 'nic', L2: 'nic', L3: 'nic', L5: 'nic', L7: 'disks', L8: 'redundancy',
   M1: 'storage', M4: 'storageNetwork', M6: 'storage',
-  N1: 'publicIp', N2: 'publicIp', N3: 'publicIp', N5: 'publicIp',
+  N1: 'publicIp', N2: 'publicIp', N3: 'publicIp', N4: 'publicIp', N5: 'publicIp',
 }
 
 /** → { title, url } for a rule ID, or null (e.g. not_modelled refusals carry no rule). */
