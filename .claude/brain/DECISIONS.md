@@ -19,6 +19,8 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   networking. First release = core landing zone + governance (management groups, subscriptions, RGs,
   VNet/NSG, VM, storage, RBAC, Azure Policy — roadmap Phases 1a/1b, after the Phase 0.5 spec work);
   players build on a visual canvas with portal-style forms first, `az` CLI later on the same model.
+- **New game resets the on-prem game only; the Cloud section has its own Start over** (owner, 2026-10-06). The sweep is a
+  prefix rule (`resetGuard.sweptByNewGame`: every `netsim*` key except `netsim_cloud*`).
 - **RBAC principals are fictional users and groups** (owner, 2026-10-06): a small labelled set per mission,
   no Entra ID model, labelled in-game as a simplification. *Why:* RBAC is the lesson; modelling Entra would
   be a project of its own.

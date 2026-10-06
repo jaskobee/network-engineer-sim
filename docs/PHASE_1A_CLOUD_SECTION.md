@@ -144,7 +144,8 @@ inventing an Azure rule:
    `DOMAINS` gains `'cloud'`; architecture test still green.
    **Done 2026-10-06** — persistence is headless (`src/cloud/persistence.js`, storage injected) and
    tested there; the architecture test now also keeps `src/cloud` free of React/DOM.
-3. Mode `cloud` in the header (dev-gated per Q4) + empty `CloudWorkspace`; on-prem untouched.
+3. Mode `cloud` in the header (shipped visible with a Preview label, decision 4) + `CloudWorkspace`; on-prem untouched.
+   **Done 2026-10-06** — the workspace shows the tenant and has its own Start over; New game resets on-prem only.
 4. Management view + forms for MG / subscription / RG.
 5. Network view + forms for VNet / subnet / NSG / public IP / NIC / VM / disk / storage.
 6. Cloud mission runtime + the three missions + their tests; cloud mission panel.

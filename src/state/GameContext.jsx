@@ -12,7 +12,7 @@ import { buildMission005Scaffold } from '../data/mission005scaffold.js'
 import { getMissionMeta } from '../engine/missionEngine.js'
 import { applyTicketFault as applyTicketFaultToTopology } from '../engine/ticketFaults.js'
 import { computeRefund } from '../engine/economy.js'
-import { markResetting, isResetting } from '../utils/resetGuard.js'
+import { markResetting, isResetting, sweptByNewGame } from '../utils/resetGuard.js'
 
 const GameContext = createContext(null)
 
@@ -549,7 +549,7 @@ export function GameProvider({ children }) {
   }
 
   function newGame() {
-    if (!window.confirm('Start a new game? All progress will be lost.')) return
+    if (!window.confirm('Start a new game? All on-prem progress will be lost. Your Cloud section is kept.')) return
     // markResetting() FIRST: window.location.reload() doesn't stop JS
     // execution immediately, and other autosave effects (CareerContext's)
     // could otherwise flush a pending write in that gap and put a key right
@@ -558,10 +558,10 @@ export function GameProvider({ children }) {
     markResetting()
     // Sweep every netsim_* key (main save, company, difficulty, tour-seen,
     // laptop prefs, career data, …) — not just the main save — so this is a
-    // genuine full reset. A per-key list here would inevitably drift out of
-    // sync as new settings get added; the prefix sweep can't.
+    // genuine full reset of the on-prem game. The cloud section's keys are
+    // kept: it has its own progress and its own "Start over" (resetGuard.js).
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('netsim')) localStorage.removeItem(key)
+      if (sweptByNewGame(key)) localStorage.removeItem(key)
     }
     window.location.reload()
   }

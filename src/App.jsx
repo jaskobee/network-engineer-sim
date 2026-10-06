@@ -3,6 +3,7 @@ import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@
 import { GameProvider, useGame } from './state/GameContext.jsx'
 import { CareerProvider, useCareer } from './state/CareerContext.jsx'
 import { CloudProvider } from './state/CloudContext.jsx'
+import CloudWorkspace from './components/cloud/CloudWorkspace.jsx'
 import { useAuth } from './state/AuthContext.jsx'
 import LoginPage from './components/LoginPage.jsx'
 import Floorplan from './components/Floorplan.jsx'
@@ -416,9 +417,11 @@ function AppContent() {
             </>
           )}
           <div className="seg" role="group" aria-label="Game mode">
-            {(['missions', 'sandbox']).map(m => (
+            {(['missions', 'sandbox', 'cloud']).map(m => (
               <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m}>
-                {m === 'missions' ? 'Missions' : 'Sandbox'}
+                {m === 'missions' ? 'Missions' : m === 'sandbox' ? 'Sandbox' : (
+                  <>Cloud <span className="preview-tag">Preview</span></>
+                )}
               </button>
             ))}
           </div>
@@ -442,20 +445,22 @@ function AppContent() {
             </div>
           )}
 
-          {/* Admin Laptop toggle */}
-          <button
-            className={`btn${adminLaptopOpen ? ' on' : ''}`}
-            style={{ position: 'relative' }}
-            onClick={() => setAdminLaptopOpen(o => !o)}
-            title="Admin Laptop — Dashboard, Guide, Wireshark, Browser, Inbox"
-            aria-pressed={adminLaptopOpen}
-          >
-            <IconLaptop size={17} />
-            Admin laptop
-            {unreadNotifications > 0 && (
-              <span className="badge">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>
-            )}
-          </button>
+          {/* Admin Laptop toggle — an on-prem device, so not shown in the Cloud section */}
+          {mode !== 'cloud' && (
+            <button
+              className={`btn${adminLaptopOpen ? ' on' : ''}`}
+              style={{ position: 'relative' }}
+              onClick={() => setAdminLaptopOpen(o => !o)}
+              title="Admin Laptop — Dashboard, Guide, Wireshark, Browser, Inbox"
+              aria-pressed={adminLaptopOpen}
+            >
+              <IconLaptop size={17} />
+              Admin laptop
+              {unreadNotifications > 0 && (
+                <span className="badge">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>
+              )}
+            </button>
+          )}
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* Save indicator — a lit LED, not a glyph */}
@@ -540,7 +545,10 @@ function AppContent() {
               can each overlay the floorplan from their own edge without
               being clipped by either sidebar's own overflow — structural
               guarantee rather than a hand-computed pixel offset. */}
-          <div style={{ position: 'relative', display: 'flex', flex: 1, minWidth: 0 }}>
+          {mode === 'cloud' && <CloudWorkspace />}
+          {/* The on-prem workspace stays mounted while the Cloud section is open (hidden,
+              like the inactive xterm tabs), so switching back loses nothing. */}
+          <div style={{ position: 'relative', display: mode === 'cloud' ? 'none' : 'flex', flex: 1, minWidth: 0 }}>
             {/* Left rail: spawn palette in sandbox (unchanged), icon-only Shop/Inventory triggers in missions */}
             <aside className="sidebar-left" style={{ width: mode === 'sandbox' ? SANDBOX_PALETTE_WIDTH : RAIL_WIDTH }}>
               {mode === 'sandbox' ? (
@@ -618,17 +626,21 @@ function AppContent() {
     {laptopIntroOpen && (
       <LaptopIntroModal onClose={() => { localStorage.setItem('netsim_laptop_intro_seen', '1'); setLaptopIntroOpen(false) }} />
     )}
-    {fwConsoleDeviceId && (
-      <FirewallConsole deviceId={fwConsoleDeviceId} onClose={closeFwConsole} />
-    )}
-    {adminLaptopOpen && (
-      <AdminLaptop onClose={() => setAdminLaptopOpen(false)} />
-    )}
-    <ActiveJobPanel />
+    {/* On-prem floating windows: hidden — never unmounted — while the Cloud section is
+        open, so terminals keep their scrollback (LESSONS: xterm tabs stay mounted). */}
+    <div style={{ display: mode === 'cloud' ? 'none' : 'contents' }}>
+      {fwConsoleDeviceId && (
+        <FirewallConsole deviceId={fwConsoleDeviceId} onClose={closeFwConsole} />
+      )}
+      {adminLaptopOpen && (
+        <AdminLaptop onClose={() => setAdminLaptopOpen(false)} />
+      )}
+      <ActiveJobPanel />
+      <TerminalPane />
+      <HostConfigPanel />
+    </div>
     <ContractClockDriver />
     <NotificationLayer />
-    <TerminalPane />
-    <HostConfigPanel />
     {import.meta.env.DEV && (
       <DevPanel open={devPanelOpen} onClose={() => setDevPanelOpen(false)} />
     )}

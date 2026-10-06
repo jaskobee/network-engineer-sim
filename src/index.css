@@ -829,3 +829,44 @@ button:focus:not(:focus-visible) { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   .ping-fx-current, .ping-fx-node { animation-duration: 1ms; opacity: 0; }
 }
+
+/* ── Cloud section (roadmap Phase 1a, shipped as Preview) ───────────────────── */
+.preview-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--led-amber);
+  border: 1px solid #5a4318;
+  border-radius: var(--radius-s);
+  vertical-align: middle;
+}
+.cloud-workspace { flex: 1; min-width: 0; overflow-y: auto; background: var(--surface-ground); }
+.cloud-inner { max-width: 880px; margin: 0 auto; padding: 28px 24px 40px; display: flex; flex-direction: column; gap: 16px; }
+.cloud-head h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; color: var(--ink); }
+.cloud-head h1 .preview-tag { font-size: 14px; line-height: 20px; }
+.cloud-head p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--ink-2); max-width: 70ch; }
+.cloud-card { padding: 16px 18px; background: var(--surface-panel); border: 1px solid var(--rule); border-radius: var(--radius-l); }
+.cloud-card h2 { margin: 0 0 10px; font-size: 17px; font-weight: 700; color: var(--ink); }
+.cloud-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 14px; font-size: 14.5px; }
+.cloud-facts dt { color: var(--ink-3); }
+.cloud-facts dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.cloud-workspace .mono { font-family: var(--font-mono); font-size: 13.5px; }
+.cloud-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cloud-counts li {
+  display: flex; align-items: baseline; gap: 7px; padding: 6px 12px;
+  font-size: 14px; color: var(--ink-2); background: var(--surface-raised);
+  border: 1px solid var(--rule); border-radius: var(--radius-m);
+}
+.cloud-counts li .mono { font-size: 15px; color: var(--ink); }
+.cloud-roadmap { margin: 0; padding-left: 18px; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+.cloud-roadmap strong { color: var(--ink); font-weight: 600; }
+.cloud-notice {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  font-size: 14.5px; color: var(--ink); background: var(--surface-raised);
+  border: 1px solid #5a4318; border-radius: var(--radius-m);
+}
+.cloud-notice span { flex: 1; }
+.cloud-actions { display: flex; justify-content: flex-end; }

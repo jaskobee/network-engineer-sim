@@ -18,3 +18,13 @@ let resetting = false
 
 export function markResetting() { resetting = true }
 export function isResetting() { return resetting }
+
+/**
+ * Which localStorage keys "New game" removes: every netsim_* key (main save, company,
+ * career, difficulty, tour-seen, laptop prefs, …) EXCEPT the cloud section's, which keeps
+ * its own progress and has its own "Start over" (owner decision 2026-10-06). A prefix
+ * rule, not a per-key list, so new on-prem settings are swept without anyone remembering.
+ */
+export function sweptByNewGame(key) {
+  return key.startsWith('netsim') && !key.startsWith('netsim_cloud')
+}

@@ -3,7 +3,7 @@
 _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep this describing **now**; remove finished items._
 
 ## Health
-- `npm test` → **956 tests / 43 files passing** (Vitest 4).
+- `npm test` → **959 tests / 44 files passing** (Vitest 4).
 - `npx vite build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
 
@@ -89,7 +89,10 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
   headless `src/cloud/` (model, naming, CIDR, catalog, outcomes, operations) + 85 rule tests. **Step 2 done:** `CloudContext`
   (`src/state/CloudContext.jsx`, mounted in `App.jsx`; UI calls `apply(operation, args)`) with its own save slice
   `netsim_cloud_v1` (`src/cloud/persistence.js`: kind, schemaVersion, `domain: 'cloud'` per node; unreadable saves kept under
-  `netsim_cloud_v1_unreadable`). Next is step 3 (Cloud mode + Preview label). Unverified cases are refused as `not_modelled` (plan §6a), never guessed.
+  `netsim_cloud_v1_unreadable`). **Step 3 done:** third mode "Cloud · Preview" in the header; `components/cloud/CloudWorkspace.jsx`
+  (tenant facts + Start over); on-prem workspace and floating windows hidden, not unmounted, in cloud mode. **New game now resets
+  on-prem only** (`resetGuard.sweptByNewGame` keeps `netsim_cloud*`). Next is step 4 (management view + MG/subscription/RG forms;
+  needs the Microsoft icon set from the owner). Unverified cases are refused as `not_modelled` (plan §6a), never guessed.
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
   UX UI and gameplay", "fix mission view and visual floor plan", "floor clean up").
 - New mission + narrative type ("full new playstyle") — the client/career layer above.
