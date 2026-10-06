@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useGame } from '../state/GameContext.jsx'
 import ContextMenu from './ContextMenu.jsx'
@@ -517,58 +517,117 @@ function PingLayer({ pingAnimations, placements }) {
     if (waypoints.length < 2) return []
     const fwd = <PingDot key={`${ping.id}-fwd`} waypoints={waypoints} success={ping.success} startTime={ping.id} isReply={false} />
     if (!ping.success) return [fwd]
-    // ICMP Echo Reply departs the destination the moment the request arrives (PING_TRAVEL_MS).
+    // Success is the payoff beat: a current sweeps the wires and each device lights up as
+    // the packet reaches it (PingCelebration), the request dot rides on top, and the ICMP
+    // Echo Reply departs the destination the moment the request arrives (PING_TRAVEL_MS).
+    const fx  = <PingCelebration key={`${ping.id}-fx`} waypoints={waypoints} />
     const rev = <PingDot key={`${ping.id}-ret`} waypoints={[...waypoints].reverse()} success={true} startTime={ping.id + PING_TRAVEL_MS} isReply={true} />
-    return [fwd, rev]
+    return [fx, fwd, rev]
   })
 }
 
+// The "network comes alive" moment, drawn only for a ping the engine actually forwarded.
+// A bright current draws itself along the real path over PING_TRAVEL_MS (so it keeps pace
+// with the request dot), and each device on the path fires an expanding ring the instant
+// the current reaches it. Pure CSS animations (see index.css) keyed off mount — no RAF,
+// and the whole group is removed with the ping after ~3.3s.
+function PingCelebration({ waypoints }) {
+  const pts  = waypoints.map(p => `${p.x},${p.y}`).join(' ')
+  const segs = Math.max(1, waypoints.length - 1)
+  return (
+    <g className="ping-fx">
+      {/* Two stacked strokes: a soft wide glow under a thin bright core, both drawn on
+          together via stroke-dashoffset over the packet's travel time. */}
+      <polyline className="ping-fx-current glow" points={pts} pathLength="1" />
+      <polyline className="ping-fx-current core" points={pts} pathLength="1" />
+      {waypoints.map((p, i) => (
+        <circle
+          key={i}
+          className="ping-fx-node"
+          cx={p.x} cy={p.y} r="8"
+          style={{ animationDelay: `${(i / segs) * PING_TRAVEL_MS}ms` }}
+        />
+      ))}
+    </g>
+  )
+}
+
+// Geometry of a multi-hop path, measured once so the packet can travel it by ARC LENGTH
+// (constant speed) instead of spending an equal slice of time on each segment — a long
+// hop and a short hop then move at the same visual pace, the way a real packet would.
+function pathGeometry(waypoints) {
+  const segs = []
+  let total = 0
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i], b = waypoints[i + 1]
+    const len = Math.hypot(b.x - a.x, b.y - a.y)
+    segs.push({ a, b, len, acc: total })
+    total += len
+  }
+  return { segs, total: total || 1 }
+}
+
+// The point that lies `dist` pixels along the path from its start (clamped to the ends).
+function pointAtDistance(geo, dist) {
+  const d = Math.max(0, Math.min(geo.total, dist))
+  let seg = geo.segs[0]
+  for (const s of geo.segs) { if (d <= s.acc + s.len) { seg = s; break } seg = s }
+  const t = seg.len ? (d - seg.acc) / seg.len : 0
+  return { x: seg.a.x + (seg.b.x - seg.a.x) * t, y: seg.a.y + (seg.b.y - seg.a.y) * t }
+}
+
+const TAIL_PX   = 44   // length of the comet trail behind the head
+const TAIL_DOTS = 6
+
 function PingDot({ waypoints, success, startTime, isReply }) {
-  const [state, setState] = useState({ x: waypoints[0].x, y: waypoints[0].y, opacity: 1 })
+  // Measure the path once (not every animation frame); re-measures only if a device moves.
+  const geo = useMemo(() => pathGeometry(waypoints), [waypoints])
+  const [frame, setFrame] = useState({ dist: 0, opacity: 1, on: false })
   const rafRef = useRef()
 
   useEffect(() => {
     const TOTAL_MS = PING_TRAVEL_MS + PING_FADE_MS
-    const segs     = waypoints.length - 1
 
-    function frame() {
+    function step() {
       const elapsed = performance.now() - startTime
-      // startTime may be in the future (return packet waits for request to arrive)
-      if (elapsed < 0) {
-        rafRef.current = requestAnimationFrame(frame)
-        return
-      }
+      // startTime may be in the future — the return packet waits for the request to arrive.
+      if (elapsed < 0) { rafRef.current = requestAnimationFrame(step); return }
 
-      const tTotal  = Math.min(elapsed / TOTAL_MS, 1)
       const tTravel = Math.min(elapsed / PING_TRAVEL_MS, 1)
-
-      // Which segment of the path are we on?
-      const segFrac = tTravel * segs
-      const segIdx  = Math.min(Math.floor(segFrac), segs - 1)
-      const segT    = segFrac - segIdx
-      const p1      = waypoints[segIdx]
-      const p2      = waypoints[segIdx + 1]
-
-      const x       = p1.x + (p2.x - p1.x) * segT
-      const y       = p1.y + (p2.y - p1.y) * segT
+      // smoothstep over the whole path: eases away from the source and settles at the
+      // destination with no jerk, while staying constant-speed in the middle.
+      const eased   = tTravel * tTravel * (3 - 2 * tTravel)
+      const dist    = eased * geo.total
       const opacity = tTravel >= 1
         ? Math.max(0, 1 - (elapsed - PING_TRAVEL_MS) / PING_FADE_MS)
         : 1
 
-      setState({ x, y, opacity })
-      if (tTotal < 1) rafRef.current = requestAnimationFrame(frame)
+      setFrame({ dist, opacity, on: true })
+      if (elapsed < TOTAL_MS) rafRef.current = requestAnimationFrame(step)
     }
 
-    rafRef.current = requestAnimationFrame(frame)
+    rafRef.current = requestAnimationFrame(step)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [startTime]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [startTime, geo])
 
+  if (!frame.on) return null
   // Echo Request: green. Echo Reply: cyan — visually distinct so the return path is obvious.
   const color = !success ? '#ff6259' : isReply ? '#66d4ea' : '#3ee08f'
+  const head  = pointAtDistance(geo, frame.dist)
+  // A comet trail: a handful of samples strung out behind the head, riding the same line
+  // and fading toward the back — reads as motion/flow rather than a dot teleporting.
+  const tail = Array.from({ length: TAIL_DOTS }, (_, k) => {
+    const f = (k + 1) / (TAIL_DOTS + 1)
+    return { p: pointAtDistance(geo, frame.dist - f * TAIL_PX), o: 1 - f }
+  })
   return (
-    <g>
-      <circle cx={state.x} cy={state.y} r={9}  fill={color} opacity={state.opacity * 0.25}/>
-      <circle cx={state.x} cy={state.y} r={5}  fill={color} opacity={state.opacity}/>
+    <g opacity={frame.opacity}>
+      {tail.map((t, i) => (
+        <circle key={i} cx={t.p.x} cy={t.p.y} r={2 + 3 * t.o} fill={color} opacity={0.45 * t.o} />
+      ))}
+      <circle cx={head.x} cy={head.y} r={10}  fill={color} opacity={0.22} />
+      <circle cx={head.x} cy={head.y} r={5.5} fill={color} />
+      <circle cx={head.x} cy={head.y} r={2.2} fill="#ffffff" opacity={0.9} />
     </g>
   )
 }

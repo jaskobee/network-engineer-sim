@@ -5,6 +5,7 @@ import '@xterm/xterm/css/xterm.css'
 import { useGame } from '../state/GameContext.jsx'
 import { isValidIp } from '../models/ipUtils.js'
 import { pingTargetOf } from '../engine/pingTarget.js'
+import { playPingSuccess, playPingFail } from '../utils/sounds.js'
 
 // Atkinson Hyperlegible Mono keeps 0/O and 1/l/I distinct — which matters when the
 // text on screen is an IP address or a command a learner has to retype exactly.
@@ -456,6 +457,11 @@ function TermSession({ session, isActive }) {
               onDoneFired = true
               lines.forEach(l => term.writeln(l))
               pingCancelRef.current = null
+              // The "network comes alive" beat: a real forwarding success gets the two-note
+              // chord; a drop gets the low buzz. Only ever fires on the engine's own verdict —
+              // we never celebrate a path real hardware wouldn't forward.
+              if (success) playPingSuccess()
+              else playPingFail()
               // Record that the user actually ran a ping (needed for mission task checks)
               if (success) {
                 const srcIp = device.interfaces.find(i => i.status === 'up' && i.ip)?.ip
