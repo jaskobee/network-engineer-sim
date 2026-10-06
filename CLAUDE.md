@@ -54,6 +54,13 @@ Path-scoped rules in `.claude/rules/` attach automatically when you edit
 | `/verify-in-browser` | Confirming a change in the running app |
 | `/brain-update` | End of substantial work — keep the brain true |
 
+The **Superpowers** plugin (`superpowers@claude-plugins-official`, enabled in
+`.claude/settings.json`) adds general workflow skills (brainstorming, writing-plans,
+systematic-debugging, test-driven-development, verification-before-completion, …).
+They set *how* to work; the project skills above and this file decide *what's correct*.
+On conflict, this file and `docs/NETWORKING_ACCURACY.md` win, and `/accuracy-gate`
+is still required on networking changes.
+
 ### Subagents
 - `accuracy-reviewer` — independent review of a diff against the spec (local twin of CI).
 - `mission-qa` — plays a mission on paper + runs its test; reports blockers/mis-teaching.
