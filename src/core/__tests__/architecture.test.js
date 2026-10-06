@@ -12,7 +12,7 @@
  * A3  only src/hybrid may import from both onprem and cloud
  * A4  onprem source does not import guest (shells sit on top of the network, not under it)
  * A5  guest → onprem is limited to a fixed list of known couplings
- * A6  core / guest / onprem / engine stay headless: no React, DOM libraries, .jsx or CSS
+ * A6  core / guest / onprem / cloud / engine stay headless: no React, DOM libraries, .jsx or CSS
  * A0  the import scanner itself finds every import form we use
  *
  * Plain file scan + regex on purpose — no parser dependency. Test files are scanned
@@ -38,7 +38,7 @@ const KNOWN_GUEST_TO_ONPREM = new Set([
   'guest/WindowsCLIEngine.js -> onprem/dns.js',
 ])
 
-const HEADLESS = ['core', 'guest', 'onprem', 'engine']
+const HEADLESS = ['core', 'guest', 'onprem', 'cloud', 'engine']
 const UI_PACKAGES = /^(react|react-dom|@dnd-kit\/|@xterm\/)/
 
 /** Every module specifier in a source text: static, side-effect, re-export, dynamic. */

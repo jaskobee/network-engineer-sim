@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { GameProvider, useGame } from './state/GameContext.jsx'
 import { CareerProvider, useCareer } from './state/CareerContext.jsx'
+import { CloudProvider } from './state/CloudContext.jsx'
 import { useAuth } from './state/AuthContext.jsx'
 import LoginPage from './components/LoginPage.jsx'
 import Floorplan from './components/Floorplan.jsx'
@@ -28,7 +29,9 @@ export default function App() {
   return (
     <GameProvider>
       <CareerProvider>
-        <AppContent />
+        <CloudProvider>
+          <AppContent />
+        </CloudProvider>
       </CareerProvider>
     </GameProvider>
   )

@@ -3,7 +3,7 @@
  *
  * V1  a file without schemaVersion is schemaVersion 1
  * V2  a node without domain is on-prem
- * V3  only 'onprem' is a valid domain until cloud arrives
+ * V3  the known domains are 'onprem' and 'cloud' (cloud added in Phase 1a); onprem stays the default
  */
 import { describe, it, expect } from 'vitest'
 import { SCHEMA_VERSION, DOMAINS, DEFAULT_DOMAIN, schemaVersionOf, domainOf } from '../saveFormat.js'
@@ -26,8 +26,10 @@ describe('V2 — domain', () => {
 })
 
 describe('V3 — known domains', () => {
-  it('only onprem exists in Phase 0, and it is the default', () => {
-    expect(DOMAINS).toEqual(['onprem'])
+  // Phase 0 asserted ['onprem']; Phase 1a adds 'cloud' as planned (roadmap §3.5). Files
+  // without a domain still default to onprem, so every pre-cloud save reads the same.
+  it('onprem and cloud exist; onprem is the default for nodes without a domain', () => {
+    expect(DOMAINS).toEqual(['onprem', 'cloud'])
     expect(DEFAULT_DOMAIN).toBe('onprem')
     expect(Object.isFrozen(DOMAINS)).toBe(true)
   })

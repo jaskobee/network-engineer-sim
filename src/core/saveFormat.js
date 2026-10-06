@@ -16,8 +16,8 @@
 
 export const SCHEMA_VERSION = 1
 
-/** Domains a saved node may belong to. 'cloud' joins in roadmap Phase 1. */
-export const DOMAINS = Object.freeze(['onprem'])
+/** Domains a saved node may belong to. 'cloud' joined in roadmap Phase 1a (src/cloud/persistence.js). */
+export const DOMAINS = Object.freeze(['onprem', 'cloud'])
 export const DEFAULT_DOMAIN = 'onprem'
 
 /** schemaVersion of a parsed save; files from before Phase 0 have none and are 1. */

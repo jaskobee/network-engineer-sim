@@ -142,6 +142,8 @@ inventing an Azure rule:
    rather than a separate `validator.js`; option lists are in `catalog.js`. 85 tests.
 2. `CloudContext` (own save slice, schemaVersion, domain `cloud`) + save/load tests;
    `DOMAINS` gains `'cloud'`; architecture test still green.
+   **Done 2026-10-06** — persistence is headless (`src/cloud/persistence.js`, storage injected) and
+   tested there; the architecture test now also keeps `src/cloud` free of React/DOM.
 3. Mode `cloud` in the header (dev-gated per Q4) + empty `CloudWorkspace`; on-prem untouched.
 4. Management view + forms for MG / subscription / RG.
 5. Network view + forms for VNet / subnet / NSG / public IP / NIC / VM / disk / storage.
