@@ -19,7 +19,7 @@
 import {
   isValidIp, isValidMask, isHostAddress,
   networkAddress, broadcastAddress, maskToPrefixLen, ipToNum,
-} from '../core/ipUtils.js'
+} from '@sim/kernel/ipUtils.js'
 import { effectiveDnsServers, dnsSource } from '../onprem/dns.js'
 
 // Device types that get the window. Routers, switches and firewalls are CLI devices.

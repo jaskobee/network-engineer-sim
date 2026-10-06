@@ -1,4 +1,4 @@
-import { isValidIp, networkAddress, maskToPrefixLen, ipToNum } from '../core/ipUtils.js'
+import { isValidIp, networkAddress, maskToPrefixLen, ipToNum } from '@sim/kernel/ipUtils.js'
 import { REASON } from '../core/failureReasons.js'
 import { refreshSubifs } from './Device.js'
 

@@ -1,0 +1,13 @@
+{
+  "name": "@sim/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared design system and app frame for every simulator: fonts, tokens, primitives (base.css), the beta login gate and the product switcher. Knows nothing about any simulator's domain.",
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

@@ -36,6 +36,8 @@ const USERS = {
   },
 }
 
+// One sign-in for every product: they share an origin in production, and sessionStorage
+// is per origin. The key keeps its original name so existing beta sessions stay valid.
 const SESSION_KEY = 'netsim_session'
 const AuthContext = createContext(null)
 

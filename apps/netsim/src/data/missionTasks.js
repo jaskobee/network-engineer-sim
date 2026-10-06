@@ -1,4 +1,4 @@
-import { networkAddress } from '../core/ipUtils.js'
+import { networkAddress } from '@sim/kernel/ipUtils.js'
 
 // ── Mission 001 ───────────────────────────────────────────────────────────────
 

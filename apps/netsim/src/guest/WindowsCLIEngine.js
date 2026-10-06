@@ -1,7 +1,7 @@
 import {
   isValidIp, isValidMask, networkAddress, maskToPrefixLen,
   ipToNum, isHostAddress,
-} from '../core/ipUtils.js'
+} from '@sim/kernel/ipUtils.js'
 import { REASON } from '../core/failureReasons.js'
 import { performDHCP, releaseDHCP } from '../onprem/DHCPEngine.js'
 import { resolveName, queryServer, effectiveDnsServers, dnsSource, reverseName, normalizeName } from '../onprem/dns.js'

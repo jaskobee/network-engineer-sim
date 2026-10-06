@@ -30,7 +30,7 @@ import {
   DISK_TYPES, VM_SIZES, OS_TYPES, STORAGE_KINDS, storageEndpoints, SECURITY_RULE_PROTOCOLS,
   SECURITY_RULE_DIRECTIONS, SECURITY_RULE_ACCESS, SERVICE_TAGS, PUBLIC_IP_POOL,
 } from './catalog.js'
-import { isValidIp } from '../core/ipUtils.js'
+import { isValidIp } from '@sim/kernel/ipUtils.js'
 
 const MAX_MG_DEPTH = 6                     // I5
 const MAX_MANAGEMENT_GROUPS = 10000        // I6

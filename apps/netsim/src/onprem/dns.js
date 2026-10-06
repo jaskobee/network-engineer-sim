@@ -22,7 +22,7 @@
  * A records only, no recursion depth, no TCP fallback, no source ports (same 4-tuple
  * simplification as the firewall).
  */
-import { isValidIp } from '../core/ipUtils.js'
+import { isValidIp } from '@sim/kernel/ipUtils.js'
 import { REASON } from '../core/failureReasons.js'
 
 /** What a DNS query looks like to the firewall: UDP, destination port 53. */

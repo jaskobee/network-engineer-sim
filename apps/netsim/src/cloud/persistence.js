@@ -8,7 +8,7 @@
  * (src/core/saveFormat.js); in memory the model has neither, because everything here is
  * cloud. Storage is passed in (localStorage in the app, a stub in tests).
  */
-import { SCHEMA_VERSION, schemaVersionOf } from '../core/saveFormat.js'
+import { SCHEMA_VERSION, schemaVersionOf } from '@sim/kernel/saveFormat.js'
 import { findCloudMission } from './missions/index.js'
 
 export const CLOUD_SAVE_KEY = 'netsim_cloud_v1'

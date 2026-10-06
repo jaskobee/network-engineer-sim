@@ -1,6 +1,6 @@
 import { deviceFromSave, setIdCounter } from '../onprem/Device.js'
 import { Topology } from '../onprem/Topology.js'
-import { SCHEMA_VERSION, DEFAULT_DOMAIN } from '../core/saveFormat.js'
+import { SCHEMA_VERSION, DEFAULT_DOMAIN } from '@sim/kernel/saveFormat.js'
 
 const SAVE_KEY = 'netsim_v2'
 const VERSION = 2

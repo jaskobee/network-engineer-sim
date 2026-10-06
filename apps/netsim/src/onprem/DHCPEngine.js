@@ -11,7 +11,7 @@
  *     A name server set by hand on the client (device.dns_servers) still wins over the lease.
  */
 
-import { isValidIp, ipToNum, networkAddress } from '../core/ipUtils.js'
+import { isValidIp, ipToNum, networkAddress } from '@sim/kernel/ipUtils.js'
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 

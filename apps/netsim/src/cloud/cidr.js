@@ -3,7 +3,7 @@
  * Builds on src/core/ipUtils — the same subnet math the on-prem track teaches; only
  * Azure's extra rules (five reserved addresses, blocked ranges) live here.
  */
-import { isValidIp, ipToNum } from '../core/ipUtils.js'
+import { isValidIp, ipToNum } from '@sim/kernel/ipUtils.js'
 
 const numToIp = n => [n >>> 24, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff].join('.')
 const blockSize = prefix => 2 ** (32 - prefix)

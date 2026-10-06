@@ -13,7 +13,7 @@ import {
   serializeCloud, deserializeCloud, serializeTenant, loadCloud, saveCloud, CLOUD_SAVE_KEY, CLOUD_UNREADABLE_KEY,
 } from '../persistence.js'
 import { findCloudMission } from '../missions/index.js'
-import { SCHEMA_VERSION, DOMAINS } from '../../core/saveFormat.js'
+import { SCHEMA_VERSION, DOMAINS } from '@sim/kernel/saveFormat.js'
 import { must, at, networkState } from './fixtures.js'
 
 function memoryStorage(initial = {}) {

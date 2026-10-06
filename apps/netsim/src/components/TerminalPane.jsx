@@ -3,7 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useGame } from '../state/GameContext.jsx'
-import { isValidIp } from '../core/ipUtils.js'
+import { isValidIp } from '@sim/kernel/ipUtils.js'
 import { pingTargetOf } from '../engine/pingTarget.js'
 import { playPingSuccess, playPingFail } from '../utils/sounds.js'
 

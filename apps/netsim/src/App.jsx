@@ -4,8 +4,9 @@ import { GameProvider, useGame } from './state/GameContext.jsx'
 import { CareerProvider, useCareer } from './state/CareerContext.jsx'
 import { CloudProvider } from './state/CloudContext.jsx'
 import CloudWorkspace from './components/cloud/CloudWorkspace.jsx'
-import { useAuth } from './state/AuthContext.jsx'
-import LoginPage from './components/LoginPage.jsx'
+import { useAuth } from '@sim/ui/AuthContext.jsx'
+import LoginPage from '@sim/ui/LoginPage.jsx'
+import Faceplate from './components/Faceplate.jsx'
 import Floorplan from './components/Floorplan.jsx'
 import Inventory from './components/Inventory.jsx'
 import Shop from './components/Shop.jsx'
@@ -26,7 +27,7 @@ import { IconCart, IconBox, IconBriefcase, IconLaptop, IconSliders, IconClose } 
 
 export default function App() {
   const { user } = useAuth()
-  if (!user) return <LoginPage />
+  if (!user) return <LoginPage title="NetSim" tagline="Configure real network gear. Get paid when it works." hero={<Faceplate />} />
   return (
     <GameProvider>
       <CareerProvider>

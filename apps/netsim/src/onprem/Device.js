@@ -1,5 +1,5 @@
-import { isValidIp, networkAddress } from '../core/ipUtils.js'
-import { DEFAULT_DOMAIN, domainOf } from '../core/saveFormat.js'
+import { isValidIp, networkAddress } from '@sim/kernel/ipUtils.js'
+import { DEFAULT_DOMAIN, domainOf } from '@sim/kernel/saveFormat.js'
 
 let _idCounter = 0
 

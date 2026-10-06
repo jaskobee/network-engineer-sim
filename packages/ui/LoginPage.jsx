@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { useAuth } from '../state/AuthContext.jsx'
-import Faceplate from './Faceplate.jsx'
+import { useAuth } from './AuthContext.jsx'
 
 const MAX_ATTEMPTS    = 5
 const LOCKOUT_SECONDS = 30
 
-export default function LoginPage() {
+/**
+ * The beta sign-in screen every product shares. The product brings its own name, one-line
+ * pitch and illustration (`hero`); the form, lockout and disclaimer are the same everywhere.
+ */
+export default function LoginPage({ title, tagline, hero }) {
   const { login } = useAuth()
   const [username,    setUsername]   = useState('')
   const [password,    setPassword]   = useState('')
@@ -97,11 +100,9 @@ export default function LoginPage() {
 
       {/* Hero */}
       <div style={{ marginBottom: 30, textAlign: 'center', userSelect: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Faceplate />
-        <h1 style={{ fontSize: 48, fontWeight: 700, letterSpacing: 0.2, color: 'var(--ink)', lineHeight: 1, marginTop: 22 }}>NetSim</h1>
-        <p style={{ fontSize: 19, color: 'var(--ink-2)', marginTop: 10 }}>
-          Configure real network gear. Get paid when it works.
-        </p>
+        {hero}
+        <h1 style={{ fontSize: 48, fontWeight: 700, letterSpacing: 0.2, color: 'var(--ink)', lineHeight: 1, marginTop: 22 }}>{title}</h1>
+        <p style={{ fontSize: 19, color: 'var(--ink-2)', marginTop: 10 }}>{tagline}</p>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14,
           fontSize: 14, fontWeight: 600, color: 'var(--ink-2)',

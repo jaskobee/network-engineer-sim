@@ -63,7 +63,7 @@ const toRel = p => path.relative(SRC, p).split(path.sep).join('/')
 const areaOf = rel => rel.split('/')[0]
 const isTest = rel => rel.includes('/__tests__/')
 
-// [{ from: 'onprem/Topology.js', to: 'core/ipUtils.js' | 'react', relative: bool }]
+// [{ from: 'onprem/Topology.js', to: 'core/failureReasons.js' | 'react', relative: bool }]
 const EDGES = walk(SRC).flatMap(file => {
   const from = toRel(file)
   return importSpecifiers(fs.readFileSync(file, 'utf8')).map(spec => {
@@ -88,7 +88,7 @@ describe('A0 — import scanner', () => {
   })
 
   it('actually sees the engine graph (guards against a scanner that silently finds nothing)', () => {
-    expect(show(local)).toContain('onprem/Topology.js -> core/ipUtils.js')
+    expect(show(local)).toContain('onprem/Topology.js -> core/failureReasons.js')
     expect(show(local)).toContain('guest/PCCLIEngine.js -> onprem/DHCPEngine.js')
   })
 })

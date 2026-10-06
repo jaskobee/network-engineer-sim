@@ -19,7 +19,7 @@
  */
 
 import { normalizeIfName, getParentIfName, createSubinterface, refreshSubifs } from './Device.js'
-import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen } from '../core/ipUtils.js'
+import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen } from '@sim/kernel/ipUtils.js'
 import { REASON } from '../core/failureReasons.js'
 import { resolveName } from './dns.js'
 

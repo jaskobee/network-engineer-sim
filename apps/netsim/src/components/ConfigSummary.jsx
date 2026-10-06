@@ -12,7 +12,7 @@
  * shape, by DevPanel.jsx's dev-only inspector — this just surfaces it to
  * real players.
  */
-import { maskToPrefixLen } from '../core/ipUtils.js'
+import { maskToPrefixLen } from '@sim/kernel/ipUtils.js'
 
 function Section({ icon, title, children }) {
   return (

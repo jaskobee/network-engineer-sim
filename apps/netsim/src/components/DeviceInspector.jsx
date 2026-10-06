@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useGame } from '../state/GameContext.jsx'
-import { maskToPrefixLen } from '../core/ipUtils.js'
+import { maskToPrefixLen } from '@sim/kernel/ipUtils.js'
 import { planAddressEdit, runAddressPlan } from '../engine/interfaceAddress.js'
 import ConfigSummary from './ConfigSummary.jsx'
 import { IconCheck, IconClose } from './icons.jsx'

@@ -1,4 +1,4 @@
-import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen, ipToNum } from '../core/ipUtils.js'
+import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen, ipToNum } from '@sim/kernel/ipUtils.js'
 import { REASON } from '../core/failureReasons.js'
 import { resolveName, queryServer, effectiveDnsServers, normalizeName } from '../onprem/dns.js'
 import { performDHCP, releaseDHCP } from '../onprem/DHCPEngine.js'
