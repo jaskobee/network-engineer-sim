@@ -39,9 +39,9 @@ console.log(`Tests ${testPassed ? 'PASSED ✅' : 'FAILED ❌'}\n`)
 // Read the missions definition for context
 let missionsSource = ''
 try {
-  missionsSource = readFileSync(join(ROOT, 'src/data/missions.js'), 'utf8')
+  missionsSource = readFileSync(join(ROOT, 'apps/netsim/src/data/missions.js'), 'utf8')
 } catch {
-  missionsSource = '(could not read src/data/missions.js)'
+  missionsSource = '(could not read apps/netsim/src/data/missions.js)'
 }
 
 console.log('Asking Claude for a mission-focused QA report...\n')

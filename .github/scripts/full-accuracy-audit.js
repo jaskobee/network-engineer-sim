@@ -51,20 +51,20 @@ const TRACKING_LABEL = 'accuracy-audit'
 // truncation. Raise it if the source set genuinely outgrows this budget.
 const MAX_FILE_CHARS = 150_000
 const SOURCES = [
-  'src/onprem/CLIEngine.js',
-  'src/guest/PCCLIEngine.js',
-  'src/guest/WindowsCLIEngine.js',
-  'src/onprem/Topology.js',
-  'src/onprem/Device.js',
-  'src/onprem/DHCPEngine.js',
-  'src/onprem/dns.js',
-  'src/core/ipUtils.js',
-  'src/core/failureReasons.js',
-  'src/data/deviceCatalog.js',
-  'src/data/missions.js',
-  'src/data/mission005scaffold.js',
-  'src/data/missionTasks.js',
-  'src/devMode/presets.js',
+  'apps/netsim/src/onprem/CLIEngine.js',
+  'apps/netsim/src/guest/PCCLIEngine.js',
+  'apps/netsim/src/guest/WindowsCLIEngine.js',
+  'apps/netsim/src/onprem/Topology.js',
+  'apps/netsim/src/onprem/Device.js',
+  'apps/netsim/src/onprem/DHCPEngine.js',
+  'apps/netsim/src/onprem/dns.js',
+  'apps/netsim/src/core/ipUtils.js',
+  'apps/netsim/src/core/failureReasons.js',
+  'apps/netsim/src/data/deviceCatalog.js',
+  'apps/netsim/src/data/missions.js',
+  'apps/netsim/src/data/mission005scaffold.js',
+  'apps/netsim/src/data/missionTasks.js',
+  'apps/netsim/src/devMode/presets.js',
 ]
 
 function readCapped(relPath) {
