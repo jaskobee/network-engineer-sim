@@ -147,6 +147,7 @@ inventing an Azure rule:
 3. Mode `cloud` in the header (shipped visible with a Preview label, decision 4) + `CloudWorkspace`; on-prem untouched.
    **Done 2026-10-06** — the workspace shows the tenant and has its own Start over; New game resets on-prem only.
 4. Management view + forms for MG / subscription / RG.
+   **Done 2026-10-06** — refusals link to the Microsoft Learn page behind each rule (`src/cloud/ruleSources.js`).
 5. Network view + forms for VNet / subnet / NSG / public IP / NIC / VM / disk / storage.
 6. Cloud mission runtime + the three missions + their tests; cloud mission panel.
 7. Cloud accuracy gate (spec §"Cloud accuracy gate"), browser check, brain update
