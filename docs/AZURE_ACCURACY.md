@@ -12,7 +12,7 @@ Every invariant has an ID, the real-world rule, what the sim must do, a source, 
 a status:
 
 - **VERIFIED** — checked against the cited source on the review date.
-- **SOURCED** — Claude found the rule stated on the cited Microsoft Learn page and quoted
+- **SOURCED**  — Claude found the rule stated on the cited Microsoft Learn page and quoted
   or closely paraphrased it on the date given; **Jasko still checks it and flips it to
   VERIFIED.** Treat SOURCED exactly like TO-VERIFY when implementing: do not build on it.
   Entries marked *(summary)* came from a summarized page fetch, not the verbatim text —
@@ -45,7 +45,7 @@ https://learn.microsoft.com/en-us/answers/questions/2046376/ — **VERIFIED**
 *Source:* https://learn.microsoft.com/en-au/azure/api-management/virtual-network-injection-resources — **VERIFIED**
 *Addition (2026-10-06):* "The smallest supported IPv4 subnet is /29, and the largest is
 /2 … IPv6 subnets must be exactly /64 in size." *Source:* VNet FAQ
-https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-faq — **SOURCED**
+https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-faq — **VERIFIED**
 
 **A3 — Subnets must sit inside the VNet address space and must not overlap each
 other.** FAQ: "Subnet address spaces can't overlap one another." A subnet can be added
@@ -54,28 +54,28 @@ space in the virtual network's address range." A subnet can be resized only "if 
 services are deployed in it."
 *Sim:* the validator refuses an overlapping subnet or one outside the VNet's address
 space; resizing a subnet with a NIC in it is refused.
-*Source:* VNet FAQ (above) — **SOURCED** 2026-10-06
+*Source:* VNet FAQ (above) — **VERIFIED** 2026-10-06
 
 **A3a — VNet address ranges.** RFC 1918 recommended; RFC 6598 (100.64.0.0/10) "is
 treated as a private IP address space in Azure"; other ranges "might work but have
 undesirable side effects". Can't be added: 224.0.0.0/4, 255.255.255.255/32,
 127.0.0.0/8, 169.254.0.0/16, 168.63.129.16/32.
 *Sim:* refuse the five blocked ranges; warn (not refuse) on public/non-RFC-1918 space.
-*Source:* VNet FAQ — **SOURCED** 2026-10-06
+*Source:* VNet FAQ — **VERIFIED** 2026-10-06
 
 **A4 — A VNet lives in one region and one subscription.** FAQ: "A virtual network is
 limited to a single region. But a virtual network does span availability zones."
 Subscription: a VNet is a resource in one resource group, which belongs to one
 subscription (J1, J2); a NIC can join "only … a virtual network in the same subscription
 and location" (L2).
-*Source:* VNet FAQ; NIC page (L2) — **SOURCED** 2026-10-06
+*Source:* VNet FAQ; NIC page (L2) — **VERIFIED** 2026-10-06
 
 **A5 — NIC private IPs are allocated by Azure** (dynamic or static, configured on
 the NIC resource). The guest OS receives the address from Azure.
 *Sim:* the IP is set on the NIC resource, not inside the VM's Linux shell.
 *Source:* https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/private-ip-addresses
 — **VERIFIED** (allocation methods). Behavior when a user hard-codes a different IP
-inside the guest — **SOURCED** 2026-10-06: "If the IP address assigned to an Azure NIC
+inside the guest — **VERIFIED** 2026-10-06: "If the IP address assigned to an Azure NIC
 that's attached to a VM changes, and the IP address within the VM operating system is
 different, you lose connectivity to the VM." (Manual assignment inside the OS is allowed
 but "we don't recommend it unless it's necessary".) *Source:* VNet FAQ. Planned as a fault.
@@ -101,7 +101,7 @@ limiting was removed). Resolve before Phase 5 models it.
 *Sim:* switches and VLANs cannot be placed inside a VNet; VNet VMs always take their
 address from the NIC resource (A5); a VM-hosted DHCP server serving on-prem clients is
 out of scope until Phase 5.
-*Source:* VNet FAQ — **SOURCED** 2026-10-06
+*Source:* VNet FAQ — **VERIFIED** 2026-10-06
 
 **A8 — Reserved subnet names:** `GatewaySubnet`, `AzureFirewallSubnet`,
 `AzureBastionSubnet` (exact names, minimum sizes apply). — **TO-VERIFY** (sizes per service doc)
@@ -136,7 +136,7 @@ Inbound: AllowVNetInBound 65000 · AllowAzureLoadBalancerInBound 65001 · DenyAl
 Outbound: AllowVnetOutBound 65000 · AllowInternetOutBound 65001 · DenyAllOutBound 65500.
 *Source:* NSG overview (above);
 https://learn.microsoft.com/en-us/azure/networking/design-guide/network-application-security-groups
-— **VERIFIED** for 65000/65500. 65001 rule names and scope — **SOURCED** 2026-10-06 from
+— **VERIFIED** for 65000/65500. 65001 rule names and scope — **VERIFIED** 2026-10-06 from
 the overview's default-rules table. Inbound 65001 `AllowAzureLoadBalancerInBound`:
 source `AzureLoadBalancer`, destination `0.0.0.0/0`, Any, Allow. Outbound 65001
 `AllowInternetOutBound`: source `0.0.0.0/0`, destination `Internet`, Any, Allow. 65000
@@ -164,7 +164,7 @@ translation; outbound rules evaluate *before* private→public translation.
 **C5 — NSG on both subnet and NIC:** inbound = subnet NSG then NIC NSG; outbound =
 NIC NSG then subnet NSG. Both must allow. FAQ: "A subnet-level NSG, followed by a NIC-level
 NSG, is processed for inbound traffic. A NIC-level NSG, followed by a subnet-level NSG, is
-processed for outbound traffic." *Source:* VNet FAQ — **SOURCED** 2026-10-06 (order).
+processed for outbound traffic." *Source:* VNet FAQ — **VERIFIED** 2026-10-06 (order).
 "Both must allow" is the implication of sequential processing — confirm on the NSG
 "how network security groups filter traffic" page before VERIFIED.
 
@@ -226,7 +226,7 @@ and traffic flows only when the peering is *Connected*.
 *Source:* https://learn.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-different-region — **VERIFIED**
 
 **E4 — VNets with overlapping address spaces can't be peered.** FAQ: "You can't enable
-virtual network peering if address spaces overlap." *Source:* VNet FAQ — **SOURCED** 2026-10-06
+virtual network peering if address spaces overlap." *Source:* VNet FAQ — **VERIFIED** 2026-10-06
 
 **E5 — Gateway transit:** the hub side enables *Allow gateway transit*, the spoke side
 enables *Use remote gateways*. Only one peering per VNet may use remote gateways, and
@@ -282,23 +282,22 @@ in the sim, label as compressed).
 ## H. Management plane — summary (detail in I, J, O)
 
 **H1 — A resource belongs to exactly one resource group.** "Each resource can exist in
-only one resource group." → J1 — **SOURCED** 2026-10-06
+only one resource group." → J1 — **VERIFIED** 2026-10-06
 
 **H2 — A resource group doesn't constrain networking.** "A resource can connect to
 resources in other resource groups." A NIC "can exist in the same or a different resource
 group from the VM you attach it to or the virtual network you connect it to." → J5, L2 —
-**SOURCED** 2026-10-06
+**VERIFIED** 2026-10-06
 
 **H3 — RBAC inherits Management Group → Subscription → RG → resource.** "Scopes are
 structured in a parent-child relationship … Lower levels inherit role permissions from
-higher levels." → O3 — **SOURCED** 2026-10-06
+higher levels." → O3 — **VERIFIED** 2026-10-06
 
 ---
 
 # First cloud release (roadmap Phases 1a/1b) — sections I–Q
 
-Researched 2026-10-06 for the Phase 0.5 spec pass. Every rule below is **SOURCED** at
-best: nothing in I–Q may be implemented until Jasko marks it VERIFIED. Page dates are the
+Verified by Jasko on 2026-10-06; rules still marked TO-VERIFY stay out of scope. Page dates are the
 `updated_at` Microsoft Learn reported on the research date.
 
 Sources used (abbreviations below):
@@ -331,87 +330,87 @@ called the *root* management group." Default display name **Tenant root group**;
 the same value as the Microsoft Entra tenant ID." "All subscriptions and management groups
 fold up into one root management group within the directory."
 *Sim:* every tenant canvas starts with exactly one root MG, named "Tenant root group", that
-the player can rename but not delete or move. *Source:* MG — **SOURCED**
+the player can rename but not delete or move. *Source:* MG — **VERIFIED**
 
 **I2 — The root can't be moved or deleted.** "The root management group can't be moved or
-deleted, unlike other management groups." *Source:* MG — **SOURCED**
+deleted, unlike other management groups." *Source:* MG — **VERIFIED**
 
 **I3 — New subscriptions land under the root.** "New subscriptions automatically default
 to the root management group when they're created." *Sim:* a new subscription appears under
-the root until the player moves it. *Source:* MG — **SOURCED**
+the root until the player moves it. *Source:* MG — **VERIFIED**
 
 **I4 — One parent, many children.** "Each management group and subscription can support
-only one parent." "Each management group can have many children." *Source:* MG — **SOURCED**
+only one parent." "Each management group can have many children." *Source:* MG — **VERIFIED**
 
 **I5 — Depth limit.** "A management group tree can support up to six levels of depth. This
 limit doesn't include the root level or the subscription level." LIMITS: "Root level plus 6
-levels". *Sim:* refuse a seventh level of MGs below the root. *Source:* MG, LIMITS — **SOURCED**
+levels". *Sim:* refuse a seventh level of MGs below the root. *Source:* MG, LIMITS — **VERIFIED**
 
 **I6 — Count limits.** "A single directory can support 10,000 management groups";
 subscriptions per MG: unlimited. *Sim:* not a gameplay concern; enforce only if reachable.
-*Source:* MG, LIMITS *(summary)* — **SOURCED**
+*Source:* MG, LIMITS *(summary)* — **VERIFIED**
 
 **I7 — One tenant.** "All subscriptions within a single management group must trust the
 same Microsoft Entra tenant." *Sim:* one tenant per game (already a documented
-simplification). *Source:* MG — **SOURCED**
+simplification). *Source:* MG — **VERIFIED**
 
 **I8 — MG name.** Microsoft.Management/managementgroups: scope tenant, 1–90 characters,
 "Alphanumerics, hyphens, underscores, periods, and parentheses. Start with a letter or
 number. Can't end with period." The ID and the display name are separate fields ("Use the
 management group's ID and not the management group's display name. This common error
-happens because both are custom-defined fields"). *Source:* NAMES, MG — **SOURCED**
+happens because both are custom-defined fields"). *Source:* NAMES, MG — **VERIFIED**
 
 **I9 — Root access.** "No one has default access to the root management group. Microsoft
 Entra Global Administrators are the only users who can elevate themselves to gain access."
 "Any assignment of user access or policy on the root management group applies to all
 resources within the directory." *Sim:* governance missions warn when the player assigns at
-the root ("must have" only). *Source:* MG — **SOURCED**
+the root ("must have" only). *Source:* MG — **VERIFIED**
 
 **I10 — Moving an MG or subscription needs write on child, old parent and new parent**
 (Owner on the child; Owner / Contributor / Management Group Contributor on both parents),
 "if the target or the existing parent management group is the root management group, the
 permission requirements don't apply." A move is refused if it breaks the path from a role
 assignment to a custom role definition's assignable scope. *Sim:* Phase 1b; until then the
-player is Owner everywhere. *Source:* MG — **SOURCED**
+player is Owner everywhere. *Source:* MG — **VERIFIED**
 
 **I11 — Hierarchy changes can lag.** "Azure Resource Manager caches details of the
 management group hierarchy for up to 30 minutes." *Sim:* not modelled — add to documented
-simplifications. *Source:* MG — **SOURCED**
+simplifications. *Source:* MG — **VERIFIED**
 
 ## J. Resource groups and resources
 
 **J1 — A resource is in exactly one RG.** "Each resource can exist in only one resource
-group." Resource groups, subscriptions, MGs and tags "are also resources." *Source:* ARM — **SOURCED**
+group." Resource groups, subscriptions, MGs and tags "are also resources." *Source:* ARM — **VERIFIED**
 
 **J2 — RG location is metadata.** "The resources in a resource group can be located in
 different regions than the resource group, but we recommend that you use the same
 location." "The resource group stores metadata about resources. When you specify a location
 for the resource group, you're also specifying where that metadata is stored."
 *Sim:* the RG form asks for a region; a resource may pick another region (allowed, with a
-best-practice note). *Source:* ARM — **SOURCED**
+best-practice note). *Source:* ARM — **VERIFIED**
 
 **J3 — Deleting an RG deletes its resources.** "When you delete a resource group, all
-resources in the resource group are also deleted." *Source:* ARM — **SOURCED**
+resources in the resource group are also deleted." *Source:* ARM — **VERIFIED**
 
 **J4 — RGs don't nest; RGs can't move between subscriptions.** "You can't move a resource
 group to a new subscription. But, you can move all resources in a resource group to a
 resource group in another subscription." (Nesting: RGs sit only directly under a
 subscription in the four-level scope model; no doc sentence says "can't nest" verbatim —
-**TO-VERIFY** wording.) *Source:* MOVE, ARM — **SOURCED** (move) / **TO-VERIFY** (nesting sentence)
+**TO-VERIFY** wording.) *Source:* MOVE, ARM — **VERIFIED** (move) / **TO-VERIFY** (nesting sentence)
 
 **J5 — Cross-RG connections are normal.** "A resource can connect to resources in other
-resource groups." *Source:* ARM — **SOURCED**
+resource groups." *Source:* ARM — **VERIFIED**
 
 **J6 — Tags don't inherit.** "You can apply tags to a resource group. The resources in the
 resource group don't inherit those tags." *Sim:* the "require a tag" lesson relies on this
-(P-section policies add/require tags per resource). *Source:* ARM — **SOURCED**
+(P-section policies add/require tags per resource). *Source:* ARM — **VERIFIED**
 
 **J7 — Four scopes and inheritance.** "Azure provides four levels of management scope:
 management groups, subscriptions, resource groups, and resources … Lower levels inherit
-settings from higher levels." *Source:* ARM — **SOURCED**
+settings from higher levels." *Source:* ARM — **VERIFIED**
 
 **J8 — Limits.** 980 resource groups per subscription; "up to 800 instances of a resource
-type in each resource group" (some types exempt). *Source:* LIMITS *(summary)*, ARM — **SOURCED**
+type in each resource group" (some types exempt). *Source:* LIMITS *(summary)*, ARM — **VERIFIED**
 
 **J9 — Moving resources.** Both RGs are locked during the move ("can't create, delete, or
 update resources within these resource groups"); "Moving a resource only changes its
@@ -424,7 +423,7 @@ become orphaned"; tags, role assignments and policies "don't transfer automatica
 destination RG; a read-only lock on source, destination or subscription blocks the move;
 policy can refuse the move with `RequestDisallowedByPolicy`.
 *Sim:* the move is instant (documented simplification: real moves can lock RGs up to four
-hours). *Source:* MOVE — **SOURCED**
+hours). *Source:* MOVE — **VERIFIED**
 
 ## K. Naming rules (validator input rules)
 
@@ -453,12 +452,12 @@ Copied from NAMES (2026-08-07). "Scope" is the uniqueness scope.
 **K1 — VM names are two names.** "Azure virtual machines have two distinct names: resource
 name and host name … The restrictions in the preceding table are for the host name. The
 actual resource name can have up to 64 characters." *Sim:* validate the host name rule;
-teach the 15-character Windows limit. *Source:* NAMES — **SOURCED**
+teach the 15-character Windows limit. *Source:* NAMES — **VERIFIED**
 
 **K2 — Storage account names are globally unique.** "Your storage account name must be
 unique within Azure. No two storage accounts can have the same name." *Sim:* the game keeps
 a fictional "already taken" list (labelled as simulated) so the lesson exists offline.
-*Source:* SA, NAMES — **SOURCED**
+*Source:* SA, NAMES — **VERIFIED**
 
 *Caution:* the NAMES page also lists a `virtualMachines | resource group | 2-64 |
 Alphanumerics` row — that row belongs to **Microsoft.NetworkCloud**, not Compute. Don't use it.
@@ -467,7 +466,7 @@ Alphanumerics` row — that row belongs to **Microsoft.NetworkCloud**, not Compu
 
 **L1 — A VM always has at least one NIC.** "A VM must always have at least one NIC
 attached to it, so you can't delete the only NIC from a VM." "You can delete a NIC only when
-the NIC isn't attached to a VM." *Source:* NIC — **SOURCED**
+the NIC isn't attached to a VM." *Source:* NIC — **VERIFIED**
 
 **L2 — NIC ↔ VNet ↔ VM: same subscription and location.** "You can assign a NIC only to a
 virtual network in the same subscription and location as the NIC. Once you create a NIC,
@@ -476,42 +475,42 @@ location and subscription as the NIC." The subnet *can* be changed later (all pr
 must be Dynamic first). A NIC "can exist in the same or a different resource group from the
 VM … or the virtual network". NIC name unique within the RG and can't be changed.
 *Sim:* validator refuses a NIC in a different region/subscription from its VNet or VM.
-*Source:* NIC — **SOURCED**
+*Source:* NIC — **VERIFIED**
 
 **L3 — Private IP from Azure DHCP.** "The Azure DHCP server assigns the private IP address
 to the NIC in the VM's operating system." Dynamic = "next available address from the address
 space of the subnet"; Static = "manually assign an available IP address from within the
 address space of the subnet". "Static and dynamic addresses don't change until you change
-them or delete the NIC." *Source:* NIC — **SOURCED** (complements A5)
+them or delete the NIC." *Source:* NIC — **VERIFIED** (complements A5)
 
 **L4 — MAC address.** "Azure assigns a MAC address to the NIC only after the NIC is
 attached to a VM and the VM starts for the first time. You can't specify the MAC address."
-*Source:* NIC — **SOURCED**
+*Source:* NIC — **VERIFIED**
 
 **L5 — IP forwarding is per NIC and off by default** ("Disabled, the default"), "you must
 enable IP forwarding for every NIC attached to the VM that needs to forward traffic", and
 "the VM must also run an application that's able to forward the traffic". *Source:* NIC —
-**SOURCED** (complements D3)
+**VERIFIED** (complements D3)
 
 **L6 — DNS servers: NIC setting overrides VNet setting.** "The NIC can inherit the settings
 from the virtual network, or use its own unique settings that override the setting for the
 virtual network." Changing VNet DNS needs a DHCP lease renewal on the VMs ("ipconfig /renew"
-on Windows). *Source:* NIC, VNETFAQ — **SOURCED** (feeds Phase 4)
+on Windows). *Source:* NIC, VNETFAQ — **VERIFIED** (feeds Phase 4)
 
 **L7 — Managed disk types.** Ultra Disk, Premium SSD v2, Premium SSD, Standard SSD,
 Standard HDD. Usable as OS disk: Ultra **No**, Premium SSD v2 **No**, Premium SSD Yes,
 Standard SSD Yes, Standard HDD Yes "(retiring Sept 8, 2028)". "Ultra Disks must be used as
 data disks and can only be created as empty disks." *Sim:* the VM form only offers Premium
-SSD / Standard SSD / Standard HDD for the OS disk. *Source:* DISKS — **SOURCED**
+SSD / Standard SSD / Standard HDD for the OS disk. *Source:* DISKS — **VERIFIED**
 
 **L8 — Managed disk redundancy.** Managed disks support LRS and ZRS (ZRS with limitations);
-Ultra Disks LRS only. *Source:* RED (supported services table), DISKS — **SOURCED**
+Ultra Disks LRS only. *Source:* RED (supported services table), DISKS — **VERIFIED**
 
 **L9 — Default outbound access** (ties to B1/B2): a VM without a public IP has a
 non-configurable default outbound IP *only where default outbound access still applies*;
 it's disabled by a public IP on the VM, a Standard load balancer backend pool, or a NAT
 gateway on the subnet. New VNets default to private subnets (B1). *Source:* NIC note —
-**SOURCED**
+**VERIFIED**
 
 ## M. Storage accounts
 
@@ -520,7 +519,7 @@ Data Lake, Queue, Table, Files; LRS/GRS/RA-GRS/ZRS/GZRS/RA-GZRS); Premium block 
 (`BlockBlobStorage`; LRS/ZRS); Premium file shares (`FileStorage`; LRS/ZRS); Premium page
 blobs (LRS/ZRS). "You can't change a storage account to a different type after it's
 created." General-purpose v1 and legacy Blob Storage are retired/retiring — don't offer them.
-*Source:* SA, RED — **SOURCED**
+*Source:* SA, RED — **VERIFIED**
 
 **M2 — Redundancy options.** LRS: "a single physical datacenter located in the primary
 region"; ZRS: "synchronously across three or more Azure availability zones in the primary
@@ -529,11 +528,11 @@ GZRS: ZRS in primary + async to secondary. GRS/GZRS secondary "isn't available f
 write access unless there's a failover"; RA-GRS / RA-GZRS add read access; the secondary
 endpoint is `<account>-secondary.blob.core.windows.net`. "The paired secondary region is
 determined based on the primary region, and can't be changed." Azure Files doesn't support
-RA-GRS/RA-GZRS. The archive tier isn't supported for ZRS/GZRS/RA-GZRS. *Source:* RED — **SOURCED**
+RA-GRS/RA-GZRS. The archive tier isn't supported for ZRS/GZRS/RA-GZRS. *Source:* RED — **VERIFIED**
 
 **M3 — Standard endpoints.** `https://<account>.blob.core.windows.net`, `.web.`, `.dfs.`,
 `.file.`, `.queue.`, `.table.core.windows.net`. (Azure DNS zone endpoints are preview and
-"will enter retirement in March 2027" — don't model.) *Source:* SA — **SOURCED**
+"will enter retirement in March 2027" — don't model.) *Source:* SA — **VERIFIED**
 
 **M4 — Public network access.** "By default, storage accounts accept connections from
 clients on any network." Portal options: **Enabled from all networks**, **Enabled from
@@ -542,62 +541,62 @@ perimeter**. CLI: `--default-action Allow|Deny`; `--public-network-access Disabl
 ("Traffic will be allowed only through a private endpoint. You need to create that private
 endpoint."). "Network rules have no effect unless you set the `--default-action` parameter
 to `Deny`." Requests from a subnet not allowed by a VNet rule "receive a 403 error".
-*Source:* SADEF, SANET — **SOURCED** (complements F5; exact client error text still TO-VERIFY)
+*Source:* SADEF, SANET — **VERIFIED** (complements F5; exact client error text still TO-VERIFY)
 
 **M5 — VNet rules need a service endpoint** on the subnet (`Microsoft.Storage` same-region,
 or `Microsoft.Storage.Global` any region; only one of the two per subnet); up to 400 VNet
 rules and 400 IP rules per account; up to 200 private endpoints per account. *Source:*
-SANET, SA — **SOURCED** (Phase 4 material)
+SANET, SA — **VERIFIED** (Phase 4 material)
 
 **M6 — Limits.** 250 storage accounts with standard endpoints per region per subscription
-by default (500 by request). *Source:* SA — **SOURCED**
+by default (500 by request). *Source:* SA — **VERIFIED**
 
 ## N. Public IP addresses
 
 **N1 — Basic SKU is retired.** "On September 30, 2025, Basic SKU public IPs were retired."
-*Sim:* offer Standard only; mention Basic only as history. *Source:* PIP — **SOURCED**
+*Sim:* offer Standard only; mention Basic only as history. *Source:* PIP — **VERIFIED**
 
 **N2 — Standard is static and closed by default.** Standard allocation: Static. Security:
 "Secure by default model and be closed to inbound traffic when used as a frontend. Allow
 traffic with network security group (NSG) is required (for example, on the NIC of a virtual
 machine with a Standard SKU Public IP attached)." *Sim:* a VM with a Standard public IP and
-no NSG allowing the port is unreachable from the internet. *Source:* PIP — **SOURCED**
+no NSG allowing the port is unreachable from the internet. *Source:* PIP — **VERIFIED**
 
 **N3 — Zones.** "All formerly Standard non-zonal IPs are now zone-redundant in all regions
 that support availability zones." "Once created, a public IP address can't change its
 availability zone." Standard v2 "can only be utilized with the Standard v2 NAT GW product at
-this time". *Sim:* don't offer Standard v2 in the first release. *Source:* PIP — **SOURCED**
+this time". *Sim:* don't offer Standard v2 in the first release. *Source:* PIP — **VERIFIED**
 
 **N4 — What it attaches to.** VM network interfaces, VM scale sets (via prefixes), public
 load balancers, VPN/ER gateways, NAT gateways, Application Gateways, Azure Firewall, Bastion,
 Route Server, API Management. The portal "doesn't provide the option to assign a public IP
-address to a NIC when you create it" (CLI/PowerShell can). *Source:* PIP, NIC — **SOURCED**
+address to a NIC when you create it" (CLI/PowerShell can). *Source:* PIP, NIC — **VERIFIED**
 
 **N5 — DNS label.** `<label>.<location>.cloudapp.azure.com`, unique within the location.
-*Source:* PIP — **SOURCED**
+*Source:* PIP — **VERIFIED**
 
 ## O. Azure RBAC (Phase 1b)
 
 **O1 — A role assignment = security principal + role definition + scope.** "A role
 assignment consists of three elements: security principal, role definition, and scope."
-Principals: "a user, group, service principal, or managed identity". *Source:* RBAC — **SOURCED**
+Principals: "a user, group, service principal, or managed identity". *Source:* RBAC — **VERIFIED**
 
 **O2 — Scope levels.** "management group, subscription, resource group, or resource."
 Formats: `/providers/Microsoft.Management/managementGroups/{id}`,
 `/subscriptions/{subscriptionId}`, `/subscriptions/{id}/resourceGroups/{rg}`,
-`…/providers/{provider}/{type}/{name}`. *Source:* SCOPE — **SOURCED**
+`…/providers/{provider}/{type}/{name}`. *Source:* SCOPE — **VERIFIED**
 
 **O3 — Inheritance down the hierarchy.** "Lower levels inherit role permissions from higher
-levels." An assignment on an MG "inherits to all the subscriptions." *Source:* SCOPE, MG — **SOURCED**
+levels." An assignment on an MG "inherits to all the subscriptions." *Source:* SCOPE, MG — **VERIFIED**
 
 **O4 — Additive.** "Azure RBAC is an additive model, so your effective permissions are the
 sum of your role assignments." (Contributor on the subscription + Reader on an RG =
 Contributor on that RG.) Group assignments are transitive through nested groups.
-*Source:* RBAC — **SOURCED**
+*Source:* RBAC — **VERIFIED**
 
 **O5 — Evaluation order.** "If a deny assignment applies, access is blocked. Otherwise,
 evaluation continues." Effective permissions = `Actions - NotActions` (and
-`DataActions - NotDataActions`). Conditions are evaluated last. *Source:* RBAC — **SOURCED**
+`DataActions - NotDataActions`). Conditions are evaluated last. *Source:* RBAC — **VERIFIED**
 
 **O6 — The four fundamental roles.** Owner: "Grants full access to manage all resources,
 including the ability to assign roles in Azure RBAC." Contributor: "Grants full access to
@@ -608,9 +607,9 @@ access to Azure resources." Also Role Based Access Control Administrator: "Manag
 Azure resources by assigning roles using Azure RBAC. This role does not allow you to manage
 access using other ways, such as Azure Policy." Owner, Contributor, UAA and RBAC
 Administrator are classed as **privileged administrator roles**. *Source:* ROLES
-*(summary — re-read verbatim)* — **SOURCED**
+*(summary — re-read verbatim)* — **VERIFIED**
 
-**O7 — Role assignments don't follow moved resources.** (J9) *Source:* MOVE — **SOURCED**
+**O7 — Role assignments don't follow moved resources.** (J9) *Source:* MOVE — **VERIFIED**
 
 **O8 — Limits.** Role assignments per subscription and per MG, custom roles per tenant —
 the numbers came from a *summarized* fetch of LIMITS and are **TO-VERIFY** (re-read the RBAC
@@ -620,75 +619,75 @@ limits table before quoting any number in-game).
 
 **P1 — Objects.** Policy definition (conditions + one effect), initiative definition
 (policy set: "a collection of policy definitions"), assignment ("a policy definition or
-initiative that was assigned to a specific scope"). *Source:* POL — **SOURCED**
+initiative that was assigned to a specific scope"). *Source:* POL — **VERIFIED**
 
 **P2 — Assignment scope and inheritance.** Assignable "from a management group to an
 individual resource"; "All child resources inherit the assignments"; "you can exclude a
 subscope from the assignment" (exclusions / `notScopes`, up to 400 per assignment). "Although
 a policy can be assigned at the management group level, *only* resources at the subscription
-or resource group level are evaluated." *Source:* POL — **SOURCED**
+or resource group level are evaluated." *Source:* POL — **VERIFIED**
 
 **P3 — Policy is an explicit-deny system.** A more permissive assignment lower down does
 **not** override a deny higher up: "If any assignment results in a resource getting denied,
 then the only way to allow the resource is to modify the denying assignment" (exclude the
 child scope from the parent assignment). Layering is "cumulative most restrictive."
-*Sim:* this is a flagship governance lesson. *Source:* POL, EFF — **SOURCED**
+*Sim:* this is a flagship governance lesson. *Source:* POL, EFF — **VERIFIED**
 
 **P4 — Effects.** Supported: addToNetworkGroup, append, audit, auditIfNotExists, deny,
 denyAction, deployIfNotExists, disabled, manual, modify, mutate. Evaluation order on
 create/update: disabled → append/modify → deny → audit → manual → auditIfNotExists →
 denyAction; after the provider succeeds, auditIfNotExists and deployIfNotExists evaluate.
-*Sim (first release):* deny, audit, modify (add tag), disabled. *Source:* EFF — **SOURCED**
+*Sim (first release):* deny, audit, modify (add tag), disabled. *Source:* EFF — **VERIFIED**
 
 **P5 — Deny.** "Deny prevents the request before being sent to the Resource Provider. The
 request is returned as a `403 (Forbidden)`." Existing resources that match are "marked as
 non-compliant" (not deleted). Error code `RequestDisallowedByPolicy` is documented on MOVE
 for move validation — **TO-VERIFY** that create/update requests return the same code before
-the sim prints it. *Source:* DENY, MOVE — **SOURCED** (403) / **TO-VERIFY** (code on create)
+the sim prints it. *Source:* DENY, MOVE — **VERIFIED** (403) / **TO-VERIFY** (code on create)
 
 **P6 — Evaluation triggers.** A resource is evaluated when created/updated in a scope with
 an assignment, when a scope gets a new assignment, when an assigned definition is updated,
 and in "the standard compliance evaluation cycle that occurs once every 24 hours."
-*Sim:* compliance recomputed instantly (documented simplification). *Source:* POL — **SOURCED**
+*Sim:* compliance recomputed instantly (documented simplification). *Source:* POL — **VERIFIED**
 
 **P7 — Policy vs RBAC.** "Even if an individual has access to perform an action, if the
 result is a non-compliant resource, Azure Policy still blocks the create or update."
 Contributor can't create/update definitions or assignments; Resource Policy Contributor and
-Owner can. *Source:* POL — **SOURCED**
+Owner can. *Source:* POL — **VERIFIED**
 
 **P8 — Built-ins named in the overview** (each must match Microsoft's real definition if we
 reproduce it): Allowed Storage Account SKUs (Deny), Allowed Resource Type (Deny), Allowed
 Locations (Deny), Allowed Virtual Machine SKUs (Deny), Add a tag to resources (Modify), Not
-allowed resource types (Deny). *Source:* POL — **SOURCED** (names/effects only; the JSON of
+allowed resource types (Deny). *Source:* POL — **VERIFIED** (names/effects only; the JSON of
 each definition is **TO-VERIFY**)
 
 **P9 — Limits.** Per scope: 500 policy definitions, 200 initiative definitions, 200
 assignments, 1000 exemptions; 400 exclusions per assignment; 20 parameters per definition.
-*Source:* POL (verbatim table) — **SOURCED**
+*Source:* POL (verbatim table) — **VERIFIED**
 
 ## Q. Resource locks (Phase 1b)
 
 **Q1 — Two levels.** Portal **Delete** / **Read-only**; CLI **CanNotDelete** / **ReadOnly**.
 "ReadOnly means authorized users can read a resource, but they can't delete or update it.
 Applying this lock is similar to restricting all authorized users to the permissions that the
-Reader role provides." "The lock overrides any user permissions." *Source:* LOCKS — **SOURCED**
+Reader role provides." "The lock overrides any user permissions." *Source:* LOCKS — **VERIFIED**
 
 **Q2 — Inheritance.** "When you apply a lock at a parent scope, all resources within that
 scope inherit the same lock … The most restrictive lock in the inheritance chain takes
 precedence." A Delete lock on one resource blocks deleting its whole RG ("A partial deletion
-isn't possible"). *Source:* LOCKS — **SOURCED**
+isn't possible"). *Source:* LOCKS — **VERIFIED**
 
 **Q3 — Scopes.** Subscription, resource group, resource. "You can't add a lock to management
-groups." *Source:* LOCKS — **SOURCED**
+groups." *Source:* LOCKS — **VERIFIED**
 
 **Q4 — Control plane only.** "Locks only apply to control plane Azure operations and not to
 data plane operations." A lock on a storage account "doesn't protect its data from being
 deleted or modified"; a ReadOnly lock on a storage account blocks listing account keys; a
-ReadOnly lock on an RG with a VM blocks starting/restarting it (POST). *Source:* LOCKS — **SOURCED**
+ReadOnly lock on an RG with a VM blocks starting/restarting it (POST). *Source:* LOCKS — **VERIFIED**
 
 **Q5 — Who.** Creating/deleting locks needs `Microsoft.Authorization/*` or
 `Microsoft.Authorization/locks/*`; Owner and User Access Administrator have it (Contributor
-does not). *Source:* LOCKS — **SOURCED**
+does not). *Source:* LOCKS — **VERIFIED**
 
 ## Management-plane outcomes (proposed, Phases 1a/1b)
 
