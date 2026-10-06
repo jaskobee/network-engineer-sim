@@ -25,12 +25,12 @@
  * window shows would also work typed on a real box.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { Device } from '../../models/Device.js'
-import { Topology } from '../../models/Topology.js'
-import { CLIEngine } from '../../models/CLIEngine.js'
-import { PCCLIEngine } from '../../models/PCCLIEngine.js'
-import { WindowsCLIEngine } from '../../models/WindowsCLIEngine.js'
-import { createAdminLaptop } from '../../models/Device.js'
+import { Device } from '../../onprem/Device.js'
+import { Topology } from '../../onprem/Topology.js'
+import { CLIEngine } from '../../onprem/CLIEngine.js'
+import { PCCLIEngine } from '../../guest/PCCLIEngine.js'
+import { WindowsCLIEngine } from '../../guest/WindowsCLIEngine.js'
+import { createAdminLaptop } from '../../onprem/Device.js'
 import {
   supportsHostGui, osOf, linuxName, adapterName, prefixToMask, readAdapter, formFromAdapter, sameForm, subnetFacts,
   validateManual, validateDns, planApply, planRenew, planLink, planClear, planQuickAddress, applyPlan,

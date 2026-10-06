@@ -35,7 +35,7 @@ Cross-check symptom strings against the table in `NETSIM_FAULTS_AND_FEATURES.md`
     (mask math, ARP-reachability of gateway, duplicate IPs, duplex fields) and return
     the specific reason + `failurePoint`. No fault flags.
   - Map the reason to the correct ping output in each CLI engine's `ping`.
-  - Tests in `src/models/__tests__/topology.test.js` (and the CLI test for output).
+  - Tests in `src/onprem/__tests__/topology.test.js` (and the CLI test for output).
   - Update `GLOSSARY.md` table and `STATUS.md` "Next up" via `/brain-update`.
 
 ## 3. Build the broken state through the engine

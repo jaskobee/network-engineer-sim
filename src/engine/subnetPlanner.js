@@ -15,7 +15,7 @@
  *
  * Pure JS — no React/DOM imports (engine rule 1).
  */
-import { isValidIp, isValidMask, maskToPrefixLen, ipToNum } from '../models/ipUtils.js'
+import { isValidIp, isValidMask, maskToPrefixLen, ipToNum } from '../core/ipUtils.js'
 import { subnetFacts, prefixToMask } from './hostConfig.js'
 
 // ── Addresses ─────────────────────────────────────────────────────────────────

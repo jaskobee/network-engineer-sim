@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Device, createIspDevice, createAdminLaptop, deviceFromSave, setIdCounter } from '../models/Device.js'
-import { Topology } from '../models/Topology.js'
-import { CLIEngine } from '../models/CLIEngine.js'
-import { PCCLIEngine } from '../models/PCCLIEngine.js'
-import { WindowsCLIEngine } from '../models/WindowsCLIEngine.js'
+import { Device, createIspDevice, createAdminLaptop, deviceFromSave, setIdCounter } from '../onprem/Device.js'
+import { Topology } from '../onprem/Topology.js'
+import { CLIEngine } from '../onprem/CLIEngine.js'
+import { PCCLIEngine } from '../guest/PCCLIEngine.js'
+import { WindowsCLIEngine } from '../guest/WindowsCLIEngine.js'
 import { serialize, saveToStorage, loadFromStorage, deserialize, exportToFile } from '../utils/saveLoad.js'
+import { SCHEMA_VERSION, DEFAULT_DOMAIN } from '../core/saveFormat.js'
 import { playPurchase, playMissionComplete, playSave, playCableDisconnect, playCableConnect } from '../utils/sounds.js'
 import { MISSIONS } from '../data/missions.js'
 import { buildMission005Scaffold } from '../data/mission005scaffold.js'
@@ -739,7 +740,7 @@ export function GameProvider({ children }) {
     const devices = []
     for (const dev of sbTopoRef.current.devices.values()) {
       devices.push({
-        id: dev.id, type: dev.type, model: dev.model, hostname: dev.hostname,
+        id: dev.id, domain: dev.domain ?? DEFAULT_DOMAIN, type: dev.type, model: dev.model, hostname: dev.hostname,
         config_mode: dev.config_mode, active_interface: dev.active_interface,
         active_dhcp_pool: dev.active_dhcp_pool ?? null,
         active_vlan: dev.active_vlan ?? null,
@@ -760,7 +761,7 @@ export function GameProvider({ children }) {
         fw_log:             dev.fw_log             ? dev.fw_log.map(e => ({ ...e }))                       : undefined,
       })
     }
-    return JSON.stringify({ version: 'netsim-dev-v1', devices, placements: sbPlacements }, null, 2)
+    return JSON.stringify({ version: 'netsim-dev-v1', schemaVersion: SCHEMA_VERSION, devices, placements: sbPlacements }, null, 2)
   }
 
   function devImportSandbox(json) {

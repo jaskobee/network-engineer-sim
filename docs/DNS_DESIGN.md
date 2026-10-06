@@ -16,7 +16,7 @@ that fits the engine we have.
 - `device.dns_server` existed on hosts but is only ever **filled by DHCP** (`DHCPEngine`,
   `dhclient`, `ipconfig /renew`). Nothing can set it by hand and nothing reads it except
   `ipconfig /all` / `netsh … show config`.
-- Names resolved from a **static table** (`_DNS_MAP` in `models/ipUtils.js`: google.com → 8.8.8.8 …) — removed in phase 1; its names are now the public zone in `models/dns.js`
+- Names resolved from a **static table** (`_DNS_MAP` in `core/ipUtils.js`: google.com → 8.8.8.8 …) — removed in phase 1; its names are now the public zone in `onprem/dns.js`
   in `ping <name>` (Linux, IOS) and in `TerminalPane`. It is consulted whether or not the device
   has any DNS server, or can reach one. That is fake data: a host with no DNS configured "resolves"
   google.com.
@@ -72,7 +72,7 @@ PT's client fields are just data; here the resolver must go through the real pat
   working in a correctly built network and stops working in a broken one.
 
 **Resolver** — one pure function, `resolveName(topology, clientDevice, name)` in a new
-`src/models/dns.js` (no React/DOM). It returns `{ ok, ip, reason, server }`:
+`src/onprem/dns.js` (no React/DOM). It returns `{ ok, ip, reason, server }`:
 1. `name` is already an IP → done.
 2. No name server on the client → `no_dns_server`.
 3. For each configured server **in order**: `topology.checkPing(clientIp, dnsIp, { protocol: 'udp', port: 53 })` — the existing bidirectional,
@@ -101,7 +101,7 @@ DNS server wrong / service off / record missing / firewall blocking udp/53.
 
 ## 5. Phases (each ends with `npm test` + build clean and an accuracy gate)
 
-1. **Client + resolver — DONE 2026-09-20.** `models/dns.js`; the three shells' resolution paths, `nslookup`, the
+1. **Client + resolver — DONE 2026-09-20.** `onprem/dns.js`; the three shells' resolution paths, `nslookup`, the
    set-DNS commands above; DNS field in the host GUI; the public-resolver table replaces the static
    fake; update `nat.test.js` to configure a name server first. Tests: each failure rung, path faults
    (link down, no route, firewall blocking udp/53, NAT missing), OS-specific wording.
@@ -136,7 +136,7 @@ DNS server wrong / service off / record missing / firewall blocking udp/53.
 
 ## 8. What phase 1 shipped
 
-- `src/models/dns.js` — `resolveName`, `queryServer`, `effectiveDnsServers`, `dnsSource`; the public zone and resolvers.
+- `src/onprem/dns.js` — `resolveName`, `queryServer`, `effectiveDnsServers`, `dnsSource`; the public zone and resolvers.
 - Linux: `ping <name>`, `nslookup <name> [server]`, `resolvectl status|dns|revert|query`, `cat /etc/resolv.conf`
   (and the upstream file); `dhclient` fills the lease list.
 - Windows: `netsh interface ip set|add|delete dns`, `show config|dnsservers`, `ipconfig /all` (several servers), `nslookup`,

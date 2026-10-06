@@ -1,4 +1,5 @@
-import { isValidIp, networkAddress } from './ipUtils.js'
+import { isValidIp, networkAddress } from '../core/ipUtils.js'
+import { DEFAULT_DOMAIN, domainOf } from '../core/saveFormat.js'
 
 let _idCounter = 0
 
@@ -16,6 +17,7 @@ export function deviceFromSave(raw) {
   const d = Object.create(Device.prototype)
   Object.assign(d, {
     id: raw.id,
+    domain: domainOf(raw),
     type: raw.type,
     model: raw.model,
     hostname: raw.hostname,
@@ -159,6 +161,7 @@ export function createAdminLaptop(hostname = 'admin-laptop') {
   const d = Object.create(Device.prototype)
   Object.assign(d, {
     id: `dev-${++_idCounter}`,
+    domain: DEFAULT_DOMAIN,
     type: 'laptop',
     model: 'ADMIN-LAPTOP',
     hostname,
@@ -182,6 +185,7 @@ export function createIspDevice() {
   const d = Object.create(Device.prototype)
   Object.assign(d, {
     id: `dev-${++_idCounter}`,
+    domain: DEFAULT_DOMAIN,
     type: 'isp',
     model: 'ISP-CLOUD',
     hostname: 'isp',
@@ -209,6 +213,7 @@ export function createIspDevice() {
 export class Device {
   constructor({ type, model, portCount, portPrefix, portStart = 0 }) {
     this.id = `dev-${++_idCounter}`
+    this.domain = DEFAULT_DOMAIN   // track whose plane evaluates this node (core/saveFormat.js)
     this.type = type
     this.model = model
     this.hostname = model.toLowerCase().replace(/[^a-z0-9-]/g, '-')
@@ -219,7 +224,7 @@ export class Device {
     this.interfaces = []
     this.routing_table = []  // [{ network, mask, next_hop, dhcp_assigned? }]
     this.vlan_db = {}        // vlan_id -> { name }
-    // Name servers, asked in order (see models/dns.js). `dns_servers` is set by hand — `resolvectl dns`,
+    // Name servers, asked in order (see onprem/dns.js). `dns_servers` is set by hand — `resolvectl dns`,
     // `netsh … set dns`, `ip name-server` — and wins; `dhcp_dns_servers` is what the lease supplied and is
     // emptied when the lease is released.
     this.dns_servers = []

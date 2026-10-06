@@ -1,4 +1,5 @@
-import { isValidIp, networkAddress, maskToPrefixLen, ipToNum } from './ipUtils.js'
+import { isValidIp, networkAddress, maskToPrefixLen, ipToNum } from '../core/ipUtils.js'
+import { REASON } from '../core/failureReasons.js'
 import { refreshSubifs } from './Device.js'
 
 export class Topology {
@@ -246,10 +247,10 @@ export class Topology {
   // service = { protocol, port } specifies the traffic type for firewall rule matching.
   // Defaults to ICMP (the original ping command) — all existing callers are unaffected.
   // Protocol: 'icmp' | 'tcp' | 'udp' | 'any'.  Port: integer or null.
-  // Returns a rich result object (see _pingResult) used by CLI `ping` and mission checks.
+  // Returns a PathResult (src/core/pathResult.js) used by CLI `ping` and mission checks.
   checkPing(srcIp, dstIp, service = { protocol: 'icmp', port: null }) {
     if (!isValidIp(srcIp) || !isValidIp(dstIp)) {
-      return _pingResult(false, 'no_route', null)
+      return _pingResult(false, REASON.NO_ROUTE, null)
     }
     if (srcIp === dstIp) return _pingResult(true, null, null)
 
@@ -259,7 +260,7 @@ export class Topology {
       for (const dev of this.devices.values()) {
         if (dev.interfaces.some(i => i.ip === srcIp && i.status === 'up')) { srcUp = true; break }
       }
-      return _pingResult(srcUp, srcUp ? null : 'link_down', null)
+      return _pingResult(srcUp, srcUp ? null : REASON.LINK_DOWN, null)
     }
 
     // Locate source device and capture interface state even if not up
@@ -276,21 +277,21 @@ export class Topology {
     }
 
     if (!srcDevice) {
-      if (srcIfStatus === 'admin_down') return _pingResult(false, 'admin_down', null)
-      if (srcIfStatus === 'down')       return _pingResult(false, 'link_down', null)
-      return _pingResult(false, 'no_route', null)
+      if (srcIfStatus === 'admin_down') return _pingResult(false, REASON.ADMIN_DOWN, null)
+      if (srcIfStatus === 'down')       return _pingResult(false, REASON.LINK_DOWN, null)
+      return _pingResult(false, REASON.NO_ROUTE, null)
     }
 
     // Forward path BFS
     const fwd = this._bfsReach(srcDevice, dstIp, srcIp, false, service)
     if (!fwd.reachable) {
       // vlan_isolated from BFS propagates directly — no further refinement needed.
-      if (fwd.failureReason === 'vlan_isolated')
-        return _pingResult(false, 'vlan_isolated', fwd.failurePoint)
+      if (fwd.failureReason === REASON.VLAN_ISOLATED)
+        return _pingResult(false, REASON.VLAN_ISOLATED, fwd.failurePoint)
 
       // Post-BFS refinements for PC/server when BFS returned 'no_route'.
       // Routers, and any failure reason other than no_route, are left unchanged.
-      if (fwd.failureReason === 'no_route' &&
+      if (fwd.failureReason === REASON.NO_ROUTE &&
           (srcDevice.type === 'pc' || srcDevice.type === 'server')) {
         const upIfaces = srcDevice.interfaces.filter(i => i.status === 'up' && i.ip && i.subnet_mask)
         const dstIsLocal = upIfaces.some(iface =>
@@ -300,8 +301,8 @@ export class Topology {
           // Src thinks dst is on the same subnet — BFS failed only because of VLAN
           // isolation at the switch (or no physical path at all).
           const vlanIsolated = _checkVlanIsolation(srcDevice, srcIp, dstIp, this)
-          if (vlanIsolated) return _pingResult(false, 'vlan_isolated', null)
-          return _pingResult(false, 'no_route', null)
+          if (vlanIsolated) return _pingResult(false, REASON.VLAN_ISOLATED, null)
+          return _pingResult(false, REASON.NO_ROUTE, null)
         }
         // Dst is off-subnet from src's perspective.
         // subnet_mismatch: dst is up, and from dst's own mask src falls in the same subnet.
@@ -312,7 +313,7 @@ export class Topology {
           )
           if (dstIface &&
               networkAddress(srcIp, dstIface.subnet_mask) === networkAddress(dstIp, dstIface.subnet_mask)) {
-            return _pingResult(false, 'subnet_mismatch', null)
+            return _pingResult(false, REASON.SUBNET_MISMATCH, null)
           }
         }
         // host_no_gateway: dst is off all connected subnets and there is no
@@ -323,7 +324,7 @@ export class Topology {
             networkAddress(r.next_hop, iface.subnet_mask) === networkAddress(iface.ip, iface.subnet_mask)
           )
         )
-        if (!hasUsableGateway) return _pingResult(false, 'host_no_gateway', null)
+        if (!hasUsableGateway) return _pingResult(false, REASON.HOST_NO_GATEWAY, null)
       }
       return _pingResult(false, fwd.failureReason, fwd.failurePoint)
     }
@@ -335,7 +336,7 @@ export class Topology {
     const dstDevice = this._findDeviceByIp(dstIp)
     if (dstDevice) {
       const ret = this._bfsReach(dstDevice, srcIp, dstIp, true, service)
-      if (!ret.reachable) return _pingResult(false, 'no_return_path', ret.failurePoint)
+      if (!ret.reachable) return _pingResult(false, REASON.NO_RETURN_PATH, ret.failurePoint)
     }
 
     return _pingResult(true, null, null)
@@ -429,7 +430,7 @@ export class Topology {
           const wanIp = _resolveNat(device, physIface, srcIp, ingressIface)
           if (!wanIp) {
             // No NAT rule covers this private source → internet is unreachable.
-            return { reachable: false, failureReason: 'nat_required', failurePoint: device.id }
+            return { reachable: false, failureReason: REASON.NAT_REQUIRED, failurePoint: device.id }
           }
           // NAT translates the source; record the mapping (idempotent).
           if (!(device.nat_translations ?? []).some(t => t.inside_local === srcIp)) {
@@ -515,7 +516,7 @@ export class Topology {
 
     return {
       reachable: false,
-      failureReason: vlanBlocked ? 'vlan_isolated' : (fwBlocked ? 'blocked_by_firewall' : 'no_route'),
+      failureReason: vlanBlocked ? REASON.VLAN_ISOLATED : (fwBlocked ? REASON.BLOCKED_BY_FIREWALL : REASON.NO_ROUTE),
       failurePoint: vlanBlocked ? null : (fwBlocked ? fwBlockedAt : null),
     }
   }
@@ -930,24 +931,22 @@ function _prefixLenToMask(prefix) {
 function _captureDropInfo(reason, fpName) {
   const at = fpName ? ` at ${fpName}` : ''
   switch (reason) {
-    case 'no_route':           return `No route to destination${at}`
-    case 'host_no_gateway':    return `No default gateway configured`
-    case 'link_down':          return `Link down — check cable`
-    case 'admin_down':         return `Interface administratively down`
-    case 'no_return_path':     return `No return path (one-way route)${at}`
-    case 'vlan_isolated':      return `VLAN boundary — no L3 routing between VLANs`
-    case 'nat_required':       return `RFC 1918 source — NAT required${at}`
-    case 'blocked_by_firewall':return `Blocked by firewall policy${at} [no matching permit rule]`
-    case 'subnet_mismatch':    return `Subnet mismatch — verify IP/mask configuration`
+    case REASON.NO_ROUTE:           return `No route to destination${at}`
+    case REASON.HOST_NO_GATEWAY:    return `No default gateway configured`
+    case REASON.LINK_DOWN:          return `Link down — check cable`
+    case REASON.ADMIN_DOWN:         return `Interface administratively down`
+    case REASON.NO_RETURN_PATH:     return `No return path (one-way route)${at}`
+    case REASON.VLAN_ISOLATED:      return `VLAN boundary — no L3 routing between VLANs`
+    case REASON.NAT_REQUIRED:       return `RFC 1918 source — NAT required${at}`
+    case REASON.BLOCKED_BY_FIREWALL:return `Blocked by firewall policy${at} [no matching permit rule]`
+    case REASON.SUBNET_MISMATCH:    return `Subnet mismatch — verify IP/mask configuration`
     default:                   return `Destination unreachable (${reason ?? 'unknown'})`
   }
 }
 
-// Build the standardised checkPing result object.
-// failureReason enum: 'no_route' | 'host_no_gateway' | 'gateway_unreachable' |
-//   'subnet_mismatch' | 'admin_down' | 'link_down' | 'no_return_path' |
-//   'vlan_isolated' | 'ip_conflict' | 'duplex_mismatch' | 'nat_required' |
-//   'blocked_by_firewall'
+// Build the standardised checkPing result — the PathResult contract (src/core/pathResult.js).
+// failureReason is a REASON.* code with source 'path' (src/core/failureReasons.js).
+/** @returns {import('../core/pathResult.js').PathResult} */
 function _pingResult(reachable, failureReason, failurePoint) {
   return {
     reachable,
@@ -956,7 +955,7 @@ function _pingResult(reachable, failureReason, failurePoint) {
     received:      reachable ? 5 : 0,
     lossPct:       reachable ? 0 : 100,
     rttMs:         reachable ? 2 : 0,
-    failureReason: reachable ? null : (failureReason ?? 'no_route'),
+    failureReason: reachable ? null : (failureReason ?? REASON.NO_ROUTE),
     failurePoint:  reachable ? null : (failurePoint  ?? null),
   }
 }

@@ -1,6 +1,7 @@
-import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen, ipToNum } from './ipUtils.js'
-import { resolveName, queryServer, effectiveDnsServers, normalizeName } from './dns.js'
-import { performDHCP, releaseDHCP } from './DHCPEngine.js'
+import { isValidIp, isValidMask, broadcastAddress, isHostAddress, networkAddress, maskToPrefixLen, ipToNum } from '../core/ipUtils.js'
+import { REASON } from '../core/failureReasons.js'
+import { resolveName, queryServer, effectiveDnsServers, normalizeName } from '../onprem/dns.js'
+import { performDHCP, releaseDHCP } from '../onprem/DHCPEngine.js'
 
 // Linux-style CLI for PC and Server device types.
 // Uses `ip`, `ifconfig`, `ping`, `route`, `hostname` — no IOS config modes.
@@ -55,11 +56,11 @@ export class PCCLIEngine {
     if (!result.reachable && _isNetworkUnreachable(result.failureReason)) {
       const lines = [`ping: connect: Network is unreachable`]
       const r = result.failureReason
-      if      (r === 'host_no_gateway') lines.push(`  (no default gateway — run: ip route add default via <gw>)`)
-      else if (r === 'no_route')        lines.push(`  (no route to ${targetIp} — check static routes on routers)`)
-      else if (r === 'admin_down')      lines.push(`  (interface is admin-down — run: ip link set eth0 up)`)
-      else if (r === 'link_down')       lines.push(`  (link is down — check cable connection)`)
-      else if (r === 'subnet_mismatch') lines.push(`  (IP/mask mismatch — verify subnet configuration)`)
+      if      (r === REASON.HOST_NO_GATEWAY) lines.push(`  (no default gateway — run: ip route add default via <gw>)`)
+      else if (r === REASON.NO_ROUTE)        lines.push(`  (no route to ${targetIp} — check static routes on routers)`)
+      else if (r === REASON.ADMIN_DOWN)      lines.push(`  (interface is admin-down — run: ip link set eth0 up)`)
+      else if (r === REASON.LINK_DOWN)       lines.push(`  (link is down — check cable connection)`)
+      else if (r === REASON.SUBNET_MISMATCH) lines.push(`  (IP/mask mismatch — verify subnet configuration)`)
       onStart?.(lines)
       onDone?.([], false)
       return () => {}
@@ -248,7 +249,7 @@ export class PCCLIEngine {
     if (r.ok) return { ok: true, ip: r.ip, lines: [] }
     return {
       ok: false,
-      lines: [r.reason === 'dns_nxdomain'
+      lines: [r.reason === REASON.DNS_NXDOMAIN
         ? `ping: ${name}: Name or service not known`
         : `ping: ${name}: Temporary failure in name resolution`],
     }
@@ -280,7 +281,7 @@ export class PCCLIEngine {
     }
 
     const r = resolveName(this.topology, device, asked, { capture: true })
-    return [...this._nsHeader('127.0.0.53'), ...this._nsAnswer(asked, r.ok ? r.ip : null, r.reason === 'dns_nxdomain' ? 'NXDOMAIN' : 'SERVFAIL')]
+    return [...this._nsHeader('127.0.0.53'), ...this._nsAnswer(asked, r.ok ? r.ip : null, r.reason === REASON.DNS_NXDOMAIN ? 'NXDOMAIN' : 'SERVFAIL')]
   }
 
   _nsHeader(server) {
@@ -366,8 +367,8 @@ export class PCCLIEngine {
         '-- Data is authenticated: no; Data is confidential: no',
       ]
     }
-    if (r.reason === 'dns_nxdomain') return [`${name}: resolve call failed: '${name}' not found`]
-    if (r.reason === 'dns_no_server') return [`${name}: resolve call failed: No appropriate name servers or networks for name found`]
+    if (r.reason === REASON.DNS_NXDOMAIN) return [`${name}: resolve call failed: '${name}' not found`]
+    if (r.reason === REASON.DNS_NO_SERVER) return [`${name}: resolve call failed: No appropriate name servers or networks for name found`]
     return [`${name}: resolve call failed: All attempts to contact name servers or networks failed`]
   }
 
@@ -881,11 +882,11 @@ const _RESOLV_UPSTREAM = [
 // Returns true for failures where Linux shows "Network is unreachable" (local error,
 // no packets sent) rather than per-packet "Destination Host Unreachable" (ICMP error).
 function _isNetworkUnreachable(failureReason) {
-  return failureReason === 'no_route' ||
-         failureReason === 'host_no_gateway' ||
-         failureReason === 'subnet_mismatch' ||
-         failureReason === 'admin_down' ||
-         failureReason === 'link_down'
+  return failureReason === REASON.NO_ROUTE ||
+         failureReason === REASON.HOST_NO_GATEWAY ||
+         failureReason === REASON.SUBNET_MISMATCH ||
+         failureReason === REASON.ADMIN_DOWN ||
+         failureReason === REASON.LINK_DOWN
 }
 
 // Returns { ttl, routerHops } for a path.

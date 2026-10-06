@@ -11,9 +11,9 @@ typed here and type it on real gear.
 ## 1. Identify the engine and the mode
 | Device | Engine | Modes |
 |---|---|---|
-| router, switch, firewall | `src/models/CLIEngine.js` | `user_exec → priv_exec → global_config → interface_config` (+ subinterface, vlan, dhcp-pool contexts as implemented) |
-| pc, server, laptop (`os_type` linux) | `src/models/PCCLIEngine.js` | single shell |
-| laptop (`os_type === 'windows'`) | `src/models/WindowsCLIEngine.js` | single `C:\Users\…>` prompt |
+| router, switch, firewall | `src/onprem/CLIEngine.js` | `user_exec → priv_exec → global_config → interface_config` (+ subinterface, vlan, dhcp-pool contexts as implemented) |
+| pc, server, laptop (`os_type` linux) | `src/guest/PCCLIEngine.js` | single shell |
+| laptop (`os_type === 'windows'`) | `src/guest/WindowsCLIEngine.js` | single `C:\Users\…>` prompt |
 
 Find the dispatch point (`execute()` → tokenizer → per-mode handlers) and the nearest
 similar command; match its structure.
@@ -45,7 +45,7 @@ a code comment starting `// SIMPLIFICATION:` explaining what real gear does.
 - If it's a `show`, it must reflect *live* state including what other engines/GUI set.
 - Update `show running-config` if the command creates persistent config.
 
-## 4. Test in the matching `src/models/__tests__/*.test.js`
+## 4. Test in the matching `src/onprem/__tests__/*.test.js` (shells: `src/guest/__tests__/`)
 - Happy path (correct mode, correct args) — assert state and output.
 - Wrong mode → exact IOS error.
 - Missing/invalid args → exact error.

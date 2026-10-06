@@ -16,7 +16,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { Device, createIspDevice } from '../Device.js'
 import { Topology } from '../Topology.js'
 import { CLIEngine } from '../CLIEngine.js'
-import { PCCLIEngine } from '../PCCLIEngine.js'
+import { PCCLIEngine } from '../../guest/PCCLIEngine.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

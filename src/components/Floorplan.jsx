@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useGame } from '../state/GameContext.jsx'
 import ContextMenu from './ContextMenu.jsx'
-import { maskToPrefixLen } from '../models/ipUtils.js'
+import { maskToPrefixLen } from '../core/ipUtils.js'
 import { DEVICE_ICONS as ICONS } from './DeviceIcons.jsx'
 import { IconDiagram } from './icons.jsx'
 

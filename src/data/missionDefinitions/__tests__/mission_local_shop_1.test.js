@@ -6,10 +6,10 @@
  * multi-device (router+switch+3PCs) mission correctly end to end.
  */
 import { describe, it, expect } from 'vitest'
-import { Device } from '../../../models/Device.js'
-import { Topology } from '../../../models/Topology.js'
-import { CLIEngine } from '../../../models/CLIEngine.js'
-import { PCCLIEngine } from '../../../models/PCCLIEngine.js'
+import { Device } from '../../../onprem/Device.js'
+import { Topology } from '../../../onprem/Topology.js'
+import { CLIEngine } from '../../../onprem/CLIEngine.js'
+import { PCCLIEngine } from '../../../guest/PCCLIEngine.js'
 import { deviceCatalog } from '../../deviceCatalog.js'
 import { getMissionRuntime } from '../../../engine/missionEngine.js'
 import { mission_local_shop_1 } from '../mission_local_shop_1.js'

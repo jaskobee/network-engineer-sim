@@ -19,8 +19,8 @@
 import {
   isValidIp, isValidMask, isHostAddress,
   networkAddress, broadcastAddress, maskToPrefixLen, ipToNum,
-} from '../models/ipUtils.js'
-import { effectiveDnsServers, dnsSource } from '../models/dns.js'
+} from '../core/ipUtils.js'
+import { effectiveDnsServers, dnsSource } from '../onprem/dns.js'
 
 // Device types that get the window. Routers, switches and firewalls are CLI devices.
 export const HOST_GUI_TYPES = new Set(['pc', 'server', 'phone', 'laptop'])

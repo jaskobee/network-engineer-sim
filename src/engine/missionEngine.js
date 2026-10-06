@@ -15,7 +15,7 @@
  * (mission_001-005 stay on MISSION_TASKS, verbatim), and built from the
  * interpreter for any new declarative MissionDefinition.
  */
-import { networkAddress } from '../models/ipUtils.js'
+import { networkAddress } from '../core/ipUtils.js'
 import { MISSION_TASKS } from '../data/missionTasks.js'
 import { MISSION_DEFINITIONS } from '../data/missionDefinitions/index.js'
 

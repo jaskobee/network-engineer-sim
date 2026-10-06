@@ -1,5 +1,6 @@
-import { deviceFromSave, setIdCounter } from '../models/Device.js'
-import { Topology } from '../models/Topology.js'
+import { deviceFromSave, setIdCounter } from '../onprem/Device.js'
+import { Topology } from '../onprem/Topology.js'
+import { SCHEMA_VERSION, DEFAULT_DOMAIN } from '../core/saveFormat.js'
 
 const SAVE_KEY = 'netsim_v2'
 const VERSION = 2
@@ -9,6 +10,7 @@ const VERSION = 2
 function serializeDevice(dev) {
   return {
     id:               dev.id,
+    domain:           dev.domain ?? DEFAULT_DOMAIN,
     type:             dev.type,
     model:            dev.model,
     hostname:         dev.hostname,
@@ -59,6 +61,7 @@ export function serialize(topology, placements, inventory, budget, completedMiss
 
   return {
     version: VERSION,
+    schemaVersion: SCHEMA_VERSION,
     savedAt: new Date().toISOString(),
     budget,
     completedMissions,

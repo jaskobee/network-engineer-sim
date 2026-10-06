@@ -20,9 +20,9 @@
  * W12 - netsh interface ip delete address
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { Device, createAdminLaptop } from '../Device.js'
-import { Topology } from '../Topology.js'
-import { CLIEngine } from '../CLIEngine.js'
+import { Device, createAdminLaptop } from '../../onprem/Device.js'
+import { Topology } from '../../onprem/Topology.js'
+import { CLIEngine } from '../../onprem/CLIEngine.js'
 import { WindowsCLIEngine } from '../WindowsCLIEngine.js'
 
 const run = (eng, dev, ...cmds) => { let out = []; for (const c of cmds) out = eng.execute(dev, c); return out }

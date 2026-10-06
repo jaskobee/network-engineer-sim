@@ -13,7 +13,7 @@ import {
   parseNetwork, classifyNetwork, divide, join, layoutPlan, encodeTree, decodeTree,
   describeSubnet, LEAF,
 } from '../subnetPlanner.js'
-import { ipToNum } from '../../models/ipUtils.js'
+import { ipToNum } from '../../core/ipUtils.js'
 
 // Divide along a list of paths, in order.
 function plan(rootPrefix, ...paths) {
