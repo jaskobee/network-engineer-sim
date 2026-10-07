@@ -1,7 +1,7 @@
 /**
- * Cloud save slice (roadmap §3.5, PHASE_1A steps 2 and 6). The cloud section saves on its
- * own, apart from the on-prem game save (`netsim_v2`) and the career slice — the same
- * "each context persists its own slice" rule as CareerContext.
+ * Cloud Engineer's save (roadmap §3.5, PHASE_1A steps 2 and 6). The products share one
+ * origin in production, so the key carries this product's own prefix: NetSim's New game
+ * sweeps `netsim*` keys and never sees this one.
  *
  * The slice is { sandbox: tenant, mission: { id, tenant } | null, completedMissions: [id] }.
  * On disk every tenant node carries `domain: 'cloud'` and the file carries `schemaVersion`
@@ -11,11 +11,11 @@
 import { SCHEMA_VERSION, schemaVersionOf } from '@sim/kernel/saveFormat.js'
 import { findCloudMission } from './missions/index.js'
 
-export const CLOUD_SAVE_KEY = 'netsim_cloud_v1'
+export const CLOUD_SAVE_KEY = 'cloudeng_save_v1'
 /** Where an unreadable save is parked before a fresh tenant overwrites the main key. */
-export const CLOUD_UNREADABLE_KEY = 'netsim_cloud_v1_unreadable'
+export const CLOUD_UNREADABLE_KEY = 'cloudeng_save_v1_unreadable'
 
-const KIND = 'netsim-cloud'
+const KIND = 'cloudeng-save'
 const COLLECTIONS = ['managementGroups', 'subscriptions', 'resourceGroups', 'resources']
 
 export function serializeTenant(tenant) {
@@ -55,16 +55,15 @@ export function serializeCloud(slice) {
 
 /**
  * Parsed save → { ok: true, state: slice } or { ok: false, error } — never half-loaded.
- * A save from before missions existed (the tenant at the top level) loads as the sandbox.
  * A mission this build doesn't know is dropped (its id stays out of the slice).
  */
 export function deserializeCloud(data) {
-  if (data?.kind !== KIND) return { ok: false, error: 'This is not a NetSim cloud save.' }
+  if (data?.kind !== KIND) return { ok: false, error: 'This is not a Cloud Engineer save.' }
   const version = schemaVersionOf(data)
   if (version > SCHEMA_VERSION)
-    return { ok: false, error: `This cloud save was made by a newer NetSim (schema ${version}).` }
+    return { ok: false, error: `This save was made by a newer Cloud Engineer (schema ${version}).` }
 
-  const sandbox = deserializeTenant(data.sandbox ?? data)
+  const sandbox = deserializeTenant(data.sandbox)
   if (!sandbox.ok) return sandbox
   let mission = null
   if (data.mission && findCloudMission(data.mission.id)) {

@@ -549,7 +549,7 @@ export function GameProvider({ children }) {
   }
 
   function newGame() {
-    if (!window.confirm('Start a new game? All on-prem progress will be lost. Your Cloud section is kept.')) return
+    if (!window.confirm('Start a new game? All progress will be lost.')) return
     // markResetting() FIRST: window.location.reload() doesn't stop JS
     // execution immediately, and other autosave effects (CareerContext's)
     // could otherwise flush a pending write in that gap and put a key right
@@ -558,8 +558,8 @@ export function GameProvider({ children }) {
     markResetting()
     // Sweep every netsim_* key (main save, company, difficulty, tour-seen,
     // laptop prefs, career data, …) — not just the main save — so this is a
-    // genuine full reset of the on-prem game. The cloud section's keys are
-    // kept: it has its own progress and its own "Start over" (resetGuard.js).
+    // genuine full reset. Other products on the same origin use their own
+    // key prefixes and are untouched (resetGuard.js).
     for (const key of Object.keys(localStorage)) {
       if (sweptByNewGame(key)) localStorage.removeItem(key)
     }

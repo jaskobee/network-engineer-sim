@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "npm run dev -w apps/netsim",
     "dev:netsim": "npm run dev -w apps/netsim",
-    "build": "npm run build -w apps/netsim",
+    "dev:cloud": "npm run dev -w apps/cloud",
+    "build": "npm run build -w apps/netsim && npm run build -w apps/cloud",
     "test": "vitest run"
   },
   "devDependencies": {

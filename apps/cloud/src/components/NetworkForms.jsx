@@ -8,10 +8,10 @@
  * decides. Option lists mirror what Azure offers (src/cloud/catalog.js).
  */
 import { useState } from 'react'
-import * as op from '../../cloud/operations.js'
-import { TYPES, resourcesOfType, subnetId } from '../../cloud/model.js'
-import { REGIONS, regionDisplayName } from '../../cloud/regions.js'
-import { DISK_TYPES, VM_SIZES, VM_IMAGES, STORAGE_KINDS } from '../../cloud/catalog.js'
+import * as op from '../azure/operations.js'
+import { TYPES, resourcesOfType, subnetId } from '../azure/model.js'
+import { REGIONS, regionDisplayName } from '../azure/regions.js'
+import { DISK_TYPES, VM_SIZES, VM_IMAGES, STORAGE_KINDS } from '../azure/catalog.js'
 import { Field, Facts, Form, Select } from './formParts.jsx'
 
 export const CREATE_KINDS = [

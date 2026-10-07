@@ -1,5 +1,5 @@
 /**
- * The regions the cloud section offers (docs/PHASE_1A_CLOUD_SECTION.md §6, decision 2).
+ * The regions Cloud Engineer offers (docs/PHASE_1A_CLOUD_SECTION.md §6, decision 2).
  * Real Azure region names; a deliberately short list. Availability zones and per-region
  * service availability (e.g. which regions support ZRS/GZRS, AZURE_ACCURACY.md M1 note)
  * are not modelled in Phase 1a — every listed region is treated as offering everything.

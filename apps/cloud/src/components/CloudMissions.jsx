@@ -4,9 +4,9 @@
  * the debrief once it's complete. Progress comes from CloudContext — derived from the
  * mission's tenant, never stored.
  */
-import { useCloud } from '../../state/CloudContext.jsx'
-import { CLOUD_MISSIONS } from '../../cloud/missions/index.js'
-import { ruleSource } from '../../cloud/ruleSources.js'
+import { useCloud } from '../state/CloudContext.jsx'
+import { CLOUD_MISSIONS } from '../azure/missions/index.js'
+import { ruleSource } from '../azure/ruleSources.js'
 
 /** One LED per objective — lit green when done. */
 export function ObjectiveLeds({ objectives }) {

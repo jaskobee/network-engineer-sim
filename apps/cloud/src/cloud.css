@@ -1,0 +1,155 @@
+/* Cloud Engineer styles. Fonts, tokens and the shared primitives (.btn, .seg, .led, the app
+   header, .preview-tag) come from @sim/ui/base.css, imported before this file in main.jsx. */
+.cloud-workspace { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--surface-ground); }
+.cloud-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 18px 24px 14px; border-bottom: 1px solid var(--rule); }
+.cloud-inner { width: 100%; max-width: 880px; margin: 0 auto; padding: 22px 24px 40px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+.cloud-head h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; color: var(--ink); }
+.cloud-head p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--ink-2); max-width: 70ch; }
+.cloud-card { padding: 16px 18px; background: var(--surface-panel); border: 1px solid var(--rule); border-radius: var(--radius-l); }
+.cloud-card h2 { margin: 0 0 10px; font-size: 17px; font-weight: 700; color: var(--ink); }
+.cloud-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 14px; font-size: 14.5px; }
+.cloud-facts dt { color: var(--ink-3); }
+.cloud-facts dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.cloud-workspace .mono { font-family: var(--font-mono); font-size: 13.5px; }
+.cloud-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cloud-counts li {
+  display: flex; align-items: baseline; gap: 7px; padding: 6px 12px;
+  font-size: 14px; color: var(--ink-2); background: var(--surface-raised);
+  border: 1px solid var(--rule); border-radius: var(--radius-m);
+}
+.cloud-counts li .mono { font-size: 15px; color: var(--ink); }
+.cloud-roadmap { margin: 0; padding-left: 18px; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+.cloud-roadmap strong { color: var(--ink); font-weight: 600; }
+.cloud-notice {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  font-size: 14.5px; color: var(--ink); background: var(--surface-raised);
+  border: 1px solid #5a4318; border-radius: var(--radius-m);
+}
+.cloud-notice span { flex: 1; }
+.cloud-actions { display: flex; justify-content: flex-end; }
+.cloud-workspace > .cloud-notice { margin: 12px 24px 0; }
+.cloud-credit { margin: 0; font-size: 13px; color: var(--ink-3); }
+
+/* Azure icon + service name (icon terms: the full service name always appears near the icon) */
+.az-item { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.az-icon { flex-shrink: 0; }
+.az-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.az-label { font-size: 15px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.az-service { font-size: 13px; color: var(--ink-3); }
+
+/* Management view: tree | details */
+.mv { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 380px) 1fr; }
+.mv-left { overflow-y: auto; border-right: 1px solid var(--rule); background: var(--surface-panel); padding: 8px 0; }
+.mv-tree { margin: 0; padding: 0; list-style: none; }
+.mv-row {
+  display: flex; width: 100%; padding-top: 6px; padding-bottom: 6px; padding-right: 10px;
+  background: transparent; border: 0; border-left: 3px solid transparent; cursor: pointer; text-align: left;
+}
+.mv-row:hover { background: var(--surface-hover); }
+.mv-row[aria-pressed='true'] { background: var(--signal-wash); border-left-color: var(--signal); }
+.mv-right { overflow-y: auto; padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+.mv-right .cloud-facts { margin: 0; }
+.mv-note { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.mv-form {
+  display: flex; flex-direction: column; gap: 10px; padding: 14px 16px;
+  background: var(--surface-panel); border: 1px solid var(--rule); border-radius: var(--radius-l);
+}
+.mv-form h3 { margin: 0; font-size: 15.5px; font-weight: 700; color: var(--ink); }
+.mv-field { display: flex; flex-direction: column; gap: 5px; font-size: 14px; color: var(--ink-2); }
+.mv-field small { font-size: 13px; color: var(--ink-3); }
+.mv-field input, .mv-field select {
+  padding: 7px 9px; font-size: 14.5px; color: var(--ink); background: var(--surface-raised);
+  border: 1px solid var(--rule-strong); border-radius: var(--radius-m); font-family: var(--font-ui);
+}
+.mv-field input.mono { font-family: var(--font-mono); font-size: 14px; }
+.mv-field input:focus-visible, .mv-field select:focus-visible { outline: 2px solid var(--signal); outline-offset: 1px; }
+.mv-danger { display: flex; justify-content: flex-end; }
+
+/* Result of the last cloud operation */
+.op-result { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: var(--radius-m); background: var(--surface-raised); font-size: 14.5px; color: var(--ink); }
+.op-result.fail { border: 1px solid #5a2a26; }
+.op-result.warn { border: 1px solid #5a4318; }
+.op-result p { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; line-height: 1.45; }
+.op-result .btn { align-self: flex-end; }
+.op-code { font-family: var(--font-mono); font-size: 13px; padding: 1px 6px; background: var(--surface-well); border-radius: var(--radius-s); color: var(--ink-2); }
+.op-meta { font-size: 13px; color: var(--ink-3); }
+.op-learn { color: var(--signal); font-size: 13.5px; }
+/* The result stays in view however far down the panel the button that caused it was. */
+.mv-right > .op-result { position: sticky; top: 0; z-index: 2; box-shadow: var(--shadow-float); }
+
+/* Network view: region → VNet → subnet → NIC diagram */
+.nv-left { overflow-y: auto; border-right: 1px solid var(--rule); padding: 14px 18px 30px; display: flex; flex-direction: column; gap: 16px; }
+.mv:has(.nv-left) { grid-template-columns: minmax(520px, 1fr) minmax(420px, 560px); }
+.nv-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.nv-sub { min-width: 260px; }
+.nv-empty { padding: 8px 2px; }
+.nv-region { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px dashed var(--rule-strong); border-radius: var(--radius-l); }
+.nv-region > h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink-2); }
+.nv-region h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.nv-pick { cursor: pointer; }
+.nv-pick:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.nv-pick[aria-pressed='true'] { box-shadow: inset 0 0 0 2px var(--signal); }
+.nv-vnet { padding: 10px 12px; background: var(--surface-panel); border: 1px solid var(--rule-strong); border-radius: var(--radius-l); display: flex; flex-direction: column; gap: 10px; }
+.nv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.nv-cidr { font-size: 13.5px; color: var(--ink-2); }
+.nv-subnets { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.nv-subnet { padding: 9px 10px; background: var(--surface-raised); border: 1px solid var(--rule); border-radius: var(--radius-m); display: flex; flex-direction: column; gap: 8px; }
+.nv-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.nv-badge { font-size: 13px; padding: 1px 7px; color: var(--ink-2); background: var(--surface-well); border: 1px solid var(--rule); border-radius: var(--radius-s); }
+.nv-nic { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--rule); border-radius: var(--radius-m); background: var(--surface-panel); }
+.nv-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: var(--radius-m); }
+.nv-chip:hover { background: var(--surface-hover); }
+.nv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.nv-chips .nv-chip { background: var(--surface-panel); border: 1px solid var(--rule); }
+.nv-create { display: flex; flex-direction: column; gap: 12px; }
+.nv-create > h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.nv-checklist { display: flex; flex-direction: column; gap: 4px; }
+.nv-checklist label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.nv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.nv-rules { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.nv-rules caption { text-align: left; padding: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.nv-rules th { text-align: left; font-weight: 600; color: var(--ink-3); padding: 4px 6px; border-bottom: 1px solid var(--rule-strong); }
+.nv-rules td { padding: 4px 6px; color: var(--ink); border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.nv-rules .mono { font-family: var(--font-mono); font-size: 13px; }
+.nv-table-wrap { overflow-x: auto; flex-shrink: 0; }  /* a flex item with overflow set may otherwise shrink to nothing */
+.nv-step { margin: 8px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 15px; font-weight: 700; color: var(--ink); }
+.mv-form > .nv-step:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.nv-review { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; background: var(--surface-panel); border: 1px solid var(--rule); border-radius: var(--radius-l); }
+.nv-valid { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.nv-review-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Cloud missions */
+.cm-bar {
+  display: flex; align-items: center; gap: 12px; padding: 8px 24px;
+  font-size: 14.5px; color: var(--ink-2); background: var(--signal-wash); border-bottom: 1px solid var(--signal-deep);
+}
+.cm-bar-title { flex: 1; }
+.cm-bar strong { color: var(--ink); }
+.cm-leds { display: inline-flex; gap: 5px; }
+.cm-done { font-weight: 600; color: var(--led-green); }
+.cm-active h2 { margin: 2px 0 8px; }
+.cm-active h3 { margin: 16px 0 8px; font-size: 15.5px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.cm-client { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+.cm-brief { margin: 0 0 8px; font-size: 15px; line-height: 1.55; color: var(--ink-2); max-width: 72ch; }
+.cm-objectives { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.cm-objectives li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--ink); }
+.cm-objectives li .led { margin-top: 6px; flex-shrink: 0; }
+.cm-objectives li.done > div > span { color: var(--ink-2); }
+.cm-objectives details { margin-top: 3px; font-size: 14px; color: var(--ink-3); }
+.cm-objectives summary { cursor: pointer; color: var(--signal); }
+.cm-objectives details p { margin: 4px 0 0; }
+.cm-debrief { margin-top: 14px; padding: 12px 14px; border: 1px solid #1f5a3c; border-radius: var(--radius-m); background: var(--surface-raised); }
+.cm-debrief h3 { margin-top: 0; }
+.cm-debrief ul { margin: 0; padding-left: 18px; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+.cm-learn { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.cm-learn a { color: var(--signal); }
+.cm-learn .mono { display: inline-block; min-width: 34px; color: var(--ink-3); }
+.cm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.cm-list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.cm-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px;
+  background: var(--surface-raised); border: 1px solid var(--rule); border-radius: var(--radius-m);
+}
+.cm-list strong { font-size: 15.5px; color: var(--ink); }
+.cm-list p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
+.cm-status { margin-left: 10px; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-3); }

@@ -4,7 +4,7 @@
  * The cloud counterpart of src/core/failureReasons.js, for docs/AZURE_ACCURACY.md
  * §"Management-plane outcomes". These are the sim's own codes. A real Azure Resource
  * Manager error code is attached (`armCode`) ONLY where the spec sources it; everywhere
- * else the UI explains the rule in plain words and labels it as NetSim's explanation.
+ * else the UI explains the rule in plain words and labels it as the simulator's explanation.
  *
  * `not_modelled` is the honest answer for a case the verified spec doesn't cover yet
  * (docs/PHASE_1A_CLOUD_SECTION.md §6a): the sim refuses rather than inventing a rule.
@@ -35,7 +35,7 @@ const ENTRIES = [
   { key: 'RETIRED',                 code: 'retired',                 description: 'This option has been retired by Azure.' },
   { key: 'IMMUTABLE',               code: 'immutable',               description: 'This setting cannot be changed after the resource is created.' },
   { key: 'MOVE_MISSING_DEPENDENTS', code: 'move_missing_dependents', description: 'A cross-subscription move must include every dependent resource, all from the same resource group.', armCode: 'MissingMoveDependentResources' },
-  { key: 'NOT_MODELLED',            code: 'not_modelled',            description: 'NetSim does not model this case yet, so it refuses instead of guessing what Azure does.' },
+  { key: 'NOT_MODELLED',            code: 'not_modelled',            description: 'The simulator does not model this case yet, so it refuses instead of guessing what Azure does.' },
 ]
 
 /** OUTCOME.NAME_INVALID === 'name_invalid' */

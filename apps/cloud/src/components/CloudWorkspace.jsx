@@ -1,5 +1,5 @@
 /**
- * The Cloud section (roadmap Phase 1a, shipped as "Preview").
+ * The Azure workspace — everything below the Cloud Engineer header (roadmap Phase 1a, "Preview").
  *
  * Tabs: Missions (step 6), Management (step 4), Network (step 5) and Overview. While a
  * mission runs, a mission bar stays visible on every tab and the views work in that
@@ -7,8 +7,8 @@
  * CloudContext; nothing assigns cloud state directly.
  */
 import { useState } from 'react'
-import { useCloud } from '../../state/CloudContext.jsx'
-import { managementGroupScope } from '../../cloud/model.js'
+import { useCloud } from '../state/CloudContext.jsx'
+import { managementGroupScope } from '../azure/model.js'
 import ManagementView from './ManagementView.jsx'
 import NetworkView from './NetworkView.jsx'
 import CloudMissions, { MissionBar } from './CloudMissions.jsx'
@@ -26,7 +26,7 @@ function Overview() {
   ]
 
   function startOver() {
-    if (window.confirm('Start your sandbox over with an empty tenant? Missions and your on-prem game are not affected.')) resetCloud()
+    if (window.confirm('Start your sandbox over with an empty tenant? Missions are not affected.')) resetCloud()
   }
 
   return (
@@ -70,10 +70,10 @@ export default function CloudWorkspace() {
     <main className="cloud-workspace">
       <header className="cloud-top">
         <div className="cloud-head">
-          <h1>Cloud <span className="preview-tag">Preview</span></h1>
+          <h1>Azure</h1>
           <p>
             Build Azure infrastructure and see how it fits together. Every rule the builder enforces is
-            checked against Microsoft Learn. NetSim never connects to real Azure.
+            checked against Microsoft Learn. Nothing here connects to real Azure or needs an Azure account.
           </p>
         </div>
         <div className="seg" role="group" aria-label="Cloud view">

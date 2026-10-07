@@ -40,7 +40,7 @@ const MAX_STORAGE_PER_REGION = 250         // M6
 
 const done = (state, id, warnings = []) => ({ ok: true, state, id, warnings })
 const clone = state => structuredClone(state)
-const notModelled = what => refuse(OUTCOME.NOT_MODELLED, null, `NetSim doesn't model ${what} yet.`)
+const notModelled = what => refuse(OUTCOME.NOT_MODELLED, null, `This simulator doesn't model ${what} yet.`)
 
 // ── Management groups and subscriptions (§I) ───────────────────────────────
 
@@ -352,7 +352,7 @@ export function createPublicIp(state, args) {
   })
   if (placed) return placed
   if (sku === 'Basic') return refuse(OUTCOME.RETIRED, 'N1', 'Basic SKU public IPs were retired on September 30, 2025. Use Standard.')
-  if (sku === 'StandardV2') return refuse(OUTCOME.INVALID_VALUE, 'N3', 'Standard v2 public IPs can only be used with the Standard v2 NAT gateway; NetSim offers Standard.')
+  if (sku === 'StandardV2') return refuse(OUTCOME.INVALID_VALUE, 'N3', 'Standard v2 public IPs can only be used with the Standard v2 NAT gateway; this simulator offers Standard.')
   if (sku !== 'Standard') return refuse(OUTCOME.INVALID_VALUE, 'N1', 'The SKU must be Standard.')
   if (allocationMethod !== 'Static') return refuse(OUTCOME.INVALID_VALUE, 'N2', 'Standard public IPs are always statically allocated.')
   if (domainNameLabel && resourcesOfType(state, TYPES.PUBLIC_IP).some(p => p.location === location && p.properties.domainNameLabel === domainNameLabel))
@@ -497,7 +497,7 @@ export function createVirtualMachine(state, args) {
  * and a public IP address when you create a VM." Everything is validated before anything is
  * deployed, so a refusal leaves the tenant untouched (all or nothing).
  *
- * The extra resources are named `<vm>-nic` and `<vm>-ip` — NetSim's names; the portal picks
+ * The extra resources are named `<vm>-nic` and `<vm>-ip` — names this simulator makes up; the portal picks
  * its own. createVirtualMachine (existing NICs) stays for the CLI/PowerShell-style path.
  */
 export function deployVirtualMachine(state, args) {

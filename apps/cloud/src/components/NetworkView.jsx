@@ -5,10 +5,10 @@
  * The right-hand panel shows the selected item or the "Create a resource" forms.
  */
 import { useState } from 'react'
-import { useCloud } from '../../state/CloudContext.jsx'
-import * as op from '../../cloud/operations.js'
-import { TYPES, findSubnet, subnetId } from '../../cloud/model.js'
-import { regionDisplayName, REGIONS } from '../../cloud/regions.js'
+import { useCloud } from '../state/CloudContext.jsx'
+import * as op from '../azure/operations.js'
+import { TYPES, findSubnet, subnetId } from '../azure/model.js'
+import { regionDisplayName, REGIONS } from '../azure/regions.js'
 import { AzureItem } from './AzureIcon.jsx'
 import OperationResult from './OperationResult.jsx'
 import { CreatePanel } from './NetworkForms.jsx'

@@ -1,23 +1,24 @@
 /**
- * Architecture boundaries (docs/HYBRID_PLATFORM_ROADMAP.md §3.1).
+ * NetSim's internal layering (docs/platform/PLATFORM_ARCHITECTURE.md; roadmap §3.1).
  *
- *   src/core/    shared kernel — imports nothing outside src/core
+ *   src/core/    NetSim's own kernel (failure reasons, PathResult) — imports nothing outside src/core
+ *                (shared, domain-free code lives in packages/kernel and is imported as @sim/kernel)
  *   src/guest/   host OS shells (Linux iproute2, Windows CMD)
  *   src/onprem/  on-prem forwarding plane, IOS, DHCP, DNS resolver
- *   src/cloud/   cloud resource model + forwarding plane   (Phase 1+)
- *   src/hybrid/  the only place allowed to import both onprem and cloud (Phase 5)
+ *   src/engine/  game logic on top of the planes
  *
  * A1  core imports only core
- * A2  onprem and cloud never import each other
- * A3  only src/hybrid may import from both onprem and cloud
  * A4  onprem source does not import guest (shells sit on top of the network, not under it)
  * A5  guest → onprem is limited to a fixed list of known couplings
- * A6  core / guest / onprem / cloud / engine stay headless: no React, DOM libraries, .jsx or CSS
+ * A6  core / guest / onprem / engine stay headless: no React, DOM libraries, .jsx or CSS
  * A0  the import scanner itself finds every import form we use
  *
+ * A2/A3 (on-prem and cloud never import each other; only hybrid imports both) became
+ * repo-wide rules when the products split into separate apps: tests/boundaries.test.js.
+ *
  * Plain file scan + regex on purpose — no parser dependency. Test files are scanned
- * too, but may import across core/guest/onprem (they are integration tests); A1, A2,
- * A3 still apply to them.
+ * too, but may import across core/guest/onprem (they are integration tests); A1 still
+ * applies to them.
  */
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
@@ -38,7 +39,7 @@ const KNOWN_GUEST_TO_ONPREM = new Set([
   'guest/WindowsCLIEngine.js -> onprem/dns.js',
 ])
 
-const HEADLESS = ['core', 'guest', 'onprem', 'cloud', 'engine']
+const HEADLESS = ['core', 'guest', 'onprem', 'engine']
 const UI_PACKAGES = /^(react|react-dom|@dnd-kit\/|@xterm\/)/
 
 /** Every module specifier in a source text: static, side-effect, re-export, dynamic. */
@@ -97,29 +98,6 @@ describe('A1 — core imports only core', () => {
   it('no file in src/core imports another area', () => {
     const bad = local.filter(e => areaOf(e.from) === 'core' && areaOf(e.to) !== 'core')
     expect(show(bad)).toEqual([])
-  })
-})
-
-describe('A2 — onprem and cloud never import each other', () => {
-  it('onprem ↛ cloud and cloud ↛ onprem', () => {
-    const bad = local.filter(e =>
-      (areaOf(e.from) === 'onprem' && areaOf(e.to) === 'cloud') ||
-      (areaOf(e.from) === 'cloud'  && areaOf(e.to) === 'onprem'))
-    expect(show(bad)).toEqual([])
-  })
-})
-
-describe('A3 — only src/hybrid imports both onprem and cloud', () => {
-  it('no file outside src/hybrid depends on both domains', () => {
-    const byFile = new Map()
-    for (const e of local) {
-      if (!byFile.has(e.from)) byFile.set(e.from, new Set())
-      byFile.get(e.from).add(areaOf(e.to))
-    }
-    const bad = [...byFile]
-      .filter(([from, areas]) => areaOf(from) !== 'hybrid' && areas.has('onprem') && areas.has('cloud'))
-      .map(([from]) => from)
-    expect(bad).toEqual([])
   })
 })
 

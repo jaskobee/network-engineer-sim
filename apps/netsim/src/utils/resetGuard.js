@@ -21,10 +21,10 @@ export function isResetting() { return resetting }
 
 /**
  * Which localStorage keys "New game" removes: every netsim_* key (main save, company,
- * career, difficulty, tour-seen, laptop prefs, …) EXCEPT the cloud section's, which keeps
- * its own progress and has its own "Start over" (owner decision 2026-10-06). A prefix
- * rule, not a per-key list, so new on-prem settings are swept without anyone remembering.
+ * career, difficulty, tour-seen, laptop prefs, …). A prefix rule, not a per-key list, so new
+ * settings are swept without anyone remembering. The other products share NetSim's origin in
+ * production and keep their keys under their own prefixes, so they are never swept.
  */
 export function sweptByNewGame(key) {
-  return key.startsWith('netsim') && !key.startsWith('netsim_cloud')
+  return key.startsWith('netsim')
 }

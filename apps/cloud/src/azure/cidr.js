@@ -1,6 +1,6 @@
 /**
  * IPv4 CIDR arithmetic for Azure address spaces (docs/AZURE_ACCURACY.md A1–A3a).
- * Builds on src/core/ipUtils — the same subnet math the on-prem track teaches; only
+ * Builds on @sim/kernel/ipUtils — the same subnet math the on-prem track teaches; only
  * Azure's extra rules (five reserved addresses, blocked ranges) live here.
  */
 import { isValidIp, ipToNum } from '@sim/kernel/ipUtils.js'

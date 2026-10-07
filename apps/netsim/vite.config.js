@@ -7,6 +7,7 @@ export default defineConfig({
   base: '/network-engineer-sim/',
   plugins: [react()],
   build: { outDir: '../../dist', emptyOutDir: true },
+  server: { port: 5173 }, // matches @sim/ui/products.js
   test: {
     environment: 'node',
   },

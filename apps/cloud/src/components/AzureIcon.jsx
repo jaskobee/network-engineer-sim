@@ -4,18 +4,18 @@
  * this module only ever renders an icon together with SERVICES[kind].name. Never
  * recolour them or use them for anything but the Azure service they represent.
  */
-import { TYPES } from '../../cloud/model.js'
-import managementGroups from '../../assets/azure-icons/10011-icon-service-Management-Groups.svg'
-import subscriptions from '../../assets/azure-icons/10002-icon-service-Subscriptions.svg'
-import resourceGroups from '../../assets/azure-icons/10007-icon-service-Resource-Groups.svg'
-import virtualNetworks from '../../assets/azure-icons/10061-icon-service-Virtual-Networks.svg'
-import subnet from '../../assets/azure-icons/02742-icon-service-Subnet.svg'
-import networkSecurityGroups from '../../assets/azure-icons/10067-icon-service-Network-Security-Groups.svg'
-import networkInterfaces from '../../assets/azure-icons/10080-icon-service-Network-Interfaces.svg'
-import publicIpAddresses from '../../assets/azure-icons/10069-icon-service-Public-IP-Addresses.svg'
-import virtualMachine from '../../assets/azure-icons/10021-icon-service-Virtual-Machine.svg'
-import disks from '../../assets/azure-icons/10032-icon-service-Disks.svg'
-import storageAccounts from '../../assets/azure-icons/10086-icon-service-Storage-Accounts.svg'
+import { TYPES } from '../azure/model.js'
+import managementGroups from '../assets/azure-icons/10011-icon-service-Management-Groups.svg'
+import subscriptions from '../assets/azure-icons/10002-icon-service-Subscriptions.svg'
+import resourceGroups from '../assets/azure-icons/10007-icon-service-Resource-Groups.svg'
+import virtualNetworks from '../assets/azure-icons/10061-icon-service-Virtual-Networks.svg'
+import subnet from '../assets/azure-icons/02742-icon-service-Subnet.svg'
+import networkSecurityGroups from '../assets/azure-icons/10067-icon-service-Network-Security-Groups.svg'
+import networkInterfaces from '../assets/azure-icons/10080-icon-service-Network-Interfaces.svg'
+import publicIpAddresses from '../assets/azure-icons/10069-icon-service-Public-IP-Addresses.svg'
+import virtualMachine from '../assets/azure-icons/10021-icon-service-Virtual-Machine.svg'
+import disks from '../assets/azure-icons/10032-icon-service-Disks.svg'
+import storageAccounts from '../assets/azure-icons/10086-icon-service-Storage-Accounts.svg'
 
 // Service names as Microsoft labels the icons (the icon file names).
 export const SERVICES = Object.freeze({

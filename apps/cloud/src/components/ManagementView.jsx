@@ -5,13 +5,13 @@
  * CloudContext.apply(operation, args); refusals are shown by OperationResult.
  */
 import { useState } from 'react'
-import { useCloud } from '../../state/CloudContext.jsx'
-import * as op from '../../cloud/operations.js'
+import { useCloud } from '../state/CloudContext.jsx'
+import * as op from '../azure/operations.js'
 import {
   isRoot, managementGroupDepth, managementGroupScope, subscriptionScope, resourceGroupId,
   childManagementGroups, childSubscriptions, resourcesInGroup,
-} from '../../cloud/model.js'
-import { REGIONS, regionDisplayName } from '../../cloud/regions.js'
+} from '../azure/model.js'
+import { REGIONS, regionDisplayName } from '../azure/regions.js'
 import { AzureItem } from './AzureIcon.jsx'
 import OperationResult from './OperationResult.jsx'
 import { Field, Facts, Form } from './formParts.jsx'

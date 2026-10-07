@@ -4,13 +4,13 @@
  * changes go through run(operation, args).
  */
 import { useState } from 'react'
-import * as op from '../../cloud/operations.js'
+import * as op from '../azure/operations.js'
 import {
   TYPES, DEFAULT_SECURITY_RULES, findSubnet, resourcesOfType, subnetId, usedAddressesInSubnet,
-} from '../../cloud/model.js'
-import { parseCidr, reservedAddresses, usableCount } from '../../cloud/cidr.js'
-import { regionDisplayName } from '../../cloud/regions.js'
-import { DISK_TYPES, STORAGE_KINDS, SECURITY_RULE_PROTOCOLS } from '../../cloud/catalog.js'
+} from '../azure/model.js'
+import { parseCidr, reservedAddresses, usableCount } from '../azure/cidr.js'
+import { regionDisplayName } from '../azure/regions.js'
+import { DISK_TYPES, STORAGE_KINDS, SECURITY_RULE_PROTOCOLS } from '../azure/catalog.js'
 import { AzureItem } from './AzureIcon.jsx'
 import { Field, Facts, Form, Select, DangerButton } from './formParts.jsx'
 import { STORAGE_ACCESS } from './NetworkForms.jsx'
@@ -122,7 +122,7 @@ function NetworkSecurityGroupDetails({ cloud, r, run, select }) {
       <AzureItem kind={r.type} label={r.name} size={32} />
       <Facts rows={[['Region', regionDisplayName(r.location)], ['Resource ID', r.id, true]]} />
       <p className="mv-note">
-        Rules are checked lowest priority number first, and the first match decides. NetSim stores and shows the
+        Rules are checked lowest priority number first, and the first match decides. The simulator stores and shows the
         rules now; evaluating real traffic against them arrives in a later preview step.
       </p>
       <RuleTable rules={sorted} caption={sorted.length ? 'Your rules' : 'Your rules — none yet'} />
@@ -209,7 +209,7 @@ function PublicIpDetails({ cloud, r, run, select }) {
         ['Region', regionDisplayName(r.location)],
       ]} />
       <p className="mv-note">
-        NetSim hands out addresses from 198.51.100.0/24, a documentation range — never a real Azure address. A
+        The simulator hands out addresses from 198.51.100.0/24, a documentation range — never a real Azure address. A
         Standard public IP is closed to inbound traffic until an NSG allows it.
       </p>
       <DangerButton label="Delete public IP address" confirm={`Delete ${r.name}?`} onConfirm={() => run(op.deleteResource, { id: r.id }, () => select(null))} />

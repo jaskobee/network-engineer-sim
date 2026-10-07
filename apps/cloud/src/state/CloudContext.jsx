@@ -1,8 +1,7 @@
 /**
- * CloudContext — state for the Cloud section (roadmap Phase 1a).
+ * CloudContext — the Cloud Engineer app's state.
  *
- * Owns the cloud slice and persists it on its own (`netsim_cloud_v1`), the same way
- * CareerContext owns the career slice; it never reads or writes GameContext's save.
+ * Owns the whole cloud slice and persists it under its own key (azure/persistence.js).
  *
  *   slice = { sandbox: tenant, mission: { id, tenant } | null, completedMissions: [id] }
  *
@@ -11,10 +10,9 @@
  * `apply(operation, args)` with a function from src/cloud/operations.js (ui.md rule 3).
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { createCloudState } from '../cloud/model.js'
-import { loadCloud, saveCloud } from '../cloud/persistence.js'
-import { findCloudMission, missionProgress } from '../cloud/missions/index.js'
-import { isResetting } from '../utils/resetGuard.js'
+import { createCloudState } from '../azure/model.js'
+import { loadCloud, saveCloud } from '../azure/persistence.js'
+import { findCloudMission, missionProgress } from '../azure/missions/index.js'
 
 const CloudContext = createContext(null)
 
@@ -62,13 +60,11 @@ export function CloudProvider({ children }) {
   /** Leave the mission — its tenant is discarded; the sandbox is untouched. */
   const leaveMission = useCallback(() => commit({ ...latest.current, mission: null }), [commit])
 
-  /** Start the sandbox over with an empty tenant (missions and the on-prem game are untouched). */
+  /** Start the sandbox over with an empty tenant (missions are untouched). */
   const resetCloud = useCallback(() => commit({ ...latest.current, sandbox: createCloudState() }), [commit])
 
-  // Persist on every change — the cloud slice is small JSON. Skipped while New game is
-  // wiping storage (resetGuard), like every other autosave.
+  // Persist on every change — the cloud slice is small JSON.
   useEffect(() => {
-    if (isResetting()) return
     saveCloud(localStorage, slice)
   }, [slice])
 
