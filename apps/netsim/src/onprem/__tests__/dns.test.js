@@ -1,6 +1,6 @@
 /**
  * DNS phase 1 — a name resolves only through a configured name server that the host can really
- * reach (docs/DNS_DESIGN.md). Every state below is built through the real CLI engines.
+ * reach (docs/netsim/DNS_DESIGN.md). Every state below is built through the real CLI engines.
  *
  * R1  - the resolver: literals, no server, unreachable, NAT, refused, NXDOMAIN, failover, precedence
  * R2  - the path is the real one: a firewall that only permits ICMP blocks DNS until udp/53 is allowed

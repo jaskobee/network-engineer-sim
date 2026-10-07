@@ -1,5 +1,9 @@
 # Phase 0 — Kernel Extraction (Claude Code prompt)
 
+> **Historical plan (done 2026-10-06).** Paths are as they were then: `src/…` is now `apps/netsim/src/…`, and
+> `src/core/ipUtils.js` / `saveFormat.js` moved to `packages/kernel/` in the platform split (2026-10-07,
+> `PLATFORM_ARCHITECTURE.md`).
+
 **Goal:** prepare the codebase for cloud and hybrid tracks with **zero behavior
 change**. This is a pure refactor. No cloud features, no new networking behavior.
 

@@ -1,21 +1,21 @@
 ---
 paths:
-  - "src/core/**"
-  - "src/guest/**"
-  - "src/onprem/**"
-  - "src/cloud/**"
-  - "src/engine/**"
+  - "apps/netsim/src/core/**"
+  - "apps/netsim/src/guest/**"
+  - "apps/netsim/src/onprem/**"
+  - "apps/netsim/src/engine/**"
 ---
 
-# Rules: engine & planes (`src/core`, `src/guest`, `src/onprem`, `src/cloud`, `src/engine`)
+# Rules: NetSim engine & planes (`apps/netsim/src/core`, `guest`, `onprem`, `engine`)
 
-You are editing the headless core — the asset of this project. Read
-`.claude/brain/LESSONS.md` §Engine before starting.
+You are editing NetSim's headless core — the asset of this product. Read
+`.claude/brain/netsim/LESSONS.md` §Engine before starting.
 
-1. **Zero React/DOM imports in `src/core/`, `src/guest/`, `src/onprem/`, `src/cloud/` or `src/engine/`.**
+1. **Zero React/DOM imports in `apps/netsim/src/core/`, `guest/`, `onprem/` or `engine/`.**
    Pure JS, testable in Node. If you need UI state, expose data and let a component read it.
-   **Import boundaries** (`src/core/__tests__/architecture.test.js`): `core` imports only
-   `core`; `onprem` never imports `guest` or `cloud`; a new `guest` → `onprem` import is a
+   **Import boundaries** (`apps/netsim/src/core/__tests__/architecture.test.js`): `core` imports only
+   `core`; `onprem` never imports `guest`; shared IPv4 math and the save format come from
+   `@sim/kernel`, never from Cloud Engineer's code (`tests/boundaries.test.js`); a new `guest` → `onprem` import is a
    design decision (add it to the test's known-couplings list with a reason), never a test fix.
 2. **Every behaviour change ships with a test** in the sibling `__tests__/` dir.
    Broken scenarios assert the exact `failureReason` (and `failurePoint` where
@@ -27,13 +27,10 @@ You are editing the headless core — the asset of this project. Read
 5. **CLI fidelity**: any new command, argument form, error string or `show` output must
    be something real IOS / iproute2 / Windows CMD would produce. When unsure, prefer
    rejecting the command with the real error (`% Invalid input detected at '^' marker.`)
-   over accepting something fake. Consult `docs/NETWORKING_ACCURACY.md`.
+   over accepting something fake. Consult `docs/netsim/NETWORKING_ACCURACY.md`.
 6. **Interface IDs** are `"<devId>:<ifaceName>"` — split on the first `:` only.
-7. **New reason codes** are registered in `src/core/failureReasons.js` (emit them as
-   `REASON.X`, never a string literal), go into the table in `.claude/brain/GLOSSARY.md`
+7. **New reason codes** are registered in `apps/netsim/src/core/failureReasons.js` (emit them as
+   `REASON.X`, never a string literal), go into the table in `.claude/brain/netsim/GLOSSARY.md`
    and, if they replace a fallthrough, into `STATUS.md` "Next up". Never rename an emitted code.
-8. **Cloud (`src/cloud`)**: state changes only through `operations.js`; enforce only VERIFIED rules from
-   `docs/AZURE_ACCURACY.md`, each refusal an `OUTCOME.X` with its rule ID; an unverified case is refused as
-   `not_modelled`, never guessed; a real ARM error code only where the spec sources it.
-9. **Before finishing**: run `/accuracy-gate` (Prompt 8 checklist + `npm test` +
-   `npx vite build`).
+8. **Before finishing**: run `/accuracy-gate` (Prompt 8 checklist + `npm test` +
+   `npm run build`).

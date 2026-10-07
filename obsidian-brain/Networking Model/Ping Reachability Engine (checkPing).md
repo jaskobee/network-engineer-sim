@@ -19,7 +19,7 @@ implementation anywhere.
 `service` defaults to `{ protocol: 'icmp', port: null }`; named services resolve
 through the well-known port table (see [[Stateful Firewall]]).
 
-The `docs/NETSIM_FAULTS_AND_FEATURES.md` design doc specifies a richer future shape
+The `docs/netsim/NETSIM_FAULTS_AND_FEATURES.md` design doc specifies a richer future shape
 (`degraded`, `sent`, `received`, `lossPct`, `rttMs`) for physical-layer faults like
 duplex mismatch — not fully implemented yet; see
 [[Fault Injection System (Act 2)]].
@@ -56,7 +56,7 @@ routers in the model, but that's enforced by explicit broadcast-domain logic in
 `show mac address-table` currently returns a documented stub rather than a live,
 learned table.
 
-`docs/ADMIN_LAPTOP_AND_TOOLS.md` §5 records the actual architectural fork this
+`docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md` §5 records the actual architectural fork this
 implies for a future packet-analyzer tool ("WireFish"): **Path A** (synthesize a
 plausible packet trace after the fact from the BFS result) is explicitly **rejected**
 — it means inventing packets, which violates the project's core accuracy rule in the

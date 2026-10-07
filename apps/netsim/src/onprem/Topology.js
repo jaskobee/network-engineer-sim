@@ -247,7 +247,7 @@ export class Topology {
   // service = { protocol, port } specifies the traffic type for firewall rule matching.
   // Defaults to ICMP (the original ping command) — all existing callers are unaffected.
   // Protocol: 'icmp' | 'tcp' | 'udp' | 'any'.  Port: integer or null.
-  // Returns a PathResult (src/core/pathResult.js) used by CLI `ping` and mission checks.
+  // Returns a PathResult (apps/netsim/src/core/pathResult.js) used by CLI `ping` and mission checks.
   checkPing(srcIp, dstIp, service = { protocol: 'icmp', port: null }) {
     if (!isValidIp(srcIp) || !isValidIp(dstIp)) {
       return _pingResult(false, REASON.NO_ROUTE, null)
@@ -944,8 +944,8 @@ function _captureDropInfo(reason, fpName) {
   }
 }
 
-// Build the standardised checkPing result — the PathResult contract (src/core/pathResult.js).
-// failureReason is a REASON.* code with source 'path' (src/core/failureReasons.js).
+// Build the standardised checkPing result — the PathResult contract (apps/netsim/src/core/pathResult.js).
+// failureReason is a REASON.* code with source 'path' (apps/netsim/src/core/failureReasons.js).
 /** @returns {import('../core/pathResult.js').PathResult} */
 function _pingResult(reachable, failureReason, failurePoint) {
   return {

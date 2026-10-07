@@ -1,20 +1,21 @@
 # STATUS — where NetSim is right now
 
-_Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep this describing **now**; remove finished items._
+_Last refreshed: 2026-10-07 (platform split). Keep this describing **now**; remove finished items.
+Repo-wide facts (both products, shared packages, build/deploy) are in `../PLATFORM.md`._
 
 ## Health
-- `npm test` → **982 tests / 47 files passing** (Vitest 4).
-- `npx vite build` → clean apart from the expected xterm chunk-size warning.
-- Dev server: `npm run dev` (Vite; port 5173 by default, 5174 if 5173 is busy).
+- NetSim lives in `apps/netsim`. `npm test` (root) → NetSim's project: **789 tests / 37 files** (the whole
+  repo: 992 / 49). `npm run build` → clean apart from the expected xterm chunk-size warning.
+- Dev server: `npm run dev` (port 5173, `/network-engineer-sim/`).
 
 ## Shipped and stable
-- **Legacy missions mission_001–005** (`src/data/missions.js` + hand-written checks in
-  `src/data/missionTasks.js`): basic LAN → switch + multi-PC → two-router static routing →
+- **Legacy missions mission_001–005** (`apps/netsim/src/data/missions.js` + hand-written checks in
+  `apps/netsim/src/data/missionTasks.js`): basic LAN → switch + multi-PC → two-router static routing →
   TechNova (VLAN + ROAS + DHCP + NAT) → Secure the Office (zone firewall, scaffolded on M004).
-- **Declarative mission DSL** (`src/engine/missionEngine.js`) — `deviceRoles` + `objectives`
+- **Declarative mission DSL** (`apps/netsim/src/engine/missionEngine.js`) — `deviceRoles` + `objectives`
   with `condition` trees. `getMissionRuntime(id)` is the single entry point and also adapts
   the 5 legacy missions, so UI never knows there are two registries.
-- **Career layer** (`src/state/CareerContext.jsx`): persistent clients (`data/clients.js`),
+- **Career layer** (`apps/netsim/src/state/CareerContext.jsx`): persistent clients (`data/clients.js`),
   contracts (`data/contracts.js`, `monthly-support`), reputation tiers (`engine/reputation.js`),
   service tickets with real point-faults (`data/serviceTickets.js`), wall-clock SLA
   (`engine/contractClock.js`). First client: `client_local_shop` with
@@ -41,7 +42,7 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
 - **Endless, pannable floorplan** (drag empty background; `panOffset` in `GameContext`).
 - **UI design system** — tokens in `index.css` `:root`, LED-as-signal colour language, two
   self-hosted fonts, SVG icon set; rules in `.claude/rules/ui.md`.
-- **Dev/QA mode** (`src/devMode/`): 16 presets (working + broken), foundation smoke tests,
+- **Dev/QA mode** (`apps/netsim/src/devMode/`): 16 presets (working + broken), foundation smoke tests,
   live state inspector. Presets drive the real engine — no state writes.
 - Auto-save to localStorage + Export/Import JSON (`utils/saveLoad.js`), reset guard,
   client-side login gate for beta (`AuthContext`, bcryptjs).
@@ -64,7 +65,7 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
   (`dns_servers` by hand over `dhcp_dns_servers` from the lease), `resolvectl` / `nslookup` / `cat resolv.conf`
   on Linux, `netsh … dns` / `nslookup` on Windows, `ip name-server` / `ip domain-lookup` on routers and
   switches, GUI fields in the host window, UDP/53 in the capture, two dev presets (16 total). Only the public
-  resolvers answer; see `docs/NETWORKING_ACCURACY.md` §DNS rules.
+  resolvers answer; see `docs/netsim/NETWORKING_ACCURACY.md` §DNS rules.
 - **Sandbox subnet planner** (`engine/subnetPlanner.js`, `components/SubnetPlanner.jsx`, button in
   `SandboxPalette`): davidc.net-style divide/join table (binary tree, pre-order `0/1` code), per-row
   range / broadcast / hosts / optional wildcard, a label per subnet, Join cells = summary routes, and an
@@ -72,54 +73,29 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
   kept in localStorage `netsim_subnet_planner`.
 
 ## In flight / recently touched
-- **Hybrid platform roadmap** (`docs/HYBRID_PLATFORM_ROADMAP.md`, cloud spec `docs/AZURE_ACCURACY.md`).
-  **Phase 0 (kernel extraction) done on branch `phase-0-kernel-extraction`**, not merged yet: `src/models` split
-  into `src/core` (ipUtils, `failureReasons` registry, `pathResult` contract, `saveFormat`), `src/guest` (Linux +
-  Windows shells) and `src/onprem` (Device, Topology, IOS, DHCP, DNS); architecture test; saves carry
-  `schemaVersion: 1` + per-device `domain`. Zero behaviour change. Next roadmap step is cloud Phase 1 (resource
-  model + validator) — its open questions (Azure icons/naming, the TO-VERIFY rules in §A/§B/§H) come first, and
-  how it orders against DNS phase 2 / Act 2 below is the owner's call.
-- **Cloud section scope agreed 2026-10-06** (roadmap §1/§4, DECISIONS): separate section, own progress; first release
-  = landing zone + governance on a canvas with forms. **Phase 0.5 research pass done 2026-10-06**: `docs/AZURE_ACCURACY.md`
-  sections I–Q (hierarchy, RGs, naming, compute, storage, public IP, RBAC, Policy, locks) added as **SOURCED** with Microsoft
-  Learn quotes; waiting on the owner to verify (SOURCED → VERIFIED) before Phase 1a code. Open flags inside the spec: NSG
-  default-rule name casing, the VNet FAQ DHCP contradiction (A7), `RequestDisallowedByPolicy` on create (P5), RBAC limits (O8).
-  **Owner verified I–Q (2026-10-06). Phase 1a approved** (`docs/PHASE_1A_CLOUD_SECTION.md`): Microsoft architecture icons (owner
-  downloads them and accepts the terms), missions provide subscriptions, Cloud ships visible as "Preview". **Step 1 done:**
-  headless `src/cloud/` (model, naming, CIDR, catalog, outcomes, operations) + 85 rule tests. **Step 2 done:** `CloudContext`
-  (`src/state/CloudContext.jsx`, mounted in `App.jsx`; UI calls `apply(operation, args)`) with its own save slice
-  `netsim_cloud_v1` (`src/cloud/persistence.js`: kind, schemaVersion, `domain: 'cloud'` per node; unreadable saves kept under
-  `netsim_cloud_v1_unreadable`). **Step 3 done:** third mode "Cloud · Preview" in the header; `components/cloud/CloudWorkspace.jsx`
-  (tenant facts + Start over); on-prem workspace and floating windows hidden, not unmounted, in cloud mode. **New game now resets
-  on-prem only** (`resetGuard.sweptByNewGame` keeps `netsim_cloud*`). **Step 4 done:** Management tab — tree (root → MGs →
-  subscriptions → RGs → resources) + details with forms (create/rename/move/delete MG, simulated "add subscription" shortcut,
-  move subscription, create/delete RG); refusals show NetSim's explanation, the rule ID and a Microsoft Learn link
-  (`cloud/ruleSources.js`). Microsoft icons: 11 SVGs copied unmodified to `src/assets/azure-icons/` (NOTICE.md; always shown with
-  the service name, `components/cloud/AzureIcon.jsx`); the full download sits in git-ignored `vendor/`. **Step 5 done:** Network tab — per subscription, drawn region → VNet → subnet → NIC
-  (with VM and public IP), plus NSGs / disks / storage "not inside a virtual network"; create forms for VNet, NSG, public IP,
-  NIC, VM, disk, storage (`NetworkForms.jsx`) and detail panels (`NetworkDetails.jsx`: subnet reserved addresses + usable count,
-  NSG custom + default rules, associate NSG, add subnet/rule, storage network access). NSG rules are stored and shown, not yet
-  evaluated (Phase 2). **Step 6 done:** portal workflow — every create is Review + create (dry-run validation, review, Create);
-  VM wizard (Basics/Disks/Networking) creates its NIC + optional public IP all-or-nothing (`operations.deployVirtualMachine`);
-  three missions in `src/cloud/missions/` (Landing zone basics, First workload, Storage for the app), each in its own customer
-  tenant with made-up GUIDs, objectives = pure checks, end-to-end tests; Missions tab + mission bar. Cloud slice now
-  { sandbox, mission, completedMissions }. Next is step 7 (cloud accuracy gate, GLOSSARY, final browser pass). Unverified cases are refused as `not_modelled` (plan §6a), never guessed.
+- **Platform split (2026-10-07, branch `phase-0-kernel-extraction`, not merged):** NetSim moved to `apps/netsim`
+  unchanged; the Cloud mode left NetSim for its own product (`apps/cloud`, Cloud Engineer); the header gained a
+  product switcher; New game sweeps every `netsim*` key again. Before that, on the same branch, **Phase 0 kernel
+  extraction**: `src/models` split into `src/core` (failure-reason registry, PathResult), `src/guest` (Linux + Windows
+  shells) and `src/onprem` (Device, Topology, IOS, DHCP, DNS); `ipUtils`/`saveFormat` now live in `@sim/kernel`; saves
+  carry `schemaVersion: 1` + per-device `domain`. Zero behaviour change. Hybrid (roadmap Phase 5) is the next time
+  NetSim's engine is touched for the platform.
 - UX/UI + gameplay cleanup on floorplan and mission view (last few commits: "clean up
   UX UI and gameplay", "fix mission view and visual floor plan", "floor clean up").
 - New mission + narrative type ("full new playstyle") — the client/career layer above.
 
 ## Next up (in priority order)
-0. **DNS phase 2** (`docs/DNS_DESIGN.md`): DNS service on servers (Services → DNS record table, Packet-Tracer
+0. **DNS phase 2** (`docs/netsim/DNS_DESIGN.md`): DNS service on servers (Services → DNS record table, Packet-Tracer
    style) and routers (`ip dns server`, `ip host`, `show hosts`), a LAN-server preset, `resolves` mission condition.
    Phase 3: forwarders, CNAME, TTL cache (`ipconfig /displaydns|/flushdns`).
 1. **Act 2 — fault-injection / troubleshooting missions**: pre-broken topologies, no
    step-by-step hints, diagnose with `show` commands. Design in
-   `docs/NETSIM_FAULTS_AND_FEATURES.md`. Use `/fault-scenario`.
+   `docs/netsim/NETSIM_FAULTS_AND_FEATURES.md`. Use `/fault-scenario`.
 2. Refine generic reason codes: `subnet_mismatch` is emitted only for PC/server sources (routers and other
    cases still get `no_route`); then `gateway_unreachable`, `ip_conflict`, `duplex_mismatch` (fall through to
-   `no_route`). Register each in `src/core/failureReasons.js` when it ships.
+   `no_route`). Register each in `apps/netsim/src/core/failureReasons.js` when it ships.
 3. More clients/missions on the declarative DSL (`/new-mission`); more service tickets.
-4. Admin-laptop tool family from `docs/ADMIN_LAPTOP_AND_TOOLS.md` — port scanner and
+4. Admin-laptop tool family from `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md` — port scanner and
    WireFish are still spec-only; the Phase 3 packet-engine refactor needs an owner decision.
 5. Backlog: live-network/SLA mode polish, mastery scoring, shop margins,
    click-to-connect cabling.
@@ -146,5 +122,5 @@ _Last refreshed: 2026-10-06 (hybrid roadmap Phase 0 — kernel extraction). Keep
   responsive down to phone width.
 - `docs/` filenames are inconsistent in case (`Roas-Sandbox-LAB.md`, `dhcp-sandbox-lab.md`,
   `NETWORKING_AUDIT.md`); older docs reference names that no longer match exactly.
-- `docs/ADMIN_LAPTOP_AND_TOOLS.md` still says "nothing here is implemented yet" — the
+- `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md` still says "nothing here is implemented yet" — the
   laptop + firewall web UI *are* implemented; the doc's status line is stale.

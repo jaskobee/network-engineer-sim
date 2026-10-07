@@ -10,8 +10,8 @@ the CI `ai-review.js` job.
 
 ## 1. Collect the change
 ```bash
-git -C "$(git rev-parse --show-toplevel)" diff -- src/ docs/
-git -C "$(git rev-parse --show-toplevel)" diff --cached -- src/ docs/
+git -C "$(git rev-parse --show-toplevel)" diff -- apps/netsim/src/ packages/ docs/netsim/
+git -C "$(git rev-parse --show-toplevel)" diff --cached -- apps/netsim/src/ packages/ docs/netsim/
 ```
 If both are empty, report "nothing to gate" and stop.
 
@@ -35,9 +35,9 @@ For each changed behaviour, answer explicitly (write the answers out — don't j
    command.`, `Destination host unreachable`, `Request timed out`, `no route to host`,
    correct `failureReason`.)
 
-Cross-check specifics against the relevant section of `docs/NETWORKING_ACCURACY.md`
+Cross-check specifics against the relevant section of `docs/netsim/NETWORKING_ACCURACY.md`
 (Prompts 1–7, DHCP, NAT, firewall, service matching) and the reason-code table in
-`.claude/brain/GLOSSARY.md`.
+`.claude/brain/netsim/GLOSSARY.md`.
 
 ## 3. Verify tests cover it
 - Every changed behaviour has a Vitest assertion. Broken scenarios assert the exact
@@ -48,7 +48,7 @@ Cross-check specifics against the relevant section of `docs/NETWORKING_ACCURACY.
 ## 4. Run the mechanical checks
 ```bash
 npm test
-npx vite build
+npm run build
 ```
 Only the xterm chunk-size warning is acceptable from the build.
 

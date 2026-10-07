@@ -4,7 +4,7 @@
  * PCCLIEngine (the same path the player uses), then asserts on the result
  * object — no React, no GameContext.
  *
- * T1–T8 match docs/SANDBOX_TEST_PLAN.md exactly.
+ * T1–T8 match docs/netsim/SANDBOX_TEST_PLAN.md exactly.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Device } from '../Device.js'

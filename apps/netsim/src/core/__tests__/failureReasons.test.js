@@ -1,10 +1,10 @@
 /**
- * failureReason registry (src/core/failureReasons.js).
+ * failureReason registry (apps/netsim/src/core/failureReasons.js).
  *
  * R1  REASON constants and the registry agree, codes are unique and frozen
  * R2  every reason any existing test expects is in the registry
  * R3  the engine emits reasons only through REASON.* — no string literal left at an
- *     emission site in src/onprem or src/guest
+ *     emission site in apps/netsim/src/onprem or apps/netsim/src/guest
  */
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
@@ -90,7 +90,7 @@ describe('R3 — the engine emits reasons only through REASON', () => {
     /failureReason:\s*[^,}]*['"][a-z_]+['"]/,        // { failureReason: 'nat_required' }
     /\breason:\s*[^,}]*['"]dns_[a-z_]+['"]/,         // { reason: 'dns_nxdomain' }
   ]
-  it('no reason literal at an emission site in src/onprem or src/guest', () => {
+  it('no reason literal at an emission site in apps/netsim/src/onprem or apps/netsim/src/guest', () => {
     const bad = []
     for (const area of ['onprem', 'guest']) {
       for (const file of walk(path.join(SRC, area)).filter(f => !f.includes('__tests__'))) {

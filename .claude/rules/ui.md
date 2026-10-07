@@ -1,12 +1,12 @@
 ---
 paths:
-  - "src/components/**"
-  - "src/state/**"
-  - "src/App.jsx"
-  - "src/index.css"
+  - "apps/netsim/src/components/**"
+  - "apps/netsim/src/state/**"
+  - "apps/netsim/src/App.jsx"
+  - "apps/netsim/src/index.css"
 ---
 
-# Rules: UI & state (`src/components`, `src/state`, `App.jsx`, `index.css`)
+# Rules: NetSim UI & state (`apps/netsim/src/components`, `state`, `App.jsx`, `index.css`)
 
 1. **The UI is disposable; the engine is not.** Components read engine state and call
    engine methods — they never reimplement networking logic (no subnet math, no
@@ -27,16 +27,16 @@ paths:
 5. **Two contexts, clear ownership**: `GameContext` = topology/engine/missions;
    `CareerContext` = company/reputation/clients/contracts, mounted inside
    `GameProvider`, persists its own slice. Don't cross-import state the wrong way.
-6. **Plain CSS in `index.css`**, JavaScript only, match existing style. No CSS-in-JS,
+6. **Plain CSS in `index.css`** (shared primitives and tokens in `packages/ui/base.css`), JavaScript only, match existing style. No CSS-in-JS,
    no TypeScript, no new UI framework.
 7. **Dev-only UI** (`DevPanel`, DEV banner) stays behind `import.meta.env.DEV`.
 8. When a UI change alters how a player *learns* something (hint text, error wording,
    status labels like up/up vs administratively down), it is a networking change:
-   check it against `docs/NETWORKING_ACCURACY.md` Prompt 5/8.
+   check it against `docs/netsim/NETWORKING_ACCURACY.md` Prompt 5/8.
 
 ## Design system (since 2026-09-20)
 
-9. **Tokens, not new hex.** `index.css` `:root` defines surfaces (`--surface-*`), text
+9. **Tokens, not new hex.** `packages/ui/base.css` `:root` defines surfaces (`--surface-*`), text
    (`--ink`, `--ink-2`, `--ink-3`), `--signal*`, `--led-*`, radii, `--font-ui`,
    `--font-mono`. New/edited UI uses `var(--…)`; don't introduce fresh hex for
    surfaces or text. (Older inline hex is the remapped palette — fine to leave.)
@@ -44,7 +44,7 @@ paths:
     *state* only: green = up/done, amber = attention or down, red = fault/failure,
     blue = actionable/selected. Never colour by category (a firewall is not red, a PC
     is not green). Interface state keeps three distinct looks — up / down /
-    administratively down — per `docs/NETWORKING_ACCURACY.md` Prompt 5, and
+    administratively down — per `docs/netsim/NETWORKING_ACCURACY.md` Prompt 5, and
     `admin_down` must stay legible.
 11. **Type.** `--font-ui` (Barlow Semi Condensed) for everything; `--font-mono`
     (Atkinson Hyperlegible Mono) only for data — IPs, hostnames, interface names,

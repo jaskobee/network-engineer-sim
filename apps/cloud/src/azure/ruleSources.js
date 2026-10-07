@@ -1,5 +1,5 @@
 /**
- * Where each docs/AZURE_ACCURACY.md rule comes from, so a refusal can link the player to
+ * Where each docs/cloud/AZURE_ACCURACY.md rule comes from, so a refusal can link the player to
  * the real Microsoft Learn page ("Learn more"). URLs are the sources the spec cites.
  */
 const LEARN = 'https://learn.microsoft.com/en-us/azure'

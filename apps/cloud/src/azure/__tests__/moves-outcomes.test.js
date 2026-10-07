@@ -1,5 +1,5 @@
 /**
- * Resource moves (docs/AZURE_ACCURACY.md J9) and the outcome registry.
+ * Resource moves (docs/cloud/AZURE_ACCURACY.md J9) and the outcome registry.
  *
  * M-J9a  a move changes the resource ID and resource group, never the region
  * M-J9b  references to a moved resource follow it (NIC → VNet subnet, VM → NIC)

@@ -4,8 +4,8 @@
  * validation is a dry run of the same operation (operations are pure), so a refusal shows
  * before anything exists, exactly as "Validation failed" does in the portal.
  *
- * Forms only collect input and call submit(operation, args, summary) — src/cloud/operations.js
- * decides. Option lists mirror what Azure offers (src/cloud/catalog.js).
+ * Forms only collect input and call submit(operation, args, summary) — apps/cloud/src/azure/operations.js
+ * decides. Option lists mirror what Azure offers (apps/cloud/src/azure/catalog.js).
  */
 import { useState } from 'react'
 import * as op from '../azure/operations.js'

@@ -1,5 +1,5 @@
 /**
- * Small, pure checks cloud missions are written with. Each reads a tenant (src/cloud/model.js
+ * Small, pure checks cloud missions are written with. Each reads a tenant (apps/cloud/src/azure/model.js
  * state) and never changes it, so mission progress is always derived from what the player
  * actually built — never stored separately.
  */

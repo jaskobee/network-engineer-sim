@@ -21,7 +21,7 @@ no game engine.
 Teach networking fundamentals **correctly** — to CCNA / CCNP / CompTIA Network+
 standard. Accuracy is the product, not a nice-to-have. See
 [[Layer 2 Switching and VLANs]] through [[Stateful Firewall]] for the actual model,
-and `docs/NETWORKING_ACCURACY.md` in the repo for the standing spec.
+and `docs/netsim/NETWORKING_ACCURACY.md` in the repo for the standing spec.
 
 ## Why this framing works
 
@@ -42,7 +42,7 @@ unavoidable for gameplay (see the many "documented simplifications" scattered th
 in a code comment — never presented as ground truth.
 
 This is enforced structurally, not just by good intentions:
-- `docs/NETWORKING_ACCURACY.md` is a hard spec with 8 standing "accuracy prompts."
+- `docs/netsim/NETWORKING_ACCURACY.md` is a hard spec with 8 standing "accuracy prompts."
 - Every behavior change to networking logic ships with a Vitest test asserting the
   *exact* `failureReason` (see [[Failure Reason Codes]]), never just `reachable: false`.
 - A dedicated `accuracy-reviewer` subagent and an `/accuracy-gate` skill exist purely
@@ -77,7 +77,7 @@ state; nothing is invented or decorative. See [[Admin Laptop and Tools]].
 3. **No synthesized packets, ever.** If the engine cannot truthfully emit a frame, a
    future packet-capture tool must not display one. See
    [[Admin Laptop and Tools]] §WireFish.
-4. **The engine is the asset; the UI is disposable.** `src/models/` and `src/engine/`
+4. **The engine is the asset; the UI is disposable.** `src/models/` and `apps/netsim/src/engine/`
    are a pure, headless, framework-free core — the entire product could be rebuilt
    with a different UI without touching the networking logic. See
    [[Architecture Overview]].

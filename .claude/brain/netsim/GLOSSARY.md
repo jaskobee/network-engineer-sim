@@ -1,6 +1,6 @@
-# GLOSSARY — names, codes and vocabulary
+# GLOSSARY — NetSim names, codes and vocabulary
 
-## Device types (`src/data/deviceCatalog.js`)
+## Device types (`apps/netsim/src/data/deviceCatalog.js`)
 | type | CLI engine | Interfaces | Notes |
 |---|---|---|---|
 | `router` | `CLIEngine` (IOS) | `GigabitEthernet0/0`… (4) | $1200. Subinterfaces `Gig0/0.10` for ROAS. |
@@ -17,7 +17,7 @@ Composite string `"<deviceId>:<ifaceName>"`, e.g. `"dev-1:GigabitEthernet0/0"`.
 Split on the **first** `:` only. `normalizeIfName()` in `Device.js` expands
 abbreviations (`gi0/0`, `fa0/1`). Linux shell maps `eth0` ↔ `Ethernet0/0`.
 
-## `checkPing` result — the PathResult contract (`src/core/pathResult.js`)
+## `checkPing` result — the PathResult contract (`apps/netsim/src/core/pathResult.js`)
 ```js
 // Topology.checkPing(srcIp, dstIp, service?)
 { reachable, degraded, sent, received, lossPct, rttMs, failureReason, failurePoint /* device id */ }
@@ -27,8 +27,8 @@ through the well-known port table (HTTP 80, HTTPS 443, SSH 22, DNS udp/53, FTP 2
 TELNET 23, RDP 3389, SMTP 25).
 
 ### `failureReason` codes
-The emitted codes are registered in `src/core/failureReasons.js` (engine code uses `REASON.NO_ROUTE` etc.;
-`src/core/__tests__/failureReasons.test.js` fails if a test expects an unregistered code). Rows marked
+The emitted codes are registered in `apps/netsim/src/core/failureReasons.js` (engine code uses `REASON.NO_ROUTE` etc.;
+`apps/netsim/src/core/__tests__/failureReasons.test.js` fails if a test expects an unregistered code). Rows marked
 *falls through* are planned and not in the registry yet.
 
 | Code | Meaning | Status |
@@ -50,7 +50,7 @@ The emitted codes are registered in `src/core/failureReasons.js` (engine code us
 | `ip_conflict` | Duplicate IP | **falls through** |
 | `duplex_mismatch` | Up/up but lossy | **falls through** |
 
-## DNS (`src/onprem/dns.js`)
+## DNS (`apps/netsim/src/onprem/dns.js`)
 - **`device.dns_servers`** — name servers set by hand, in order (`resolvectl dns`, `netsh … set dns`, `ip name-server`).
   **`device.dhcp_dns_servers`** — what a DHCP lease supplied. `effectiveDnsServers(device)` = the first if non-empty, else the
   second; `dnsSource(device)` → `'static' | 'dhcp' | 'none'`. **`device.domain_lookup`** (router/switch, default `true`) = IOS `ip domain-lookup`.
@@ -60,7 +60,7 @@ The emitted codes are registered in `src/core/failureReasons.js` (engine code us
 - Shell hook: each engine has `resolveForPing(device, name)` → `{ ok, ip, lines }` (OS-worded); `TerminalPane` uses it, and
   `engine/pingTarget.js` `pingTargetOf(tokens, os)` picks the destination.
 
-## Mission DSL (`src/engine/missionEngine.js`)
+## Mission DSL (`apps/netsim/src/engine/missionEngine.js`)
 A `MissionDefinition` has `deviceRoles` and `objectives`.
 
 - **deviceRoles**: `{ roleName: { type, match: 'first'|'second'|'third'|<number>, label } }`
@@ -117,8 +117,8 @@ objectives`.
   expectedFailure?, description, pingCheck { src, dst, service?, kind? }`) plus a builder
   in `buildPreset()`'s `builders` map. Builder ctx: `{ addSandboxDevice, sbTopology,
   sbEngine, sbPcEngine, sbConnectInterfaces, setMode, clearSandbox }`.
-- **Smoke test** — `src/devMode/smokeTests.js`, programmatic twin of
-  `docs/foundation-smoke-test.md`.
+- **Smoke test** — `apps/netsim/src/devMode/smokeTests.js`, programmatic twin of
+  `docs/netsim/foundation-smoke-test.md`.
 
 ## Realistic CLI output strings (use these, not invented ones)
 IOS: `% Invalid input detected at '^' marker.`, `% Incomplete command.`,

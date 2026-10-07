@@ -1,5 +1,5 @@
 /**
- * The option lists the cloud forms offer, each tied to its docs/AZURE_ACCURACY.md rule.
+ * The option lists the cloud forms offer, each tied to its docs/cloud/AZURE_ACCURACY.md rule.
  */
 
 /** L7 — managed disk types; Ultra Disk and Premium SSD v2 can't be OS disks. */

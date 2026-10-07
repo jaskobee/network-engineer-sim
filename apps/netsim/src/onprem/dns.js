@@ -1,5 +1,5 @@
 /**
- * DNS resolver — pure headless core (no React/DOM). See docs/DNS_DESIGN.md.
+ * DNS resolver — pure headless core (no React/DOM). See docs/netsim/DNS_DESIGN.md.
  *
  * A name resolves only if the asking device really can:
  *   1. has at least one name server configured (by hand, or handed out by DHCP),

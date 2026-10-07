@@ -4,7 +4,7 @@
  *
  * How it works:
  *   1. Gets the diff between this PR and main (only apps/netsim/, packages/ and docs/)
- *   2. Reads docs/NETWORKING_ACCURACY.md as the hard spec
+ *   2. Reads docs/netsim/NETWORKING_ACCURACY.md as the hard spec
  *   3. Sends both to Claude claude-opus-5 for review
  *   4. Posts the review as a comment on the PR
  *
@@ -48,7 +48,7 @@ if (!diff.trim()) {
   process.exit(0)
 }
 
-const spec = readFileSync(join(ROOT, 'docs/NETWORKING_ACCURACY.md'), 'utf8')
+const spec = readFileSync(join(ROOT, 'docs/netsim/NETWORKING_ACCURACY.md'), 'utf8')
 
 // Truncate if the diff is huge (Claude has a context limit)
 const MAX_DIFF = 40_000

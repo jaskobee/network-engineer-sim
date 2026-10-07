@@ -1,22 +1,22 @@
 ---
 paths:
-  - "src/data/missionDefinitions/**"
-  - "src/data/missions.js"
-  - "src/data/missionTasks.js"
-  - "src/data/clients.js"
-  - "src/data/contracts.js"
-  - "src/data/serviceTickets.js"
-  - "src/data/mission005scaffold.js"
+  - "apps/netsim/src/data/missionDefinitions/**"
+  - "apps/netsim/src/data/missions.js"
+  - "apps/netsim/src/data/missionTasks.js"
+  - "apps/netsim/src/data/clients.js"
+  - "apps/netsim/src/data/contracts.js"
+  - "apps/netsim/src/data/serviceTickets.js"
+  - "apps/netsim/src/data/mission005scaffold.js"
 ---
 
-# Rules: missions, clients, tickets (`src/data/*`)
+# Rules: missions, clients, tickets (`apps/netsim/src/data/*`)
 
 1. **New missions are declarative.** Author a `MissionDefinition` in
-   `src/data/missionDefinitions/` using the DSL in `src/engine/missionEngine.js`
-   (vocabulary in `.claude/brain/GLOSSARY.md`). Do **not** add new hand-written
+   `apps/netsim/src/data/missionDefinitions/` using the DSL in `apps/netsim/src/engine/missionEngine.js`
+   (vocabulary in `.claude/brain/netsim/GLOSSARY.md`). Do **not** add new hand-written
    `checkNNN()` functions to `missionTasks.js` — that file is frozen for
    `mission_001–005`. Use `/new-mission`.
-2. **Register** the definition in `src/data/missionDefinitions/index.js` and, for a
+2. **Register** the definition in `apps/netsim/src/data/missionDefinitions/index.js` and, for a
    client mission, reference it from the client's `initialMissionIds` or a prior
    mission's `followUpMissionIds`.
 3. **Every mission gets an end-to-end test** in `missionDefinitions/__tests__/` that

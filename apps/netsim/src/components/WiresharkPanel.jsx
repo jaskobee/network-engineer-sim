@@ -3,7 +3,7 @@
  *
  * STATUS: Phase 3 placeholder.
  *
- * Why it isn't built yet (from docs/ADMIN_LAPTOP_AND_TOOLS.md, Hard Rule 3):
+ * Why it isn't built yet (from docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md, Hard Rule 3):
  *   "Do NOT post-hoc invent an ARP/ICMP sequence from a BFS path result to ship
  *    faster. If the engine can't emit it truthfully, don't display it."
  *

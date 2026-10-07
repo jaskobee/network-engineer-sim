@@ -1,5 +1,5 @@
 /**
- * Virtual networks, NSGs, NICs, public IPs — docs/AZURE_ACCURACY.md §A, §B, §C, §L, §N.
+ * Virtual networks, NSGs, NICs, public IPs — docs/cloud/AZURE_ACCURACY.md §A, §B, §C, §L, §N.
  *
  * N-A1  five reserved addresses per subnet; usable = 2^(32−p) − 5 (a /24 has 251)
  * N-A2  subnets /29…/2

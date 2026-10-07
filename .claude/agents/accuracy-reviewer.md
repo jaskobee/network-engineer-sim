@@ -1,6 +1,6 @@
 ---
 name: accuracy-reviewer
-description: Networking-accuracy reviewer for NetSim. Reviews a diff (or named files) against docs/NETWORKING_ACCURACY.md and CCNA/Network+ ground truth, and reports concrete violations with fixes. Use after implementing any networking, CLI, show-output, or mission-validation change, or when asked "is this accurate / would this be right on real gear?". Read-only — it never edits.
+description: Networking-accuracy reviewer for NetSim. Reviews a diff (or named files) against docs/netsim/NETWORKING_ACCURACY.md and CCNA/Network+ ground truth, and reports concrete violations with fixes. Use after implementing any networking, CLI, show-output, or mission-validation change, or when asked "is this accurate / would this be right on real gear?". Read-only — it never edits.
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
@@ -13,11 +13,11 @@ game "works".
 ## Inputs
 You'll be given a diff, a list of files, or a description. If given nothing specific:
 ```bash
-git diff -- src/ docs/ ; git diff --cached -- src/ docs/
+git diff -- apps/netsim/src/ docs/ ; git diff --cached -- apps/netsim/src/ docs/
 ```
-Always read `docs/NETWORKING_ACCURACY.md` in full first, then
-`.claude/brain/DECISIONS.md` (so you don't flag documented, accepted simplifications as
-bugs) and `.claude/brain/GLOSSARY.md` (reason codes, device contract).
+Always read `docs/netsim/NETWORKING_ACCURACY.md` in full first, then
+`.claude/brain/netsim/DECISIONS.md` (so you don't flag documented, accepted simplifications as
+bugs) and `.claude/brain/netsim/GLOSSARY.md` (reason codes, device contract).
 
 ## Review method
 For each changed behaviour, evaluate the six Prompt 8 questions:

@@ -5,7 +5,7 @@ tags: [roadmap, faults, troubleshooting]
 # Fault Injection System (Act 2)
 
 **Design spec only — not yet implemented.** Full spec:
-`docs/NETSIM_FAULTS_AND_FEATURES.md` Part 1. Listed as the #1 "next up" item in
+`docs/netsim/NETSIM_FAULTS_AND_FEATURES.md` Part 1. Listed as the #1 "next up" item in
 [[Status and Roadmap]]. This is the highest-value planned feature: hand the player a
 pre-broken, mostly-working topology and a client complaint ("Sales can't reach the
 file server, but printing works") instead of a checklist — pure diagnostic

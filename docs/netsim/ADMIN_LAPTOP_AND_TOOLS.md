@@ -2,8 +2,8 @@
 
 **Status:** Design spec. Nothing here is implemented yet.
 **Owner decision needed on:** the Phase 3 packet-engine refactor (see "Open questions").
-**Read first:** `CLAUDE.md` (hard rules), `docs/NETWORKING_ACCURACY.md` (hard spec),
-`docs/NETSIM_FAULTS_AND_FEATURES.md` (fault system this feeds into).
+**Read first:** `CLAUDE.md` (hard rules), `docs/netsim/NETWORKING_ACCURACY.md` (hard spec),
+`docs/netsim/NETSIM_FAULTS_AND_FEATURES.md` (fault system this feeds into).
 
 This document describes a feature family: an **Admin Laptop** device that acts as the
 player's own workstation, and the **tools that run on it** — a firewall web admin GUI,
@@ -20,7 +20,7 @@ decision (stay on the web) and the one architectural fork this feature exposes.
 | Is the laptop a real topology node? | **Yes — always** | It has a NIC, IP, gateway, MAC, and a switch port. If it is a floating panel that always works, the lesson is deleted. |
 | Does the GUI have its own config store? | **No** | Firewall GUI and CLI mutate the **same** device state. A rule added in the GUI appears in `show running-config` and vice versa. |
 | Visual juice (packet animation) | Canvas/WebGL layer (e.g. PixiJS) **for the map only**, if/when needed | Everything else stays DOM. Not part of this spec. |
-| Portability hedge | Keep the engine (`src/core`, `src/guest`, `src/onprem`, `src/engine`) a **pure headless JS core** with zero React/DOM imports | The UI is disposable; the engine is the asset. Enforce as a package boundary. |
+| Portability hedge | Keep the engine (`apps/netsim/src/core`, `apps/netsim/src/guest`, `apps/netsim/src/onprem`, `apps/netsim/src/engine`) a **pure headless JS core** with zero React/DOM imports | The UI is disposable; the engine is the asset. Enforce as a package boundary. |
 
 ---
 
@@ -276,9 +276,9 @@ software licenses (buy WireFish, buy the scanner). This:
 - provides a natural gate: "you're not ready for packet analysis yet"
 
 ### Engine purity boundary
-Formalize the engine folders (`src/core`, `src/guest`, `src/onprem`, `src/engine`) as a headless core: no React, no DOM, no browser globals. It must
+Formalize the engine folders (`apps/netsim/src/core`, `apps/netsim/src/guest`, `apps/netsim/src/onprem`, `apps/netsim/src/engine`) as a headless core: no React, no DOM, no browser globals. It must
 run in Node for tests, and could later run server-side for authoritative multiplayer state.
-Enforced since Phase 0 by `src/core/__tests__/architecture.test.js` (imports only; browser globals are not scanned).
+Enforced since Phase 0 by `apps/netsim/src/core/__tests__/architecture.test.js` (imports only; browser globals are not scanned).
 
 ### Mastery scoring interaction
 GUI config is realistic for firewalls, but scoring should reward CLI fluency. Some missions

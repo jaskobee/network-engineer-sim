@@ -1,5 +1,10 @@
 # Phase 1a — Cloud section + resource model (plan for approval)
 
+> **Platform split (2026-10-07).** The cloud "section" is now its own product, Cloud Engineer (`apps/cloud`).
+> Paths in this plan are as they were written: `src/cloud/` → `apps/cloud/src/azure/`, `src/components/cloud/` →
+> `apps/cloud/src/components/`, `src/state/CloudContext.jsx` → `apps/cloud/src/state/`, docs → `docs/cloud/`; the
+> save key `netsim_cloud_v1` became `cloudeng_save_v1`. Step 7 still stands (`/azure-gate`).
+
 **Status:** draft for the owner's approval, 2026-10-06. No code until approved.
 **Read with:** `docs/HYBRID_PLATFORM_ROADMAP.md` (§1, §3, §4), `docs/AZURE_ACCURACY.md`
 (the rules listed in §2 below), `CLAUDE.md`.

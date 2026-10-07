@@ -4,7 +4,7 @@ tags: [decisions, reference]
 
 # Decisions Log
 
-Locked design choices and their *why*. Canonical source: `.claude/brain/DECISIONS.md`
+Locked design choices and their *why*. Canonical source: `.claude/brain/netsim/DECISIONS.md`
 — if you believe one of these is wrong, say so explicitly and get a go-ahead before
 changing it; never silently work around one. Grouped here the same way as the source.
 

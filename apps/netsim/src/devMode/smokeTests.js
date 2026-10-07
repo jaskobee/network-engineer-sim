@@ -1,5 +1,5 @@
 /**
- * Foundation smoke tests — programmatic twin of docs/foundation-smoke-test.md.
+ * Foundation smoke tests — programmatic twin of docs/netsim/foundation-smoke-test.md.
  *
  * Each test builds its own topology via the real engine, asserts expected
  * reachability / DHCP results, then returns a result object.  The runner

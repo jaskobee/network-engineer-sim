@@ -1,5 +1,5 @@
 /**
- * Compute and storage — docs/AZURE_ACCURACY.md §K, §L, §M.
+ * Compute and storage — docs/cloud/AZURE_ACCURACY.md §K, §L, §M.
  *
  * CS-K1 VM host names: Windows 1–15, Linux 1–64, forbidden characters
  * CS-L1 a VM needs a NIC; an attached NIC can't be deleted

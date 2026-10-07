@@ -1,5 +1,5 @@
 /**
- * Save-format versioning shared by every track (docs/HYBRID_PLATFORM_ROADMAP.md §3.5).
+ * Save-format versioning shared by every track (docs/platform/HYBRID_PLATFORM_ROADMAP.md §3.5).
  *
  * `schemaVersion` describes the cross-track shape of saved topology data; each saved
  * node carries a `domain` naming the plane that evaluates it. Both are new in Phase 0,
@@ -16,7 +16,7 @@
 
 export const SCHEMA_VERSION = 1
 
-/** Domains a saved node may belong to. 'cloud' joined in roadmap Phase 1a (src/cloud/persistence.js). */
+/** Domains a saved node may belong to. 'cloud' joined in roadmap Phase 1a (apps/cloud/src/azure/persistence.js). */
 export const DOMAINS = Object.freeze(['onprem', 'cloud'])
 export const DEFAULT_DOMAIN = 'onprem'
 

@@ -5,11 +5,11 @@ tags: [reference, glossary]
 # Glossary
 
 Every code, id format, and vocabulary term used across the codebase and this vault,
-in one place. Canonical source: `.claude/brain/GLOSSARY.md` (kept in sync with this
+in one place. Canonical source: `.claude/brain/netsim/GLOSSARY.md` (kept in sync with this
 note as a manual duplication — if they ever disagree, the `.claude/brain` copy is the
 one Claude Code actually loads every session).
 
-## Device types (`src/data/deviceCatalog.js`)
+## Device types (`apps/netsim/src/data/deviceCatalog.js`)
 
 | Type | CLI engine | Interfaces | Notes |
 |---|---|---|---|
@@ -79,8 +79,8 @@ Full detail: [[Career Layer]].
   expectedFailure?, description, pingCheck { src, dst, service?, kind? }`) plus a
   builder in `buildPreset()`'s `builders` map. Builder ctx: `{ addSandboxDevice,
   sbTopology, sbEngine, sbPcEngine, sbConnectInterfaces, setMode, clearSandbox }`.
-- **Smoke test** — `src/devMode/smokeTests.js`, the programmatic twin of
-  `docs/foundation-smoke-test.md`.
+- **Smoke test** — `apps/netsim/src/devMode/smokeTests.js`, the programmatic twin of
+  `docs/netsim/foundation-smoke-test.md`.
 
 Full detail: [[Dev Mode and QA]].
 

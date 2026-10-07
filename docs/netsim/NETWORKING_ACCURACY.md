@@ -232,8 +232,8 @@ code comment that flags it as a simplification rather than presenting it as trut
 
 ## DHCP rules (added sprint: router-as-server + relay)
 
-The following invariants are implemented in `src/onprem/DHCPEngine.js` and enforced by
-the test suite in `src/onprem/__tests__/dhcp.test.js`:
+The following invariants are implemented in `apps/netsim/src/onprem/DHCPEngine.js` and enforced by
+the test suite in `apps/netsim/src/onprem/__tests__/dhcp.test.js`:
 
 1. **DORA exchange** modeled logically (not packet-level broadcast through BFS).
 2. **Broadcasts don't cross routers.** A client's DISCOVER is confined to its L2
@@ -265,9 +265,9 @@ the test suite in `src/onprem/__tests__/dhcp.test.js`:
 
 ## Host shell rules (Linux iproute2 and Windows CMD)
 
-Implemented in `src/guest/PCCLIEngine.js`, `src/guest/WindowsCLIEngine.js`, and the shared
+Implemented in `apps/netsim/src/guest/PCCLIEngine.js`, `apps/netsim/src/guest/WindowsCLIEngine.js`, and the shared
 `Device.nextHopReachable()` / `Device.flushRoutesVia()` / `Topology.setInterfaceAdmin()`.
-Enforced by `src/guest/__tests__/pcshell.test.js` (N1–N9) and `winshell.test.js` (W1–W12).
+Enforced by `apps/netsim/src/guest/__tests__/pcshell.test.js` (N1–N9) and `winshell.test.js` (W1–W12).
 These follow Prompt 3 (gateway inside the host's own subnet), Prompt 4 (a next hop must be
 reachable over a connected network) and Prompt 5 (interface states) for end hosts.
 
@@ -306,10 +306,10 @@ reachable over a connected network) and Prompt 5 (interface states) for end host
 
 ## DNS rules (phase 1: client resolver)
 
-Implemented in `src/onprem/dns.js` (resolver), the three shells (`PCCLIEngine`, `WindowsCLIEngine`,
-`CLIEngine`) and `src/engine/hostConfig.js` (GUI planner). Enforced by
-`src/onprem/__tests__/dns.test.js` and `src/engine/__tests__/hostConfig.test.js` (H-DNS).
-Design and phases: `docs/DNS_DESIGN.md`.
+Implemented in `apps/netsim/src/onprem/dns.js` (resolver), the three shells (`PCCLIEngine`, `WindowsCLIEngine`,
+`CLIEngine`) and `apps/netsim/src/engine/hostConfig.js` (GUI planner). Enforced by
+`apps/netsim/src/onprem/__tests__/dns.test.js` and `apps/netsim/src/engine/__tests__/hostConfig.test.js` (H-DNS).
+Design and phases: `docs/netsim/DNS_DESIGN.md`.
 
 1. **A name resolves only through a configured name server the host can really reach.** No name
    server → no resolution; there is no built-in "internet" table. The query is UDP/53 checked with
@@ -367,9 +367,9 @@ Design and phases: `docs/DNS_DESIGN.md`.
 
 ## NAT/PAT rules (added sprint: source NAT overload)
 
-The following invariants are implemented across `src/onprem/Topology.js` (BFS
-enforcement), `src/onprem/CLIEngine.js` (IOS CLI), and
-`src/onprem/__tests__/nat.test.js`.
+The following invariants are implemented across `apps/netsim/src/onprem/Topology.js` (BFS
+enforcement), `apps/netsim/src/onprem/CLIEngine.js` (IOS CLI), and
+`apps/netsim/src/onprem/__tests__/nat.test.js`.
 
 1. **RFC 1918 addresses are not internet-routable.** `10.0.0.0/8`,
    `172.16.0.0/12`, and `192.168.0.0/16` are private. A packet with a private
@@ -422,8 +422,8 @@ enforcement), `src/onprem/CLIEngine.js` (IOS CLI), and
 
 ## Stateful Firewall rules (Sprint 1: zone-based firewall engine)
 
-Implemented in `src/onprem/Topology.js` (BFS hook) and `src/onprem/CLIEngine.js` (CLI).
-Enforced by `src/onprem/__tests__/firewall.test.js`.
+Implemented in `apps/netsim/src/onprem/Topology.js` (BFS hook) and `apps/netsim/src/onprem/CLIEngine.js` (CLI).
+Enforced by `apps/netsim/src/onprem/__tests__/firewall.test.js`.
 
 ### Core invariants (all enforced by engine + tests)
 
@@ -516,9 +516,9 @@ show ip interface brief                                 ← works same as router
 
 ## Service / Port matching rules (implemented in Topology.js + CLIEngine.js)
 
-Implemented in `src/onprem/Topology.js` (`_evaluateFirewallRules`, `_bfsReach`) and
-`src/onprem/CLIEngine.js` (CLI command, `_showConn`).
-Enforced by `src/onprem/__tests__/firewall.test.js` (SVC1–SVC6 blocks, 21 tests).
+Implemented in `apps/netsim/src/onprem/Topology.js` (`_evaluateFirewallRules`, `_bfsReach`) and
+`apps/netsim/src/onprem/CLIEngine.js` (CLI command, `_showConn`).
+Enforced by `apps/netsim/src/onprem/__tests__/firewall.test.js` (SVC1–SVC6 blocks, 21 tests).
 
 ### Invariants
 

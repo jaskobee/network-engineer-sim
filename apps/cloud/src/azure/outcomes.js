@@ -1,13 +1,13 @@
 /**
  * Management-plane outcomes — why a create / update / move / delete was refused.
  *
- * The cloud counterpart of src/core/failureReasons.js, for docs/AZURE_ACCURACY.md
+ * The cloud counterpart of apps/netsim/src/core/failureReasons.js, for docs/cloud/AZURE_ACCURACY.md
  * §"Management-plane outcomes". These are the sim's own codes. A real Azure Resource
  * Manager error code is attached (`armCode`) ONLY where the spec sources it; everywhere
  * else the UI explains the rule in plain words and labels it as the simulator's explanation.
  *
  * `not_modelled` is the honest answer for a case the verified spec doesn't cover yet
- * (docs/PHASE_1A_CLOUD_SECTION.md §6a): the sim refuses rather than inventing a rule.
+ * (docs/cloud/PHASE_1A_CLOUD_SECTION.md §6a): the sim refuses rather than inventing a rule.
  */
 
 const ENTRIES = [
@@ -47,7 +47,7 @@ export const OUTCOMES = Object.freeze(Object.fromEntries(ENTRIES.map(e => [
   Object.freeze({ code: e.code, domain: 'cloud', description: e.description, ...(e.armCode ? { armCode: e.armCode } : {}) }),
 ])))
 
-/** A refused operation. ruleId is the docs/AZURE_ACCURACY.md rule, or null for not_modelled. */
+/** A refused operation. ruleId is the docs/cloud/AZURE_ACCURACY.md rule, or null for not_modelled. */
 export function refuse(outcome, ruleId, message) {
   return { ok: false, outcome, ruleId, message }
 }

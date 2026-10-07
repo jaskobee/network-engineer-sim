@@ -13,7 +13,7 @@ Network+ standard. Accuracy is the product.
 1. **Networking accuracy outranks convenience.** If a simplification would teach a
    beginner something they'd have to unlearn for a cert or a real job, do not ship it.
    When in doubt, flag the conflict instead of silently simplifying.
-2. **`docs/NETWORKING_ACCURACY.md` is a hard spec.** All networking behaviour, CLI
+2. **`docs/netsim/NETWORKING_ACCURACY.md` is a hard spec.** All networking behaviour, CLI
    commands, `show` output, hints, and mission validation must comply with it.
 3. **A Layer 2 switch has no per-port IPs**, one management SVI, and never routes
    between VLANs. Inter-VLAN routing = router-on-a-stick (or a future L3 switch device).
@@ -22,12 +22,12 @@ Network+ standard. Accuracy is the product.
    (pc/server), Windows CMD (admin laptop). No leakage.
 6. **Dev mode drives the real engine, never bypasses it.** No direct state writes in
    presets/tests; dev UI is compiled out of production (`import.meta.env.DEV`).
-7. **JavaScript only, no TypeScript.** `src/models/` and `src/engine/` stay free of
+7. **JavaScript only, no TypeScript.** `src/models/` and `apps/netsim/src/engine/` stay free of
    React/DOM imports.
 
 ## Stack
 Vite 5 · React 18 · @dnd-kit · @xterm/xterm 5.5 · React Context (`GameContext` via
-`useGame()`, `CareerContext`) · plain CSS (`src/index.css`) · Vitest 4.
+`useGame()`, `CareerContext`) · plain CSS (`apps/netsim/src/index.css`) · Vitest 4.
 
 - `npm run dev` → Vite dev server (5173, or 5174 if busy)
 - `npm test` → Vitest · `npx vite build` → only the xterm chunk-size warning is OK
@@ -35,13 +35,13 @@ Vite 5 · React 18 · @dnd-kit · @xterm/xterm 5.5 · React Context (`GameContex
 ## The brain — read before working
 Project knowledge lives in `.Codex/brain/` (versioned; see `.Codex/brain/README.md`):
 - **STATUS** and **DECISIONS** are included below and always in context.
-- `.Codex/brain/GLOSSARY.md` — device types, interface IDs, `failureReason` codes,
+- `.Codex/brain/netsim/GLOSSARY.md` — device types, interface IDs, `failureReason` codes,
   mission DSL, career-layer terms. Read when a term is unfamiliar.
-- `.Codex/brain/LESSONS.md` — gotchas. Read before touching missions, engine, or
+- `.Codex/brain/netsim/LESSONS.md` — gotchas. Read before touching missions, engine, or
   React state.
 
 Path-scoped rules in `.Codex/rules/` attach automatically when you edit
-`src/models|engine`, missions/data, `src/devMode`, UI/state, or `.github`.
+`src/models|engine`, missions/data, `apps/netsim/src/devMode`, UI/state, or `.github`.
 
 ### Skills (invoke them; the user can too with `/name`)
 | Skill | Use when |
@@ -68,6 +68,6 @@ Path-scoped rules in `.Codex/rules/` attach automatically when you edit
   was touched, then `/brain-update` if project facts changed.
 
 ---
-@.Codex/brain/STATUS.md
-@.Codex/brain/DECISIONS.md
-@docs/NETWORKING_ACCURACY.md
+@.Codex/brain/netsim/STATUS.md
+@.Codex/brain/netsim/DECISIONS.md
+@docs/netsim/NETWORKING_ACCURACY.md

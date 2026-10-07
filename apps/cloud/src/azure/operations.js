@@ -6,7 +6,7 @@
  *   { ok: true, state: nextState, id, warnings: [{ ruleId, message }] }
  *   { ok: false, outcome, ruleId, message }          ← refuse(), see outcomes.js
  *
- * Rule IDs refer to docs/AZURE_ACCURACY.md; only VERIFIED rules are enforced. Cases the
+ * Rule IDs refer to docs/cloud/AZURE_ACCURACY.md; only VERIFIED rules are enforced. Cases the
  * verified spec doesn't cover are refused as `not_modelled` (PHASE_1A_CLOUD_SECTION §6a)
  * instead of guessing what Azure does.
  */

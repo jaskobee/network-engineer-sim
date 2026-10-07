@@ -1,6 +1,6 @@
 ---
 name: new-preset
-description: Add a dev-mode topology preset (working or deliberately broken) to src/devMode/presets.js that drives the real engine via CLI commands, plus its test. Use when asked for a QA preset, a reproducible sandbox scenario, or a one-click broken topology.
+description: Add a dev-mode topology preset (working or deliberately broken) to apps/netsim/src/devMode/presets.js that drives the real engine via CLI commands, plus its test. Use when asked for a QA preset, a reproducible sandbox scenario, or a one-click broken topology.
 ---
 
 # New dev-mode preset
@@ -10,15 +10,15 @@ only through `addSandboxDevice`, `sbConnectInterfaces`, and `engine.execute(devi
 cmd)`.
 
 ## 1. Pick the scenario
-Source from `docs/foundation-smoke-test.md`, the `docs/*-lab.md` files, or a mission's
+Source from `docs/netsim/foundation-smoke-test.md`, the `docs/*-lab.md` files, or a mission's
 topology. Decide:
 - `category: 'working'` with a `pingCheck { src, dst }` that must be `reachable`, or
 - `category: 'broken'` with `expectedFailure: '<failureReason>'` (exact code from
-  `.claude/brain/GLOSSARY.md`).
+  `.claude/brain/netsim/GLOSSARY.md`).
 - Optional `pingCheck.service` (e.g. `{ protocol:'tcp', port:443 }`) and
   `pingCheck.kind: 'webui'` for admin-laptop GUI scenarios.
 
-## 2. Add metadata to `PRESETS[]` in `src/devMode/presets.js`
+## 2. Add metadata to `PRESETS[]` in `apps/netsim/src/devMode/presets.js`
 ```js
 {
   id: 'kebab-id-solved' | 'kebab-id-broken',
@@ -41,7 +41,7 @@ topology. Decide:
 - **Never** call `ctx.refresh()`; never assign to device/interface fields.
 - Add `'kebab-id': _camelName,` to the `builders` map in `buildPreset()`.
 
-## 4. Test in `src/devMode/__tests__/presets.test.js`
+## 4. Test in `apps/netsim/src/devMode/__tests__/presets.test.js`
 Build the preset with the same ctx shape the existing tests use and assert:
 - working → `result.reachable === true`
 - broken → `result.reachable === false && result.failureReason === expectedFailure`

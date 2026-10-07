@@ -18,4 +18,4 @@ permission by Microsoft. Microsoft reserves all other rights."
 
 Cloud Engineer's use is as training material that draws Azure architecture. The terms don't mention
 software explicitly; if Cloud Engineer is ever offered commercially, ask Microsoft first
-(see docs/PHASE_1A_CLOUD_SECTION.md §6).
+(see docs/cloud/PHASE_1A_CLOUD_SECTION.md §6).

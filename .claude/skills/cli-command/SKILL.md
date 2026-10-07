@@ -11,15 +11,15 @@ typed here and type it on real gear.
 ## 1. Identify the engine and the mode
 | Device | Engine | Modes |
 |---|---|---|
-| router, switch, firewall | `src/onprem/CLIEngine.js` | `user_exec → priv_exec → global_config → interface_config` (+ subinterface, vlan, dhcp-pool contexts as implemented) |
-| pc, server, laptop (`os_type` linux) | `src/guest/PCCLIEngine.js` | single shell |
-| laptop (`os_type === 'windows'`) | `src/guest/WindowsCLIEngine.js` | single `C:\Users\…>` prompt |
+| router, switch, firewall | `apps/netsim/src/onprem/CLIEngine.js` | `user_exec → priv_exec → global_config → interface_config` (+ subinterface, vlan, dhcp-pool contexts as implemented) |
+| pc, server, laptop (`os_type` linux) | `apps/netsim/src/guest/PCCLIEngine.js` | single shell |
+| laptop (`os_type === 'windows'`) | `apps/netsim/src/guest/WindowsCLIEngine.js` | single `C:\Users\…>` prompt |
 
 Find the dispatch point (`execute()` → tokenizer → per-mode handlers) and the nearest
 similar command; match its structure.
 
 ## 2. Establish ground truth BEFORE writing code
-Write down, from real-device knowledge (and `docs/NETWORKING_ACCURACY.md` where it
+Write down, from real-device knowledge (and `docs/netsim/NETWORKING_ACCURACY.md` where it
 covers the topic):
 - Exact syntax including abbreviations IOS accepts (`sh ip int br`, `conf t`, `int
   gi0/0`) — use `normalizeIfName()` for interface tokens.
@@ -45,7 +45,7 @@ a code comment starting `// SIMPLIFICATION:` explaining what real gear does.
 - If it's a `show`, it must reflect *live* state including what other engines/GUI set.
 - Update `show running-config` if the command creates persistent config.
 
-## 4. Test in the matching `src/onprem/__tests__/*.test.js` (shells: `src/guest/__tests__/`)
+## 4. Test in the matching `apps/netsim/src/onprem/__tests__/*.test.js` (shells: `apps/netsim/src/guest/__tests__/`)
 - Happy path (correct mode, correct args) — assert state and output.
 - Wrong mode → exact IOS error.
 - Missing/invalid args → exact error.
@@ -55,5 +55,5 @@ a code comment starting `// SIMPLIFICATION:` explaining what real gear does.
   before/after.
 
 ## 5. Finish
-`npm test`, `npx vite build`, then `/accuracy-gate`. If you added a documented
+`npm test`, `npm run build`, then `/accuracy-gate`. If you added a documented
 simplification or a new reason code, `/brain-update` (GLOSSARY / DECISIONS).

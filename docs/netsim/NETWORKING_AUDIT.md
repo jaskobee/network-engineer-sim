@@ -3,7 +3,7 @@
 **Phase 1 — Read-Only Audit**  
 Files inspected: `ipUtils.js`, `Device.js`, `Topology.js`, `CLIEngine.js`,
 `PCCLIEngine.js`, `GameContext.jsx`.  
-Reference: `docs/NETWORKING_ACCURACY.md`, `docs/SANDBOX_TEST_PLAN.md`.
+Reference: `docs/netsim/NETWORKING_ACCURACY.md`, `docs/netsim/SANDBOX_TEST_PLAN.md`.
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * Save-format versioning (src/core/saveFormat.js) — roadmap §3.5, Phase 0 step 5.
+ * Save-format versioning (packages/kernel/saveFormat.js) — roadmap §3.5, Phase 0 step 5.
  *
  * V1  a file without schemaVersion is schemaVersion 1
  * V2  a node without domain is on-prem

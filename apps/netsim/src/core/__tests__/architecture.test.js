@@ -1,11 +1,11 @@
 /**
  * NetSim's internal layering (docs/platform/PLATFORM_ARCHITECTURE.md; roadmap §3.1).
  *
- *   src/core/    NetSim's own kernel (failure reasons, PathResult) — imports nothing outside src/core
+ *   apps/netsim/src/core/    NetSim's own kernel (failure reasons, PathResult) — imports nothing outside apps/netsim/src/core
  *                (shared, domain-free code lives in packages/kernel and is imported as @sim/kernel)
- *   src/guest/   host OS shells (Linux iproute2, Windows CMD)
- *   src/onprem/  on-prem forwarding plane, IOS, DHCP, DNS resolver
- *   src/engine/  game logic on top of the planes
+ *   apps/netsim/src/guest/   host OS shells (Linux iproute2, Windows CMD)
+ *   apps/netsim/src/onprem/  on-prem forwarding plane, IOS, DHCP, DNS resolver
+ *   apps/netsim/src/engine/  game logic on top of the planes
  *
  * A1  core imports only core
  * A4  onprem source does not import guest (shells sit on top of the network, not under it)
@@ -95,7 +95,7 @@ describe('A0 — import scanner', () => {
 })
 
 describe('A1 — core imports only core', () => {
-  it('no file in src/core imports another area', () => {
+  it('no file in apps/netsim/src/core imports another area', () => {
     const bad = local.filter(e => areaOf(e.from) === 'core' && areaOf(e.to) !== 'core')
     expect(show(bad)).toEqual([])
   })

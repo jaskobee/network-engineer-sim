@@ -1,4 +1,4 @@
-# LESSONS — things that cost time once
+# LESSONS — NetSim, things that cost time once
 
 Add an entry only when the code/tests don't already make it obvious. Format:
 **symptom → cause → rule**.
@@ -88,15 +88,12 @@ Add an entry only when the code/tests don't already make it obvious. Format:
   appears after Apply) → clamping only at mount isn't enough → re-clamp from a
   `ResizeObserver` plus window `resize` (`HostConfigPanel`).
 
-- **A table inside a scroll wrapper vanished from a flex-column panel** → a flex item whose `overflow` isn't
-  `visible` gets `min-height: 0` and can shrink to nothing when the column is short → give such wrappers
-  `flex-shrink: 0` (`.nv-table-wrap` in the cloud network view).
 
 ## Tooling / environment
 - **`find` and `grep` in this shell are functions wrapping the Claude binary** and can
   print `error: unknown option '-S'` / `'-G'` → use `command find` / `command grep`
   (or the Grep/Glob tools) when a plain shell call misbehaves.
-- **`npx vite build` warns about chunk size for xterm** → expected, not a failure.
+- **`npm run build` warns about chunk size for xterm** → expected, not a failure.
 - **Driving the app from Playwright** → typing into xterm needs a click on `.xterm` first;
   a terminal opens *over* the device you right-clicked, so close it (title "Close
   terminal") before the next right-click; IOS `ping` takes ~5.5 s, so poll for its result

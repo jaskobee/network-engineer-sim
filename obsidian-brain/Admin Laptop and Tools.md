@@ -5,7 +5,7 @@ tags: [admin-laptop, ui, product]
 # Admin Laptop and Tools
 
 The player's own workstation — a real topology node, not a floating always-works UI
-panel. Design spec: `docs/ADMIN_LAPTOP_AND_TOOLS.md`. Partially implemented; see
+panel. Design spec: `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md`. Partially implemented; see
 status per tool below.
 
 ## Why it's a device, and why that's the whole point
@@ -32,7 +32,7 @@ these actually means underneath.
   needed for the base terminal.
 - Pre-placed, free, and excluded from mission-completion refunds (`type === 'laptop'`
   is explicitly skipped in `computeRefund()`, alongside `isp` — see
-  `src/engine/economy.js`).
+  `apps/netsim/src/engine/economy.js`).
 - A **tools layer** sits on top of the plain terminal: a windowed UI surface (browser
   tab, dashboard, future scanner/analyzer) the plain PC/server doesn't have.
 
@@ -44,7 +44,7 @@ modeling the real distinction later: SSH/web admin requires actual reachability;
 console cable is always out-of-band and always works. **Not built yet** — magic
 access stays global for now (beginners shouldn't be punished for not knowing what a
 console cable is). Gating this behind a mode flag for later missions is an explicit,
-still-open design decision — see `docs/ADMIN_LAPTOP_AND_TOOLS.md` §2 and
+still-open design decision — see `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md` §2 and
 [[Status and Roadmap]].
 
 ## Tool 1 — Firewall Web Admin UI (shipped)

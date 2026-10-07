@@ -1,7 +1,7 @@
 /**
  * BrowserPanel — network-gated browser inside the Admin Laptop.
  *
- * IMPORTANT (see docs/ADMIN_LAPTOP_AND_TOOLS.md):
+ * IMPORTANT (see docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md):
  *   "If the laptop is a floating panel that always works, the lesson is deleted."
  *
  * Every navigation is checked against the real engine:

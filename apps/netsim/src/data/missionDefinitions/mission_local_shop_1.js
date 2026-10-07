@@ -2,10 +2,10 @@
  * mission_local_shop_1 — "Sam's Corner Store: Getting Online"
  *
  * The player's first job for their first persistent client (client_local_shop,
- * see src/data/clients.js). A friend's small shop needs a basic LAN: one
+ * see apps/netsim/src/data/clients.js). A friend's small shop needs a basic LAN: one
  * router, one switch, three PCs — the canonical "inspect → configure → verify"
  * small-business deployment described in the design doc, authored as data
- * against the new declarative objective DSL (src/engine/missionEngine.js)
+ * against the new declarative objective DSL (apps/netsim/src/engine/missionEngine.js)
  * instead of a hand-written checkNNN() function.
  *
  *                 Internet

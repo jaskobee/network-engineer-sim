@@ -3,7 +3,7 @@
  * ISC dhclient fail, instead of silently doing something else.
  *
  * Each case below used to be accepted by the engine and quietly produce a state or a
- * lesson that real Linux would not (see .claude/brain/STATUS.md history). Error strings
+ * lesson that real Linux would not (see .claude/brain/netsim/STATUS.md history). Error strings
  * are the real ones.
  *
  * N1  - a gateway needs a directly connected network: no address / interface off / off-link

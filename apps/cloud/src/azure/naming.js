@@ -1,5 +1,5 @@
 /**
- * Naming rules — docs/AZURE_ACCURACY.md §K (copied from Microsoft Learn "Naming rules and
+ * Naming rules — docs/cloud/AZURE_ACCURACY.md §K (copied from Microsoft Learn "Naming rules and
  * restrictions for Azure resources"). Each validator returns null when the name is valid,
  * or a plain-language reason when it isn't. Uniqueness is checked in operations.js.
  *

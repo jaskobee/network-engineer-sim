@@ -1,5 +1,5 @@
 /**
- * Management hierarchy — docs/AZURE_ACCURACY.md §I, §J (resource groups).
+ * Management hierarchy — docs/cloud/AZURE_ACCURACY.md §I, §J (resource groups).
  *
  * H-I1  one root per tenant, ID = tenant ID, display name "Tenant root group"
  * H-I2  the root can't be moved or deleted (its display name can change)

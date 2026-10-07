@@ -1,9 +1,9 @@
 /**
  * Registry of new-style declarative MissionDefinitions (see
- * src/engine/missionEngine.js for the objective interpreter).
+ * apps/netsim/src/engine/missionEngine.js for the objective interpreter).
  *
  * The 5 legacy missions (mission_001-005) are NOT here — they stay on
- * src/data/missionTasks.js's MISSION_TASKS, consumed verbatim via the legacy
+ * apps/netsim/src/data/missionTasks.js's MISSION_TASKS, consumed verbatim via the legacy
  * adapter in missionEngine.js's getMissionRuntime().
  */
 import { MISSIONS } from '../missions.js'

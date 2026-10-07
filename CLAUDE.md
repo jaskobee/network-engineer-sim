@@ -1,93 +1,50 @@
-# CLAUDE.md — NetSim (network-engineer-sim)
+# CLAUDE.md — the simulator platform (network-engineer-sim)
 
-## What this project is
-NetSim is a **browser-based networking education game**: Cisco Packet Tracer meets a
-tower-defense shop loop. The player is a network engineer who takes client jobs, buys
-hardware, configures devices through **real CLI commands**, and gets paid when the
-network works. Runs entirely in the browser.
+## What this repo is
+Two browser-based education products that share a design language and nothing they don't need to:
 
-**The mission: teach networking fundamentals CORRECTLY** — to CCNA / CCNP / CompTIA
-Network+ standard. Accuracy is the product.
+| Product | App | Teaches | Hard spec | Read first |
+|---|---|---|---|---|
+| **NetSim** | `apps/netsim` | On-prem networking: Cisco IOS, Linux/Windows hosts — CCNA / Network+ | `docs/netsim/NETWORKING_ACCURACY.md` | `apps/netsim/CLAUDE.md` |
+| **Cloud Engineer** (working title, Preview) | `apps/cloud` | Azure infrastructure and architecture | `docs/cloud/AZURE_ACCURACY.md` | `apps/cloud/CLAUDE.md` |
 
-## ⛔ HARD RULES (non-negotiable)
-1. **Networking accuracy outranks convenience.** If a simplification would teach a
-   beginner something they'd have to unlearn for a cert or a real job, do not ship it.
+**Accuracy is the product in both.** Each product's `CLAUDE.md` holds its hard rules; read it before
+changing anything in that app.
+
+## ⛔ HARD RULES (both products)
+1. **Accuracy outranks convenience.** Never teach something a learner must unlearn for a cert or a job.
    When in doubt, flag the conflict instead of silently simplifying.
-2. **`docs/NETWORKING_ACCURACY.md` is a hard spec.** All networking behaviour, CLI
-   commands, `show` output, hints, and mission validation must comply with it.
-3. **A Layer 2 switch has no per-port IPs**, one management SVI, and never routes
-   between VLANs. Inter-VLAN routing = router-on-a-stick (or a future L3 switch device).
-4. **A ping succeeds only along a path real hardware would forward — both directions.**
-5. **Each OS keeps its idioms**: IOS (router/switch/firewall), Linux iproute2
-   (pc/server), Windows CMD (admin laptop). No leakage.
-6. **Dev mode drives the real engine, never bypasses it.** No direct state writes in
-   presets/tests; dev UI is compiled out of production (`import.meta.env.DEV`).
-7. **JavaScript only, no TypeScript.** `src/core/`, `src/guest/`, `src/onprem/` and
-   `src/engine/` stay free of React/DOM imports (enforced by
-   `src/core/__tests__/architecture.test.js`).
+2. **The products stay separate.** An app never imports another app; shared code lives in `packages/`,
+   is domain-free and is imported by name (`@sim/kernel/…`, `@sim/ui/…`). Enforced by
+   `tests/boundaries.test.js`. Hybrid (roadmap Phase 5) will be the only package allowed to import both
+   products' engines.
+3. **Storage keys carry the product's prefix** (`netsim_*`, `cloudeng_*`) — the products share one origin.
+4. **JavaScript only, no TypeScript.** Engines are headless (no React/DOM).
+5. **Never connect to real cloud services or handle real credentials.**
 
-## Stack
-Vite 5 · React 18 · @dnd-kit · @xterm/xterm 5.5 · React Context (`GameContext` via
-`useGame()`, `CareerContext`) · plain CSS (`src/index.css`) · Vitest 4.
+## Layout and commands
+```
+apps/netsim/      NetSim                  apps/cloud/       Cloud Engineer (src/azure = Azure model)
+packages/kernel/  @sim/kernel: ipUtils, saveFormat (imports nothing)
+packages/ui/      @sim/ui: base.css (fonts, tokens, primitives), sign-in, product switcher
+tests/            repo-wide boundary tests        docs/netsim | cloud | platform
+```
+- `npm test` → every workspace as a Vitest project (+ `repo`)
+- `npm run build` → NetSim into `dist/`, then Cloud Engineer into `dist/cloud/`; only the xterm
+  chunk-size warning is OK
+- `npm run dev` / `npm run dev:netsim` (5173) · `npm run dev:cloud` (5180)
+- Architecture and roadmap: `docs/platform/PLATFORM_ARCHITECTURE.md`, `docs/platform/HYBRID_PLATFORM_ROADMAP.md`
 
-- `npm run dev` → Vite dev server (5173, or 5174 if busy)
-- `npm test` → Vitest · `npx vite build` → only the xterm chunk-size warning is OK
-
-## Platform scope (updated 2026-10-05)
-NetSim covers three tracks: On-prem (IOS + Linux), Cloud (Azure first), Hybrid.
-- Cloud behavior is governed by docs/AZURE_ACCURACY.md (hard spec, same status as
-  NETWORKING_ACCURACY.md). Never implement a rule marked TO-VERIFY — stop and flag.
-- Code boundaries: src/core never imports onprem/cloud/hybrid; onprem and cloud never
-  import each other; only src/hybrid may import both. Enforced by an architecture test.
-- NetSim never connects to real Azure or handles real cloud credentials.
-- Roadmap and phase order: docs/HYBRID_PLATFORM_ROADMAP.md.
-
-### Code layout
-| Folder | Holds |
-|---|---|
-| `src/core/` | Shared kernel, imports nothing else: `ipUtils`, `failureReasons` (registry + `REASON.*`), `pathResult` (the `checkPing` contract), `saveFormat` (`schemaVersion`, per-node `domain`) |
-| `src/guest/` | Host OS shells: `PCCLIEngine` (Linux iproute2), `WindowsCLIEngine` (CMD). Known couplings to `onprem` (DHCP client, DNS resolver) are listed in the architecture test |
-| `src/onprem/` | On-prem plane: `Device`, `Topology` (`checkPing`/BFS), `CLIEngine` (IOS), `DHCPEngine`, `dns` (resolver) |
-| `src/cloud/`, `src/hybrid/` | Not yet — roadmap Phases 1 and 5 |
-| `src/engine/` | Game logic on top of the planes: mission DSL, career, tickets, GUI→CLI planners |
-| `src/components/`, `src/state/` | React UI and contexts |
-
-## The brain — read before working
-Project knowledge lives in `.claude/brain/` (versioned; see `.claude/brain/README.md`):
-- **STATUS** and **DECISIONS** are included below and always in context.
-- `.claude/brain/GLOSSARY.md` — device types, interface IDs, `failureReason` codes,
-  mission DSL, career-layer terms. Read when a term is unfamiliar.
-- `.claude/brain/LESSONS.md` — gotchas. Read before touching missions, engine, or
-  React state.
-
-Path-scoped rules in `.claude/rules/` attach automatically when you edit
-`src/core|guest|onprem|engine`, missions/data, `src/devMode`, UI/state, or `.github`.
-
-### Skills (invoke them; the user can too with `/name`)
-| Skill | Use when |
-|---|---|
-| `/accuracy-gate` | Before finalizing **any** networking/CLI/hint/mission change |
-| `/new-mission` | Authoring a mission on the declarative DSL |
-| `/new-preset` | Adding a dev-mode working/broken topology preset |
-| `/cli-command` | Adding/fixing a terminal command or `show` output |
-| `/fault-scenario` | Act 2 troubleshooting scenarios, ticket faults, new reason codes |
-| `/verify-in-browser` | Confirming a change in the running app |
-| `/brain-update` | End of substantial work — keep the brain true |
-
-### Subagents
-- `accuracy-reviewer` — independent review of a diff against the spec (local twin of CI).
-- `mission-qa` — plays a mission on paper + runs its test; reports blockers/mis-teaching.
+## The brain
+`.claude/brain/` (see its README): `PLATFORM.md` (included below) plus one folder per product
+(`netsim/`, `cloud/`), each with STATUS, DECISIONS, GLOSSARY, LESSONS — loaded by that product's
+`CLAUDE.md`. Changing `packages/` affects both products: run both products' checks.
 
 ## Working discipline
-- Networking behaviour is locked in by tests. Broken scenarios assert the exact
-  `failureReason`, never just "failed". Never loosen a test to make code pass without
-  justifying it against the spec.
-- Big changes: plan first, list files, work in phases with a checkpoint each, keep
-  every existing mission playable.
-- Finish with `npm test` + `npx vite build` clean, then `/accuracy-gate` if networking
-  was touched, then `/brain-update` if project facts changed.
+- Big changes: plan first, list files, work in phases with a checkpoint each, keep every mission in
+  both products playable.
+- Finish with `npm test` + `npm run build` clean, the product's accuracy gate (`/accuracy-gate` for
+  NetSim, `/azure-gate` for Cloud Engineer), then `/brain-update` if project facts changed.
 
 ---
-@.claude/brain/STATUS.md
-@.claude/brain/DECISIONS.md
-@docs/NETWORKING_ACCURACY.md
+@.claude/brain/PLATFORM.md

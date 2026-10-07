@@ -11,7 +11,7 @@ the full networking model, the engine architecture, every mission and client, an
 working discipline this codebase has been built under.
 
 > **This vault is prose, not enforcement.** The actual hard rules live in the repo at
-> `CLAUDE.md`, `.claude/brain/`, `.claude/rules/*.md`, and `docs/NETWORKING_ACCURACY.md`
+> `CLAUDE.md`, `.claude/brain/`, `.claude/rules/*.md`, and `docs/netsim/NETWORKING_ACCURACY.md`
 > — those are read by Claude Code every session and are the ground truth. This vault
 > explains and cross-references that material for deeper onboarding; if the two ever
 > disagree, **the repo wins** and this vault is stale and should be corrected.
@@ -76,4 +76,4 @@ behavior *and* exactly where it lives in code.
 teaches networking *correctly* — to CCNA/CCNP/Network+ standard. Every shortcut you're
 tempted to take (a ping that succeeds along a path real hardware would drop, a
 simplification a beginner would have to unlearn later) is a bug, not a feature. See
-[[Vision and Product]] and `docs/NETWORKING_ACCURACY.md` in the repo.
+[[Vision and Product]] and `docs/netsim/NETWORKING_ACCURACY.md` in the repo.

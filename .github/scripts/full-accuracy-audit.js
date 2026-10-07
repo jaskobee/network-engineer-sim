@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Full Accuracy Audit Agent — reviews the ENTIRE networking engine (not a
- * diff) as a seasoned network engineer would, against docs/NETWORKING_ACCURACY.md.
+ * diff) as a seasoned network engineer would, against docs/netsim/NETWORKING_ACCURACY.md.
  *
  * Why this exists alongside ai-review.js:
  *   ai-review.js only ever sees what changed in one PR. A bug introduced two
@@ -11,7 +11,7 @@
  *   long-standing mistakes get caught even when nobody is touching that file.
  *
  * How it works:
- *   1. Reads docs/NETWORKING_ACCURACY.md as the hard spec
+ *   1. Reads docs/netsim/NETWORKING_ACCURACY.md as the hard spec
  *   2. Reads every engine + topology-defining source file in full (current
  *      state, not a diff)
  *   3. Sends it all to Claude claude-opus-5, prompted to audit like a
@@ -80,7 +80,7 @@ function readCapped(relPath) {
   return `\n\n### FILE: ${relPath}\n\`\`\`js\n${capped}\n\`\`\`\n`
 }
 
-const spec = readFileSync(join(ROOT, 'docs/NETWORKING_ACCURACY.md'), 'utf8')
+const spec = readFileSync(join(ROOT, 'docs/netsim/NETWORKING_ACCURACY.md'), 'utf8')
 const engineSource = SOURCES.map(readCapped).join('')
 
 console.log(`Sending spec (${spec.length} chars) + ${SOURCES.length} source files (${engineSource.length} chars) to Claude for a full accuracy audit...\n`)

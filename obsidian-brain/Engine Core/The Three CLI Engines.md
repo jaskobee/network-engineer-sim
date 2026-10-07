@@ -46,7 +46,7 @@ Real iproute2 idioms: `ip addr add|del <ip>/<prefix> dev eth0`, `ip link set eth
 (`RTNETLINK answers: File exists` / `No such process` / `Cannot assign requested address`,
 `Error: Nexthop has invalid gateway.` when no enabled interface covers the gateway, `dhclient …
 is already running - exiting.`), and deleting an interface's address flushes the routes that
-depended on it — see the "Host shell rules" section of `docs/NETWORKING_ACCURACY.md`.
+depended on it — see the "Host shell rules" section of `docs/netsim/NETWORKING_ACCURACY.md`.
 **Simplification:** in NetSim every interface — hosts included — boots administratively down
 (real Linux hosts boot with the NIC up), which is why missions teach `ip link set eth0 up` and
 why addr → up → route is the working order (see [[Interface States and Cabling]]).
@@ -77,7 +77,7 @@ rather than silently corrected. It has its own test file, `winshell.test.js`.
 - Before adding or changing any command, argument form, error string, or `show`
   output: would this literally appear on real IOS / iproute2 / Windows CMD? If
   unsure, reject with the real error rather than accept something invented. See
-  `docs/NETWORKING_ACCURACY.md` and the `/cli-command` skill in
+  `docs/netsim/NETWORKING_ACCURACY.md` and the `/cli-command` skill in
   [[Working with Claude Code]].
 
 ## Related

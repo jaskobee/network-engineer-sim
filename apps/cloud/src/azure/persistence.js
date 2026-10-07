@@ -5,7 +5,7 @@
  *
  * The slice is { sandbox: tenant, mission: { id, tenant } | null, completedMissions: [id] }.
  * On disk every tenant node carries `domain: 'cloud'` and the file carries `schemaVersion`
- * (src/core/saveFormat.js); in memory the model has neither, because everything here is
+ * (packages/kernel/saveFormat.js); in memory the model has neither, because everything here is
  * cloud. Storage is passed in (localStorage in the app, a stub in tests).
  */
 import { SCHEMA_VERSION, schemaVersionOf } from '@sim/kernel/saveFormat.js'

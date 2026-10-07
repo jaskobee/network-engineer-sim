@@ -7,7 +7,7 @@
  *
  * `cloud` is the tenant being worked on: the active mission's (a customer's environment)
  * or, with no mission running, the player's sandbox. Components change it only through
- * `apply(operation, args)` with a function from src/cloud/operations.js (ui.md rule 3).
+ * `apply(operation, args)` with a function from apps/cloud/src/azure/operations.js (ui.md rule 3).
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createCloudState } from '../azure/model.js'

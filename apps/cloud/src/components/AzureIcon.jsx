@@ -1,5 +1,5 @@
 /**
- * Microsoft's Azure architecture icons (src/assets/azure-icons/NOTICE.md).
+ * Microsoft's Azure architecture icons (apps/cloud/src/assets/azure-icons/NOTICE.md).
  * Terms: shown unmodified, at any size, always with the full service name nearby — so
  * this module only ever renders an icon together with SERVICES[kind].name. Never
  * recolour them or use them for anything but the Azure service they represent.

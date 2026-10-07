@@ -18,7 +18,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:<port> --max-time 2
 Stop it afterwards with `pkill -f vite` (allowed in project settings).
 
 ## 2. Get past the login gate
-The beta gate is client-side (`src/state/AuthContext.jsx`). Use the `test` account —
+The beta gate is client-side (`packages/ui/AuthContext.jsx`). Use the `test` account —
 its password is documented in a comment next to its hash in that file. The session
 persists in `sessionStorage` under `netsim_session`.
 

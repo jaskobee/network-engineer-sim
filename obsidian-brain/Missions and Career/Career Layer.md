@@ -7,12 +7,12 @@ tags: [career, clients, contracts, reputation]
 The business/progression system sitting on top of the mission engine — owned by
 `CareerContext` (`useCareer()`), mounted *inside* `GameProvider` (see
 [[Architecture Overview]]). Plain-JS logic lives in
-`src/engine/reputation.js` and `src/engine/contractClock.js`; static content in
-`src/data/clients.js`, `src/data/contracts.js`, `src/data/serviceTickets.js`.
+`apps/netsim/src/engine/reputation.js` and `apps/netsim/src/engine/contractClock.js`; static content in
+`apps/netsim/src/data/clients.js`, `apps/netsim/src/data/contracts.js`, `apps/netsim/src/data/serviceTickets.js`.
 
 ## Clients — persistent entities, not mission metadata
 
-`CLIENT_TEMPLATES` (`src/data/clients.js`) is static data (like `deviceCatalog.js`);
+`CLIENT_TEMPLATES` (`apps/netsim/src/data/clients.js`) is static data (like `deviceCatalog.js`);
 `createClientInstance(templateId)` produces the mutable per-save record. Today there
 is exactly one: `client_local_shop` — "Sam's Corner Store" — whose first mission,
 `mission_local_shop_1`, is offered via `initialMissionIds`. A client instance tracks:
@@ -38,7 +38,7 @@ through a separate unlock table.
 
 ## Contracts — recurring income, distinct from a one-time mission reward
 
-`CONTRACT_TYPES['monthly-support']` (`src/data/contracts.js`) — $500/month,
+`CONTRACT_TYPES['monthly-support']` (`apps/netsim/src/data/contracts.js`) — $500/month,
 established by a mission's `contractOutcome: { type: 'monthly-support' }` field (see
 [[Mission Catalog]] — `mission_local_shop_1` is the current example). A contract
 instance tracks its own SLA bookkeeping: `startedAtMs`, `lastTicketAt`,
@@ -51,7 +51,7 @@ reuses the client's *existing* persistent devices, and completes through the exa
 same objective DSL (see [[Mission DSL]]), just with a much smaller `objectives[]`.
 See [[Mission Catalog]] §Service Tickets for the two that exist today.
 
-### The SLA clock (`src/engine/contractClock.js`) — real wall-clock time
+### The SLA clock (`apps/netsim/src/engine/contractClock.js`) — real wall-clock time
 
 Deliberately `Date.now()`-based, not a turn/day counter, tuned for a single ~20–60
 minute browser session (documented as "a first guess to retune via playtesting," not

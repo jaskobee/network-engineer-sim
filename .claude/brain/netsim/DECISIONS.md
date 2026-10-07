@@ -1,4 +1,4 @@
-# DECISIONS — locked design choices
+# DECISIONS — NetSim, locked design choices
 
 Each entry: **what**, **why**, **date**. If you believe one is wrong, say so to the user
 and get an explicit go-ahead before changing it. Never silently work around one.
@@ -8,27 +8,12 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 - **Accuracy outranks convenience** (project founding). If a simplification would teach
   something a learner must unlearn for CCNA / Network+ / a real job, it doesn't ship.
   Unavoidable simplifications are labelled as such in-game or in a code comment.
-  `docs/NETWORKING_ACCURACY.md` is the hard spec.
-- **Three tracks: On-prem, Cloud (Azure first), Hybrid** (`docs/HYBRID_PLATFORM_ROADMAP.md`,
-  2026-10-05). Cloud behaviour is governed by `docs/AZURE_ACCURACY.md` (same status as the
-  networking spec); a rule marked TO-VERIFY is never implemented — stop and flag. NetSim
-  never connects to real Azure or handles real cloud credentials. One phase at a time.
-- **Cloud is a separate section with its own progress** (owner, 2026-10-06): next to Missions/Sandbox,
-  own missions, progress and sandbox; the on-prem game stays untouched (supersedes the roadmap's original
-  "one economy, one career"). It teaches the *whole* Azure infrastructure and architecture, not only
-  networking. First release = core landing zone + governance (management groups, subscriptions, RGs,
-  VNet/NSG, VM, storage, RBAC, Azure Policy — roadmap Phases 1a/1b, after the Phase 0.5 spec work);
-  players build on a visual canvas with portal-style forms first, `az` CLI later on the same model.
-- **New game resets the on-prem game only; the Cloud section has its own Start over** (owner, 2026-10-06). The sweep is a
-  prefix rule (`resetGuard.sweptByNewGame`: every `netsim*` key except `netsim_cloud*`).
-- **The cloud builder follows the real Azure portal workflow** (owner, 2026-10-07): every create is Review + create
-  (validation first, nothing deployed on failure), the VM wizard creates the VM's NIC and optional public IP with it, a
-  standalone NIC can't get a public IP at create (N4). Names NetSim gives auto-created resources (`<vm>-nic`, `<vm>-ip`) and
-  all tenant/subscription GUIDs are made up — allowed by the owner. Each cloud mission runs in its own customer tenant.
-- **RBAC principals are fictional users and groups** (owner, 2026-10-06): a small labelled set per mission,
-  no Entra ID model, labelled in-game as a simplification. *Why:* RBAC is the lesson; modelling Entra would
-  be a project of its own.
-- **Stay on the web, no game engine** (see `docs/ADMIN_LAPTOP_AND_TOOLS.md` §0).
+  `docs/netsim/NETWORKING_ACCURACY.md` is the hard spec.
+- **NetSim is one of two products** (owner, 2026-10-07): it teaches on-prem networking; Azure lives in its own
+  product, Cloud Engineer (`apps/cloud`). Repo-wide and shared decisions — the split, shared packages, storage
+  key prefixes, the design system — are in `../PLATFORM.md`; cloud decisions in `../cloud/DECISIONS.md`. NetSim's
+  New game sweeps every `netsim*` key; other products keep their own prefixes.
+- **Stay on the web, no game engine** (see `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md` §0).
   The UI is terminals, tables, forms — DOM territory. Install-free is a core advantage
   over Packet Tracer / GNS3.
 - **Dev mode is a faster way to drive the real engine, never a way around it.**
@@ -42,7 +27,7 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   `ip route`, no `no switchport`. Management via one SVI. It never routes between VLANs.
   Inter-VLAN routing = router-on-a-stick. A separate "Layer 3 Switch" device type may
   be added later; the plain switch stays L2. Contract comment lives at the top of
-  `src/onprem/CLIEngine.js`.
+  `apps/netsim/src/onprem/CLIEngine.js`.
 - **A ping succeeds only if both forward AND return paths forward** (`checkPing` runs
   the BFS both ways; one-way routing yields `no_return_path`).
 - **Each OS keeps its own idioms**: IOS on router/switch/firewall, iproute2 on
@@ -62,17 +47,18 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 
 ## Architecture
 
-- **JavaScript only, no TypeScript.**
-- **The engine is a pure headless core** (`src/core`, `src/guest`, `src/onprem`, `src/engine`) —
-  zero React/DOM imports, enforced by `src/core/__tests__/architecture.test.js`. The UI is
+- **JavaScript only, no TypeScript** (platform-wide, `../PLATFORM.md`).
+- **The engine is a pure headless core** (`apps/netsim/src/core`, `apps/netsim/src/guest`, `apps/netsim/src/onprem`, `apps/netsim/src/engine`) —
+  zero React/DOM imports, enforced by `apps/netsim/src/core/__tests__/architecture.test.js`. The UI is
   disposable; the engine is the asset.
-- **Folder boundaries, not packages** (Phase 0, 2026-10-06; roadmap §3.1). `core` imports only
-  `core`; `onprem` ↔ `cloud` never; only `hybrid` imports both; `onprem` never imports `guest`.
-  Both host shells (Linux *and* Windows) live in `guest/` so cloud VMs can reuse them.
+- **Folder boundaries inside the app** (Phase 0, 2026-10-06; roadmap §3.1). `core` imports only
+  `core`; `onprem` never imports `guest`. Both host shells (Linux *and* Windows) live in `guest/`
+  so they could one day serve Cloud Engineer's VMs too — they would move to a package first.
   *Known coupling:* `guest` → `onprem` for the DHCP client and DNS resolver — listed in the
-  architecture test and to be resolved before cloud VMs reuse the shell (Phase 2), because an
-  Azure NIC gets its address from the platform, not from a player-run DHCP server.
-- **Failure reasons are a registry** (`src/core/failureReasons.js`): engine code emits
+  architecture test and to be cut before any reuse, because an Azure NIC gets its address from the
+  platform, not from a player-run DHCP server. Shared, domain-free code (`ipUtils`, `saveFormat`)
+  lives in `@sim/kernel` since the split (2026-10-07).
+- **Failure reasons are a registry** (`apps/netsim/src/core/failureReasons.js`): engine code emits
   `REASON.*`, never literals; emitted strings never change. Only codes the engine really emits
   are registered — planned ones join when implemented. (2026-10-06)
 - **Saves gain `schemaVersion: 1` next to the existing `version: 2`, and every device a
@@ -99,7 +85,7 @@ and get an explicit go-ahead before changing it. Never silently work around one.
   strict; Linux uses `resolvectl`; a host holds a list of name servers (primary + secondary).**
   *Why:* Windows DNS Manager and Packet Tracer both use a GUI for server records; CCNA tests the
   router CLI; a single name server per host would have to be unlearned. Phase 1 (client resolver, the three
-  shells, host GUI) built 2026-09-20; servers/`ip dns server`/cache are phases 2–3 — see `docs/DNS_DESIGN.md`.
+  shells, host GUI) built 2026-09-20; servers/`ip dns server`/cache are phases 2–3 — see `docs/netsim/DNS_DESIGN.md`.
   A host's name servers are `dns_servers` (by hand) over `dhcp_dns_servers` (lease); static wins. (2026-09-20)
 - **Long-term-contract tickets are paced, not periodic.** First ticket 5–9 min after a contract
   starts, then a rolled 10–20 min gap after each fix or expiry, ×2.5 while a job-board mission is
@@ -113,22 +99,14 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 
 ## UI design system (2026-09-20)
 
-- **Colour is signal.** A quiet cool-graphite UI where the only saturated colours are
-  what a port LED would say (green up/done, amber attention/down, red fault) plus one
-  blue for what you can act on. *Why:* it keeps the LED metaphor meaningful — colouring
-  a firewall red or a PC green by category makes "green = up" unreadable.
+- **Colour is signal, two self-hosted typefaces, sentence case** — shared by both products, recorded in
+  `../PLATFORM.md` ("UI design system").
 - **Menus always come over everything else.** z-index scale: floorplan ≤ 50 · job panel 1500 ·
   terminal / Configure GUI windows 1600 · toasts 2400 · dialogs 2500+ · admin laptop 3000 ·
   menus (settings, device and background context menus) 5000. *Why:* owner rule; a menu hidden
   under a window is unusable. New floating UI picks a slot on this scale. (2026-09-20)
-- **Two self-hosted typefaces** (`src/assets/fonts`, SIL OFL): Barlow Semi Condensed for
-  UI, Atkinson Hyperlegible Mono for data and the terminal. *Why:* the mono was chosen
-  because IPs, interface names and commands must keep `0/O` and `1/l/I` apart; both are
-  bundled so the app stays install-free/offline and makes no third-party requests.
 - **Mission progress is drawn as a patch cable** (`.step`): one LED per task, cable lit
   up to the current step. Difficulty is drawn as signal-strength bars, not stars.
-- **Sentence case, no tracked-caps eyebrows, no emoji as controls.** Emoji stay only
-  where they are player content (client/company avatars).
 
 ## GUI writes (2026-09-20)
 
@@ -148,7 +126,7 @@ and get an explicit go-ahead before changing it. Never silently work around one.
 
 - **Vitest is the test runner**; networking behaviour is locked in by tests. Broken
   scenarios assert the exact `failureReason`, not just `reachable === false`.
-- **The accuracy gate (`docs/NETWORKING_ACCURACY.md` Prompt 8) runs before finalizing
+- **The accuracy gate (`docs/netsim/NETWORKING_ACCURACY.md` Prompt 8) runs before finalizing
   any networking change** — locally via `/accuracy-gate`, and again in CI via
   `.github/scripts/ai-review.js`.
 - **The brain lives in `.claude/` and is versioned** (2026-09-11). Only

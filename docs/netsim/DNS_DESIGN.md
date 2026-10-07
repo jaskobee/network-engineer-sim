@@ -4,7 +4,7 @@ Status: **phase 1 built (2026-09-20); phases 2 and 3 not started.** The owner an
 approved phase 1 the same day (see "Decisions" at the end). Written after the host Configure GUI shipped without a
 DNS field, because there was no engine behind one and NetSim does not fake settings — now there is, and the window
 has Preferred / Alternate DNS server fields. The rules the shipped code obeys live in
-`docs/NETWORKING_ACCURACY.md` §DNS rules; this file keeps the design and the plan.
+`docs/netsim/NETWORKING_ACCURACY.md` §DNS rules; this file keeps the design and the plan.
 
 Big missions will need DNS (name → address, a DNS server on the LAN, a firewall that must
 let UDP/53 through, "the site works by IP but not by name"). This doc records how Cisco Packet
@@ -72,7 +72,7 @@ PT's client fields are just data; here the resolver must go through the real pat
   working in a correctly built network and stops working in a broken one.
 
 **Resolver** — one pure function, `resolveName(topology, clientDevice, name)` in a new
-`src/onprem/dns.js` (no React/DOM). It returns `{ ok, ip, reason, server }`:
+`apps/netsim/src/onprem/dns.js` (no React/DOM). It returns `{ ok, ip, reason, server }`:
 1. `name` is already an IP → done.
 2. No name server on the client → `no_dns_server`.
 3. For each configured server **in order**: `topology.checkPing(clientIp, dnsIp, { protocol: 'udp', port: 53 })` — the existing bidirectional,
@@ -136,7 +136,7 @@ DNS server wrong / service off / record missing / firewall blocking udp/53.
 
 ## 8. What phase 1 shipped
 
-- `src/onprem/dns.js` — `resolveName`, `queryServer`, `effectiveDnsServers`, `dnsSource`; the public zone and resolvers.
+- `apps/netsim/src/onprem/dns.js` — `resolveName`, `queryServer`, `effectiveDnsServers`, `dnsSource`; the public zone and resolvers.
 - Linux: `ping <name>`, `nslookup <name> [server]`, `resolvectl status|dns|revert|query`, `cat /etc/resolv.conf`
   (and the upstream file); `dhclient` fills the lease list.
 - Windows: `netsh interface ip set|add|delete dns`, `show config|dnsservers`, `ipconfig /all` (several servers), `nslookup`,

@@ -26,7 +26,7 @@ scenarios in Vitest assert the **exact** reason code, and loosening a test to ac
 
 ## Specified but not yet distinguished — currently fall through to `no_route`
 
-These are fully specified in `docs/NETSIM_FAULTS_AND_FEATURES.md` (with exact
+These are fully specified in `docs/netsim/NETSIM_FAULTS_AND_FEATURES.md` (with exact
 manifestation + IOS/Linux ping output + fix) but the engine does not yet emit them as
 their own code — implementing each is explicit, named work in
 [[Status and Roadmap]] and [[Fault Injection System (Act 2)]]:
@@ -62,7 +62,7 @@ first — see [[Ping Reachability Engine (checkPing)]]).
    GLOSSARY.md` (the two should stay in sync — GLOSSARY.md is what Claude Code reads
    automatically every session).
 4. If it replaces a fallthrough, remove it from the "Next up" list in
-   `.claude/brain/STATUS.md`.
+   `.claude/brain/netsim/STATUS.md`.
 
 ## Related
 

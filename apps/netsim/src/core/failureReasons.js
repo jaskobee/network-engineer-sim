@@ -14,7 +14,7 @@
  * duplex_mismatch — STATUS "Next up") and the DHCP client's own `reason` values
  * (link_down / no_link / pool_exhausted / no_server), which are a separate result type.
  *
- * Pure data — core imports nothing (src/core/__tests__/architecture.test.js A1).
+ * Pure data — core imports nothing (apps/netsim/src/core/__tests__/architecture.test.js A1).
  */
 
 const ENTRIES = [

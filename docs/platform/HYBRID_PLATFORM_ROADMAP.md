@@ -2,6 +2,13 @@
 
 **Status:** Settled direction as of 2026-10-05; cloud section scope updated 2026-10-06 (§1, §2, §4–§6).
 Design document — no code in this file.
+
+> **Update 2026-10-07 — platform split.** On-prem and cloud are now **two separate products** in one
+> monorepo: NetSim (`apps/netsim`) and Cloud Engineer (`apps/cloud`, Azure only for now), sharing only
+> `packages/kernel` and `packages/ui`. Where this roadmap says "section of the app", read "product"; the
+> phases (§4) are unchanged and now belong to Cloud Engineer; Hybrid (Phase 5) becomes `packages/hybrid`,
+> the only place allowed to import both products' engines. Layout, reasoning and trade-offs:
+> `PLATFORM_ARCHITECTURE.md` (this folder). §3.1 and §7 below are superseded.
 **Companion specs:** `NETWORKING_ACCURACY.md` (on-prem hard spec), `AZURE_ACCURACY.md`
 (cloud hard spec), `PHASE_0_KERNEL_EXTRACTION.md` (first implementation phase).
 
@@ -86,27 +93,24 @@ prerequisite for anything in the cloud section.
 
 ## 3. Architecture
 
-### 3.1 Code boundaries (start simple)
+### 3.1 Code boundaries
 
-Do **not** introduce a multi-package workspace yet — it adds tooling cost with no
-payoff until there's a second deployable. Start with folder boundaries inside the
-existing Vite app, enforced by an architecture test:
+*Superseded 2026-10-07.* The original plan (folder boundaries inside one Vite app: `src/core`, `guest`,
+`onprem`, `cloud`, `hybrid`) was built in Phase 0 and Phase 1a, then replaced by the platform split:
 
 ```
-src/
-  core/       ipUtils, PathResult + failureReason registry, evaluator interfaces,
-              mission/fault framework, save-format versioning, DNS resolver (later)
-  guest/      Linux shell engine (today's PCCLIEngine) — shared by on-prem PCs/servers
-              AND Azure VMs. One Linux, two worlds.
-  onprem/     Device, Topology (on-prem forwarding plane), IOS CLIEngine, DHCPEngine
-  cloud/      Resource model, ARM-style validator, Azure forwarding plane,
-              az CLI engine, Network Watcher tools        (Phase 1+)
-  hybrid/     Boundary adapters: VPN gateway ↔ on-prem router  (Phase 5)
-  components/ UI (canvas lenses, inspectors, terminals, mission panel)
+apps/netsim/src/   core (failure reasons, PathResult) · guest · onprem · engine · UI
+apps/cloud/src/    azure (resource model, operations, missions) · UI
+packages/kernel/   ipUtils, saveFormat — shared, domain-free
+packages/ui/       design system, sign-in, product switcher
+packages/hybrid/   (Phase 5) boundary adapters — the only code allowed to import both engines
 ```
 
-Rule: `core` imports nothing from `onprem`/`cloud`/`hybrid`. `onprem` and `cloud`
-never import each other — only `hybrid` may import both.
+Rules: apps never import each other; packages never import apps; shared code is domain-free and imported
+by package name. Enforced by `tests/boundaries.test.js`; NetSim's internal layering by its own
+architecture test. When Hybrid starts, the two engines move from their apps into packages so
+`packages/hybrid` can depend on them. The Linux/Windows guest shells move to a package only if Cloud
+Engineer's VMs get a shell — after their DHCP/DNS coupling to `onprem` is cut.
 
 ### 3.2 One evaluator contract, pluggable forwarding planes
 
@@ -194,7 +198,7 @@ Claude Code receives **one phase at a time**.
 3. **Cloud Phases 1a → 1b → 2 → 3 → 4**, then **Hybrid (5)**. How these interleave with the
    on-prem backlog (DNS phase 2, Act 2 troubleshooting) is the owner's call per phase.
    Note the overlap: on-prem DNS phase 2 and cloud Phase 4 both want a shared resolver
-   in `src/core` — design it once.
+   in `apps/netsim/src/core` — design it once.
 5. **Admin Laptop** (firewall GUI, netscan) is paused, not cancelled. WireFish's
    engine question is folded into the PathResult decision in §3.2.
 
@@ -243,15 +247,8 @@ Claude Code receives **one phase at a time**.
 
 ---
 
-## 7. Proposed CLAUDE.md addition
+## 7. CLAUDE.md
 
-```
-## Platform scope (updated 2026-10-05)
-NetSim covers three tracks: On-prem (IOS + Linux), Cloud (Azure first), Hybrid.
-- Cloud behavior is governed by docs/AZURE_ACCURACY.md (hard spec, same status as
-  NETWORKING_ACCURACY.md). Never implement a rule marked TO-VERIFY — stop and flag.
-- Code boundaries: src/core never imports onprem/cloud/hybrid; onprem and cloud never
-  import each other; only src/hybrid may import both. Enforced by an architecture test.
-- NetSim never connects to real Azure or handles real cloud credentials.
-- Roadmap and phase order: docs/HYBRID_PLATFORM_ROADMAP.md.
-```
+*Superseded 2026-10-07.* The "Platform scope" block proposed here was added to `CLAUDE.md` and then
+replaced by the split: the root `CLAUDE.md` now describes the platform, and each product has its own
+(`apps/netsim/CLAUDE.md`, `apps/cloud/CLAUDE.md`).

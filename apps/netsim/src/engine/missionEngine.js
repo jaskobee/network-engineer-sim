@@ -1,8 +1,8 @@
 /**
  * Mission objective interpreter — the declarative replacement for hand-written
- * checkNNN()/diagnoseNNN() functions (see src/data/missionTasks.js).
+ * checkNNN()/diagnoseNNN() functions (see apps/netsim/src/data/missionTasks.js).
  *
- * A MissionDefinition (src/data/missionDefinitions/) supplies `deviceRoles` (how
+ * A MissionDefinition (apps/netsim/src/data/missionDefinitions/) supplies `deviceRoles` (how
  * to find "the router" / "the shop PC" etc. inside a topology) and `objectives`
  * (declarative conditions to evaluate against those roles). This module never
  * touches CLIEngine/PCCLIEngine/WindowsCLIEngine/Topology/Device state directly —
