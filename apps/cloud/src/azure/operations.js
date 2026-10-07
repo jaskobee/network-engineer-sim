@@ -428,6 +428,17 @@ export function createNetworkInterface(state, args) {
 
 // ── Managed disks and virtual machines (§L) ────────────────────────────────
 
+/**
+ * A disk size is a whole number of GiB. Azure's maximum per disk type is not in the verified
+ * spec (L7 lists the types only), so sizes above the simulator's own cap (catalog maxGiB) are
+ * refused as not modelled — never presented as an Azure limit.
+ */
+function checkDiskSize(kind, sizeGiB) {
+  if (!Number.isInteger(sizeGiB) || sizeGiB < 1) return refuse(OUTCOME.INVALID_VALUE, null, 'A disk size is a whole number of GiB, at least 1.')
+  if (sizeGiB > kind.maxGiB) return notModelled(`${kind.displayName} disks larger than ${kind.maxGiB.toLocaleString('en-US')} GiB`)
+  return null
+}
+
 export function createDisk(state, args) {
   const { name, diskType, redundancy = 'LRS', sizeGiB } = args
   const placed = checkPlacement(state, args) ?? checkNewResource(state, {
@@ -439,8 +450,8 @@ export function createDisk(state, args) {
   if (!['LRS', 'ZRS'].includes(redundancy)) return refuse(OUTCOME.INVALID_VALUE, 'L8', 'Managed disks are LRS or ZRS.')
   if (redundancy === 'ZRS' && diskType === 'UltraDisk') return refuse(OUTCOME.INVALID_VALUE, 'L8', 'Ultra Disks don\'t support ZRS — they\'re LRS only.')
   if (redundancy === 'ZRS' && !['PremiumSSD', 'StandardSSD'].includes(diskType)) return notModelled(`ZRS for ${kind.displayName}`)
-  if (!Number.isInteger(sizeGiB) || sizeGiB < 1 || sizeGiB > kind.maxGiB)
-    return refuse(OUTCOME.INVALID_VALUE, 'L7', `${kind.displayName} disks are 1–${kind.maxGiB.toLocaleString('en-US')} GiB.`)
+  const badSize = checkDiskSize(kind, sizeGiB)
+  if (badSize) return badSize
   const next = clone(state)
   const disk = newResource(args, TYPES.DISK, name, { diskType, redundancy, sizeGiB, managedBy: null })
   next.resources[disk.id] = disk
@@ -469,7 +480,8 @@ export function createVirtualMachine(state, args) {
   if (!os) return refuse(OUTCOME.INVALID_VALUE, 'L7', 'Pick an OS disk type.')
   if (!os.osCapable) return refuse(OUTCOME.DISK_NOT_OS_CAPABLE, 'L7', `${os.displayName} can't be used as an OS disk — use Premium SSD, Standard SSD or Standard HDD.`)
   const osSize = osDisk.sizeGiB ?? 128
-  if (!Number.isInteger(osSize) || osSize < 1 || osSize > os.maxGiB) return refuse(OUTCOME.INVALID_VALUE, 'L7', `${os.displayName} disks are 1–${os.maxGiB.toLocaleString('en-US')} GiB.`)
+  const badSize = checkDiskSize(os, osSize)
+  if (badSize) return badSize
   for (const diskId of dataDiskIds) {
     const disk = state.resources[diskId]
     if (disk?.type !== TYPES.DISK) return refuse(OUTCOME.NOT_FOUND, null, 'That disk does not exist.')

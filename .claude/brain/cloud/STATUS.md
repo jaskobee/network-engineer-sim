@@ -22,7 +22,8 @@ Repo-wide facts are in `../PLATFORM.md`._
 - **Network + compute + storage**: VNet, subnets (resize, overlap, reserved addresses, usable count), NSG with the
   exact default rules (stored and shown, **not evaluated yet** — Phase 2), public IP (Standard only), NIC, disk, VM,
   storage account (kind, redundancy, network access).
-- **Portal workflow**: every create is Review + create (dry-run validation first; nothing deployed on failure);
+- **Portal workflow**: every create — resource groups included — is Review + create (`useReview` + `ReviewStep` in
+  `formParts.jsx`: dry-run validation first; nothing deployed on failure);
   the VM wizard (Basics / Disks / Networking) creates `<vm>-nic` and optional `<vm>-ip` all-or-nothing
   (`deployVirtualMachine`); a standalone NIC can't take a public IP at create (N4).
 - **UI** (`src/components/`): tabs Missions · Management (tree + forms) · Network (region → VNet → subnet → NIC
@@ -36,10 +37,12 @@ Repo-wide facts are in `../PLATFORM.md`._
   completedMissions }` saved under `cloudeng_save_v1` (kind `cloudeng-save`, `schemaVersion`, `domain: 'cloud'` per
   node); an unreadable save is kept under `cloudeng_save_v1_unreadable`.
 
+**Phase 1a is complete** (2026-10-07): accuracy gate over all cloud code (every cited rule VERIFIED), all three
+missions played through the UI in the browser.
+
 ## Next up
-1. **Phase 1a step 7:** run the cloud accuracy gate (`/azure-gate`) over everything; Review + create for resource
-   groups in the Management tab (still immediate — the portal validates there too); cloud GLOSSARY kept current;
-   a final full browser pass.
+1. **Owner decisions from the gate** (`docs/cloud/PHASE_1A_CLOUD_SECTION.md` §6a): the spec's K-vs-C2 contradiction on
+   NSG rule names, the `DenyAllInbound` casing re-check, the "Disable(d)" portal label, sourcing disk size limits.
 2. **Phase 1b:** RBAC (fictional users and groups), Azure Policy (effects still to choose — suggested Deny, Audit,
    Modify, Disabled), locks.
 3. **Phase 2:** NSG/route evaluation as a flow engine (reason codes, Network Watcher-style tools), private
@@ -50,3 +53,4 @@ Repo-wide facts are in `../PLATFORM.md`._
   VNet FAQ DHCP contradiction (A7).
 - Plan §6a gaps, e.g. the public IP / NSG same-region rule.
 - The VM wizard has no administrator-account step (username, password / SSH key); the form says so.
+- Disk sizes above the simulator's cap are `not_modelled` (Azure's per-type maximums aren't in the spec yet).

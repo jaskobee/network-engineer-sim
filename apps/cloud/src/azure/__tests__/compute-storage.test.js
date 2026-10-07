@@ -73,9 +73,13 @@ describe('CS-L7/L8 — managed disks', () => {
     const r = must(op.createVirtualMachine(d.state, vm({ networkInterfaceIds: [nicId], dataDiskIds: [d.id] })))
     expect(r.state.resources[d.id].properties.managedBy).toBe(r.id)
   })
-  it('disk sizes follow each type\'s maximum', () => {
-    expectRefused(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSD', sizeGiB: 32768 }), OUTCOME.INVALID_VALUE, 'L7')
+  // Azure's per-type maximum sizes are not in the verified spec (L7 lists types only), so the
+  // simulator's own cap is refused as not_modelled, never as an Azure rule (gate 2026-10-07).
+  it('sizes above the simulator\'s cap are not modelled; a size is a whole number ≥ 1', () => {
+    expectRefused(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSD', sizeGiB: 32768 }), OUTCOME.NOT_MODELLED, null)
     expect(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSDv2', sizeGiB: 32768 }).ok).toBe(true)
+    expectRefused(op.createDisk(state, { ...at(), name: 'tiny', diskType: 'PremiumSSD', sizeGiB: 0 }), OUTCOME.INVALID_VALUE, null)
+    expectRefused(op.createVirtualMachine(state, vm({ networkInterfaceIds: [nicId], osDisk: { diskType: 'PremiumSSD', sizeGiB: 40000 } })), OUTCOME.NOT_MODELLED, null)
   })
 })
 

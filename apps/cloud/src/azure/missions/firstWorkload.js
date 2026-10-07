@@ -66,7 +66,7 @@ export const firstWorkloadMission = {
     'Azure keeps five addresses of every subnet, so snet-web has 251 usable addresses, not 254.',
     'A VM, its network interface and its virtual network must share a region — that\'s why vnet-hub-neu was no use here.',
     'New subnets are private: without a public IP or NAT gateway the VM has no default way out to the internet.',
-    'The NSG on the subnet allows HTTPS in; every other inbound flow from outside the VNet meets DenyAllInbound.',
+    'The NSG on the subnet allows HTTPS in; apart from Azure Load Balancer traffic (default rule AllowAzureLoadBalancerInBound), every other inbound flow from outside the VNet meets DenyAllInbound.',
   ],
   setup() {
     let s = createCloudState({ tenantId: TENANT })

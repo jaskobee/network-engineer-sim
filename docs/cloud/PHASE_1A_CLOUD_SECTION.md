@@ -140,6 +140,18 @@ inventing an Azure rule:
 - whether resource-group and other resource names are compared case-insensitively
   (uniqueness checks compare exactly for now).
 
+Found by the step-7 accuracy gate (2026-10-07):
+- **Managed disk maximum sizes** aren't in the spec (L7 lists the types only). Sizes above the simulator's own cap
+  (`catalog.DISK_TYPES[].maxGiB`) are now refused as `not_modelled` instead of citing L7.
+- **NSG security-rule names — the spec contradicts itself.** Table K says `/securityRules` follow the VNet rule (start
+  with a letter or digit); C2 says "starts with a word character" (an underscore too). The code follows C2, as before.
+  Owner to decide which is right.
+- **`DenyAllInbound` capitalisation** — C2 asks for a re-check in the portal / `az network nsg rule list
+  --include-default` before the string ships; it is shown in the NSG panel and a mission debrief. Still open.
+- **Portal label for disabled public access** — M4 quotes the portal option as "Disable"; the form says "Disabled".
+  Left as is until checked.
+- **OS disk size** — the VM wizard starts at 128 GiB; the form now says that is the simulator's default, not Azure's.
+
 ## 7. Work plan (checkpoint after each step: `npm test`, `npx vite build`)
 
 1. `src/cloud` model, naming, CIDR, validator, operations, outcomes + tests for every rule in §2.
@@ -161,6 +173,11 @@ inventing an Azure rule:
    runs in its own customer tenant (made-up GUIDs, allowed by the owner); the sandbox is kept.
 7. Cloud accuracy gate (spec §"Cloud accuracy gate"), browser check, brain update
    (STATUS, DECISIONS, GLOSSARY: cloud terms and outcomes).
+   **Done 2026-10-07** (after the platform split — Cloud Engineer is its own app). Every rule ID the code cites (40)
+   is VERIFIED; fixes: disk sizes no longer claimed as an Azure limit, the storage note follows the access setting
+   (M4), the mission 2 debrief no longer hides AllowAzureLoadBalancerInBound, the OS-disk default is labelled.
+   Resource groups now go through Review + create too (shared `useReview` / `ReviewStep`). Browser: all three
+   missions completed through the UI, every trap refused for its rule, no page errors. Open flags in §6a.
 
 ## 7a. Done when
 

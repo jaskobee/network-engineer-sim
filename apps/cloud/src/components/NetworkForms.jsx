@@ -12,7 +12,7 @@ import * as op from '../azure/operations.js'
 import { TYPES, resourcesOfType, subnetId } from '../azure/model.js'
 import { REGIONS, regionDisplayName } from '../azure/regions.js'
 import { DISK_TYPES, VM_SIZES, VM_IMAGES, STORAGE_KINDS } from '../azure/catalog.js'
-import { Field, Facts, Form, Select } from './formParts.jsx'
+import { Field, Facts, Form, Select, useReview, ReviewStep } from './formParts.jsx'
 
 export const CREATE_KINDS = [
   [TYPES.VIRTUAL_MACHINE, 'Virtual machine'],
@@ -126,7 +126,7 @@ function VirtualMachineForm({ cloud, subscriptionId, submit }) {
       <Field label="OS disk type" hint="Ultra Disk and Premium SSD v2 can't be OS disks.">
         <Select value={osType} onChange={setOsType} options={osDiskTypes.map(([k, d]) => [k, d.displayName])} />
       </Field>
-      <Field label="OS disk size (GiB)"><input className="mono" type="number" min="1" value={osSize} onChange={e => setOsSize(e.target.value)} /></Field>
+      <Field label="OS disk size (GiB)" hint="The 128 GiB starting value is this simulator's own default, not Azure's."><input className="mono" type="number" min="1" value={osSize} onChange={e => setOsSize(e.target.value)} /></Field>
       <Field label="Attach existing data disks (optional)">
         <Checklist items={disks.map(d => [d.id, `${d.name} — ${DISK_TYPES[d.properties.diskType].displayName}, ${d.properties.sizeGiB} GiB (${regionDisplayName(d.location)})`])}
           value={diskIds} onChange={setDiskIds} empty="No unattached disks." />
@@ -336,41 +336,22 @@ const FORMS = {
  * deploys after the player confirms on the review page.
  */
 export function CreatePanel({ cloud, subscriptionId, run, report, kind, onKind }) {
-  const [pending, setPending] = useState(null)   // { operation, args, summary, warnings }
+  const review = useReview(cloud, report)
+  const { pending } = review
   const CreateForm = FORMS[kind]
   const hasGroup = Object.values(cloud.resourceGroups).some(g => g.subscriptionId === subscriptionId)
-
-  function submit(operation, args, summary) {
-    const validation = operation(cloud, args)        // dry run — nothing is applied
-    if (!validation.ok) { report(validation); return }
-    report(null)
-    setPending({ operation, args, summary, warnings: validation.warnings })
-  }
 
   return (
     <section className="nv-create">
       <h2>{pending ? 'Review + create' : 'Create a resource'}</h2>
-      {pending && (
-        <div className="nv-review">
-          <p className="nv-valid"><i className="led green" />Validation passed</p>
-          {pending.warnings.map((w, i) => <p key={i} className="mv-note"><i className="led amber" /> {w.message}</p>)}
-          <Facts rows={pending.summary} />
-          <div className="nv-review-actions">
-            <button className="btn" type="button" onClick={() => setPending(null)}>Back</button>
-            <button className="btn primary" type="button" onClick={() => {
-              const r = run(pending.operation, pending.args)
-              if (r.ok) setPending(null)
-            }}>Create</button>
-          </div>
-        </div>
-      )}
+      {pending && <ReviewStep review={review} create={run} />}
       {/* The form stays mounted under the review, so Back returns to what was typed. */}
       <div style={{ display: pending ? 'none' : 'contents' }}>
         <Field label="Resource type">
-          <Select value={kind} onChange={k => { setPending(null); onKind(k) }} options={CREATE_KINDS} />
+          <Select value={kind} onChange={k => { review.back(); onKind(k) }} options={CREATE_KINDS} />
         </Field>
         {hasGroup
-          ? <CreateForm key={`${kind}:${subscriptionId}`} cloud={cloud} subscriptionId={subscriptionId} submit={submit} />
+          ? <CreateForm key={`${kind}:${subscriptionId}`} cloud={cloud} subscriptionId={subscriptionId} submit={review.submit} />
           : <p className="mv-note">This subscription has no resource group yet. Create one in the Management tab first.</p>}
       </div>
     </section>

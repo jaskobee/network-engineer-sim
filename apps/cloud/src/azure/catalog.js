@@ -2,7 +2,10 @@
  * The option lists the cloud forms offer, each tied to its docs/cloud/AZURE_ACCURACY.md rule.
  */
 
-/** L7 — managed disk types; Ultra Disk and Premium SSD v2 can't be OS disks. */
+/**
+ * L7 — managed disk types; Ultra Disk and Premium SSD v2 can't be OS disks. `maxGiB` is the largest
+ * size this simulator offers — not a verified Azure limit (L7 doesn't list sizes); bigger is `not_modelled`.
+ */
 export const DISK_TYPES = Object.freeze({
   UltraDisk:    Object.freeze({ displayName: 'Ultra Disk',     osCapable: false, maxGiB: 65536 }),
   PremiumSSDv2: Object.freeze({ displayName: 'Premium SSD v2', osCapable: false, maxGiB: 65536 }),

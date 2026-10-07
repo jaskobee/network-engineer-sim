@@ -15,8 +15,9 @@ Read `apps/cloud/CLAUDE.md` (hard rules) and `.claude/brain/cloud/LESSONS.md` be
    `src/azure/cidr.js`).
 3. **Every rule an operation cites** has an entry in `src/azure/ruleSources.js` and a test asserting the
    exact outcome and rule ID. A real ARM error code (`armCode`) only where the spec sources it.
-4. **Portal workflow**: a create goes through Review + create (`CreatePanel`), which dry-runs the same
-   operation; a wizard that creates several resources is one operation that refuses all-or-nothing.
+4. **Portal workflow**: every create goes through Review + create — `useReview` + `ReviewStep` from
+   `formParts.jsx` (as `CreatePanel` and the resource-group form do), which dry-run the same operation; a wizard
+   that creates several resources is one operation that refuses all-or-nothing.
 5. **Player-facing text**: portal names for things (region display names via `regionDisplayName`,
    "Tenant root group", Microsoft's default NSG rule names); the simulator's own explanations are labelled
    as such; made-up values (GUIDs, `198.51.100.x`) are said to be made up.

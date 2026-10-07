@@ -111,7 +111,9 @@ export default function CloudMissions({ onStarted }) {
                 <div>
                   <strong>{m.title}</strong>
                   <span className="cm-status">
-                    {active ? <><i className="led blue" />In progress</> : doneBefore ? <><i className="led green" />Completed</> : 'Not started'}
+                    {active
+                      ? (mission.progress.complete ? <><i className="led green" />Complete — finish it above</> : <><i className="led blue" />In progress</>)
+                      : doneBefore ? <><i className="led green" />Completed</> : 'Not started'}
                   </span>
                   <p>{m.summary}</p>
                 </div>

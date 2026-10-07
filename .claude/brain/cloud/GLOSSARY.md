@@ -27,7 +27,9 @@ Management: `createManagementGroup`, `renameManagementGroup`, `moveManagementGro
 `createDisk`, `createVirtualMachine`, **`deployVirtualMachine`** (the portal VM wizard: public IP → NIC → VM,
 all-or-nothing), `createStorageAccount`, `updateStorageAccount`. Lifecycle: `deleteResource`, `moveResources`.
 - **Review + create** — the UI runs the same operation as a dry run, shows "Validation passed" + a summary, and
-  only Create commits it. A refusal deploys nothing.
+  only Create commits it. A refusal deploys nothing. One implementation for every create form:
+  `useReview(cloud, report)` → `{ pending, submit(operation, args, summary), back }` and `<ReviewStep review create>`
+  (`components/formParts.jsx`).
 
 ## Outcome codes (`azure/outcomes.js`)
 `OUTCOME.*` constants; every refusal carries one, plus its rule ID. An ARM error code (`armCode`) only where the

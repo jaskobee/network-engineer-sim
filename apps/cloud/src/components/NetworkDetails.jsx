@@ -250,9 +250,13 @@ function StorageAccountDetails({ cloud, r, run, select }) {
         ['Region', regionDisplayName(r.location)],
         ['Resource ID', r.id, true],
       ]} />
+      {/* What the current setting means (M4). Private endpoints and VNet/IP rules come in a later phase. */}
       <p className="mv-note">
-        A storage account isn't inside a virtual network — it's reached through its public endpoints. Connecting it
-        privately (private endpoints and private DNS) comes in a later part of the cloud track.
+        A storage account isn&apos;t inside a virtual network.{' '}
+        {current === 'all' && 'Clients on any network can reach its public endpoints.'}
+        {current === 'selected' && 'Only the virtual networks and IP addresses you allow can use its public endpoints; requests from anywhere else get a 403 error. Adding those network rules isn\'t built in this preview yet, so nothing is allowed.'}
+        {current === 'disabled' && 'Its public endpoints accept no traffic: it can only be reached through a private endpoint, which you create separately.'}
+        {' '}Private endpoints and private DNS come in a later part of the cloud track.
       </p>
       <Form title="Networking" submit="Save" onSubmit={() => run(op.updateStorageAccount, {
         id: r.id, publicNetworkAccess: STORAGE_ACCESS[access].publicNetworkAccess, defaultAction: STORAGE_ACCESS[access].defaultAction,

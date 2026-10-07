@@ -14,7 +14,7 @@ import {
 import { REGIONS, regionDisplayName } from '../azure/regions.js'
 import { AzureItem } from './AzureIcon.jsx'
 import OperationResult from './OperationResult.jsx'
-import { Field, Facts, Form } from './formParts.jsx'
+import { Field, Facts, Form, useReview, ReviewStep } from './formParts.jsx'
 
 // ── Tree ─────────────────────────────────────────────────────────────────────
 
@@ -144,10 +144,13 @@ function ManagementGroupDetails({ cloud, mg, run }) {
   )
 }
 
-function SubscriptionDetails({ cloud, sub, run }) {
+function SubscriptionDetails({ cloud, sub, run, report }) {
   const [target, setTarget] = useState(sub.parentId)
   const [rgName, setRgName] = useState('')
   const [region, setRegion] = useState(REGIONS[0].name)
+  // Creating a resource group is Review + create in the portal too (Basics → Review + create → Create).
+  const review = useReview(cloud, report)
+  const rgArgs = { subscriptionId: sub.id, name: rgName.trim(), location: region }
   return (
     <>
       <AzureItem kind="subscription" label={sub.displayName} size={32} />
@@ -157,18 +160,29 @@ function SubscriptionDetails({ cloud, sub, run }) {
         ['Scope', subscriptionScope(sub.id), true],
       ]} />
 
-      <Form title="Create a resource group" submit="Create"
-        onSubmit={() => run(op.createResourceGroup, { subscriptionId: sub.id, name: rgName.trim(), location: region },
-          r => { setRgName(''); return { kind: 'rg', id: r.id } })}>
-        <Field label="Resource group name" hint="Unique in this subscription. Letters, digits, underscores, hyphens, periods, parentheses; no period at the end.">
-          <input className="mono" value={rgName} onChange={e => setRgName(e.target.value)} placeholder="rg-app-prod" />
-        </Field>
-        <Field label="Region" hint="Where the resource group's metadata is stored. Its resources may be in other regions.">
-          <select value={region} onChange={e => setRegion(e.target.value)}>
-            {REGIONS.map(r => <option key={r.name} value={r.name}>{r.displayName}</option>)}
-          </select>
-        </Field>
-      </Form>
+      {review.pending ? (
+        <div className="mv-form">
+          <h3>Create a resource group — Review + create</h3>
+          <ReviewStep review={review} create={(operation, args) =>
+            run(operation, args, r => { setRgName(''); return { kind: 'rg', id: r.id } })} />
+        </div>
+      ) : (
+        <Form title="Create a resource group" submit="Review + create"
+          onSubmit={() => review.submit(op.createResourceGroup, rgArgs, [
+            ['Subscription', sub.displayName],
+            ['Resource group', rgArgs.name, true],
+            ['Region', regionDisplayName(region)],
+          ])}>
+          <Field label="Resource group name" hint="Unique in this subscription. Letters, digits, underscores, hyphens, periods, parentheses; no period at the end.">
+            <input className="mono" value={rgName} onChange={e => setRgName(e.target.value)} placeholder="rg-app-prod" />
+          </Field>
+          <Field label="Region" hint="Where the resource group's metadata is stored. Its resources may be in other regions.">
+            <select value={region} onChange={e => setRegion(e.target.value)}>
+              {REGIONS.map(r => <option key={r.name} value={r.name}>{r.displayName}</option>)}
+            </select>
+          </Field>
+        </Form>
+      )}
 
       <Form title="Move to a management group" submit="Move" onSubmit={() => run(op.moveSubscription, { id: sub.id, parentId: target })}>
         <Field label="Management group" hint="A subscription has exactly one parent.">
@@ -258,7 +272,7 @@ export default function ManagementView() {
   const key = `${selected.kind}:${selected.id}`   // remounts the panel so its forms start fresh
   let details
   if (selected.kind === 'mg') details = <ManagementGroupDetails key={key} cloud={cloud} mg={cloud.managementGroups[selected.id]} run={run} />
-  else if (selected.kind === 'sub') details = <SubscriptionDetails key={key} cloud={cloud} sub={cloud.subscriptions[selected.id]} run={run} />
+  else if (selected.kind === 'sub') details = <SubscriptionDetails key={key} cloud={cloud} sub={cloud.subscriptions[selected.id]} run={run} report={setResult} />
   else if (selected.kind === 'rg') details = <ResourceGroupDetails key={key} cloud={cloud} rg={cloud.resourceGroups[selected.id]} run={run} />
   else details = <ResourceDetails key={key} cloud={cloud} r={cloud.resources[selected.id]} run={run} />
 
