@@ -20,7 +20,7 @@ own build, URL, saves, missions, docs, brain. Architecture and reasoning:
   chunk-size warning (NetSim) is expected.
 - Dev: `npm run dev` / `npm run dev:netsim` (port 5173), `npm run dev:cloud` (port 5180,
   `/network-engineer-sim/cloud/`). Each dev server is its own origin, so you sign in once per product there.
-- Deploy: GitHub Pages from `main` — NetSim at `/network-engineer-sim/`, Cloud Engineer at
+- Deploy (live since 2026-10-07, merge fd4a0fe): GitHub Pages from `main` — NetSim at `/network-engineer-sim/`, Cloud Engineer at
   `/network-engineer-sim/cloud/` (one origin: sign-in carries over).
 
 ## Layout
@@ -66,6 +66,5 @@ docs/netsim|cloud|platform/
 
 ## Open (owner)
 - Final product names and the family brand ("Cloud Engineer" is a working title).
-- Merging `phase-0-kernel-extraction` to `main` publishes both products.
 - Codex mirrors (`AGENTS.md`, `.agents/`, `.codex/`) predate Phase 0 and the split; only their paths
   were updated.

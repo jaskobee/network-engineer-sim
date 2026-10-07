@@ -73,7 +73,7 @@ Repo-wide facts (both products, shared packages, build/deploy) are in `../PLATFO
   kept in localStorage `netsim_subnet_planner`.
 
 ## In flight / recently touched
-- **Platform split (2026-10-07, branch `phase-0-kernel-extraction`, not merged):** NetSim moved to `apps/netsim`
+- **Platform split (2026-10-07, merged to `main` and deployed):** NetSim moved to `apps/netsim`
   unchanged; the Cloud mode left NetSim for its own product (`apps/cloud`, Cloud Engineer); the header gained a
   product switcher; New game sweeps every `netsim*` key again. Before that, on the same branch, **Phase 0 kernel
   extraction**: `src/models` split into `src/core` (failure-reason registry, PathResult), `src/guest` (Linux + Windows

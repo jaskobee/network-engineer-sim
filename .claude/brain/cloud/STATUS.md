@@ -7,7 +7,7 @@ Repo-wide facts are in `../PLATFORM.md`._
 - App: `apps/cloud` (working title **Cloud Engineer**, shipped as "Preview"). Azure only.
 - `npm test` (root) → the cloud project: **118 tests / 8 files** (`apps/cloud/src/azure/__tests__`, incl. missions).
 - `npm run dev:cloud` → port 5180, `http://localhost:5180/network-engineer-sim/cloud/`.
-- Not on `main` yet: everything below sits on branch `phase-0-kernel-extraction`.
+- Live on `main` since 2026-10-07 at https://jaskobee.github.io/network-engineer-sim/cloud/ (Preview).
 
 ## Built (roadmap Phase 1a, steps 1–6; plan `docs/cloud/PHASE_1A_CLOUD_SECTION.md`)
 - **Headless Azure model** (`src/azure/`): plain serialisable tenant keyed by ARM-style IDs; pure operations in
