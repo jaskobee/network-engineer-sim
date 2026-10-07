@@ -5,7 +5,7 @@ tags: [status, roadmap]
 # Status and Roadmap
 
 Snapshot as of 2026-09-14 (commit `9e7bf1e`, "Latest updates"). **This note goes
-stale fast** — treat every number as approximate and prefer `.claude/brain/STATUS.md`
+stale fast** — treat every number as approximate and prefer `.claude/brain/netsim/STATUS.md`
 (refreshed via the `/brain-update` skill — see [[Working with Claude Code]]) or the
 live repo for anything you're about to act on.
 
@@ -24,7 +24,7 @@ live repo for anything you're about to act on.
   wall-clock SLA service tickets with randomized pacing, an alert ladder, a job board with offers,
   and a Topology tab on every job — see [[Career Layer]].
 - DNS phase 1: strict resolution through configured name-server lists, in all three shells and the host GUI
-  (`docs/DNS_DESIGN.md`); server-side DNS (phase 2) is next.
+  (`docs/netsim/DNS_DESIGN.md`); server-side DNS (phase 2) is next.
 - The full networking model: bidirectional `checkPing` with `failureReason`/
   `failurePoint`, strict L2 switch, ROAS, DHCP (DORA/pools/relay/`dhclient`),
   NAT/PAT overload, zone-based stateful firewall with service/port matching, a
@@ -40,13 +40,13 @@ live repo for anything you're about to act on.
   [[UI Component Map]].
 - A "Configure GUI" window for PCs, servers and IP phones (right-click) that drives the
   same Linux shell as the terminal — see [[UI Component Map]]. Engine gaps found while
-  building it are listed in `.claude/brain/STATUS.md` → Known rough edges.
+  building it are listed in `.claude/brain/netsim/STATUS.md` → Known rough edges.
 - Autosave to localStorage + Export/Import JSON, reset guard, client-side beta login
   gate (`AuthContext`, bcryptjs).
 - CI: Vitest on PR, GitHub Pages deploy, AI accuracy review (`ai-review.js`), mission
   QA, failure explainer, full accuracy audit.
 
-## Next up, in priority order (per `.claude/brain/STATUS.md`)
+## Next up, in priority order (per `.claude/brain/netsim/STATUS.md`)
 
 1. **Act 2 — fault-injection/troubleshooting missions.** Pre-broken topologies, no
    step-by-step hints, diagnose with `show` commands. The single highest-value
@@ -57,13 +57,13 @@ live repo for anything you're about to act on.
    [[Failure Reason Codes]].
 3. More clients/missions on the declarative DSL; more service tickets. See
    [[Mission Catalog]].
-4. The admin-laptop tool family from `docs/ADMIN_LAPTOP_AND_TOOLS.md`: the port
+4. The admin-laptop tool family from `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md`: the port
    scanner and "WireFish" packet analyzer are still spec-only, and the Phase 3
    packet-engine refactor still needs an explicit owner decision before it can start.
    See [[Admin Laptop and Tools]].
 5. Backlog: live-network/SLA "one more wave" mode polish, mastery scoring (star
    rating on best practice, not just "does it ping"), shop margins, blueprint
-   diagrams in briefings — see `docs/NETSIM_FAULTS_AND_FEATURES.md` Part 2 for the
+   diagrams in briefings — see `docs/netsim/NETSIM_FAULTS_AND_FEATURES.md` Part 2 for the
    full "make it addictive, honestly" idea list, including an explicit list of what
    *not* to do (no loot-box randomness, no energy timers, no FOMO daily-login
    pressure — intrinsic stickiness only).
@@ -73,7 +73,7 @@ live repo for anything you're about to act on.
 - `docs/` filenames are inconsistent in case (`Roas-Sandbox-LAB.md`,
   `dhcp-sandbox-lab.md`, `NETWORKING_AUDIT.md`) — older docs may reference names that
   no longer match exactly.
-- `docs/ADMIN_LAPTOP_AND_TOOLS.md` still opens with "nothing here is implemented
+- `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md` still opens with "nothing here is implemented
   yet" — stale; the laptop and Firewall Web UI *are* implemented. Fix the doc's
   status line next time that file is touched.
 

@@ -3,8 +3,8 @@
  * Accuracy Agent — reviews PRs for networking accuracy against the spec.
  *
  * How it works:
- *   1. Gets the diff between this PR and main (only src/ and docs/)
- *   2. Reads docs/NETWORKING_ACCURACY.md as the hard spec
+ *   1. Gets the diff between this PR and main (only apps/netsim/, packages/ and docs/)
+ *   2. Reads docs/netsim/NETWORKING_ACCURACY.md as the hard spec
  *   3. Sends both to Claude claude-opus-5 for review
  *   4. Posts the review as a comment on the PR
  *
@@ -33,7 +33,7 @@ const BASE_REF = process.env.GITHUB_BASE_REF || 'main'
 // Get the diff for this PR (only files that affect networking behavior)
 let diff
 try {
-  diff = execSync(`git diff origin/${BASE_REF}...HEAD -- src/ docs/`, {
+  diff = execSync(`git diff origin/${BASE_REF}...HEAD -- apps/netsim/ packages/ docs/`, {
     encoding: 'utf8',
     maxBuffer: 5 * 1024 * 1024,
     cwd: ROOT,
@@ -44,11 +44,11 @@ try {
 }
 
 if (!diff.trim()) {
-  console.log('No changes in src/ or docs/ — nothing to review.')
+  console.log('No changes in apps/netsim/, packages/ or docs/ — nothing to review.')
   process.exit(0)
 }
 
-const spec = readFileSync(join(ROOT, 'docs/NETWORKING_ACCURACY.md'), 'utf8')
+const spec = readFileSync(join(ROOT, 'docs/netsim/NETWORKING_ACCURACY.md'), 'utf8')
 
 // Truncate if the diff is huge (Claude has a context limit)
 const MAX_DIFF = 40_000

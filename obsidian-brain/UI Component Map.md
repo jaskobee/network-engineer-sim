@@ -4,7 +4,7 @@ tags: [ui, components]
 
 # UI Component Map
 
-`src/components/` — all presentational. See [[Architecture Overview]] for the
+`apps/netsim/src/components/` — all presentational. See [[Architecture Overview]] for the
 governing rule: components read `GameContext`/`CareerContext` state and call engine
 methods; they never reimplement networking logic themselves.
 
@@ -75,12 +75,12 @@ detail in [[Admin Laptop and Tools]].
 One idea runs through the whole UI: **colour is signal.** Surfaces and text are a quiet
 cool graphite; the only saturated colours are what a port LED would say — green = up or
 done, amber = attention or down, red = fault — plus one blue for whatever you can act on.
-Tokens live in `src/index.css` `:root` (`--surface-*`, `--ink*`, `--signal*`, `--led-*`,
+Tokens live in `apps/netsim/src/index.css` `:root` (`--surface-*`, `--ink*`, `--signal*`, `--led-*`,
 `--font-ui`, `--font-mono`); the rules are in `.claude/rules/ui.md`.
 
 - **Type**: Barlow Semi Condensed for the UI, Atkinson Hyperlegible Mono for data and the
   terminal (chosen because IPs, interface names and commands must keep `0/O` and `1/l/I`
-  apart). Both are self-hosted in `src/assets/fonts` (SIL OFL). Sentence-case labels, no
+  apart). Both are self-hosted in `packages/ui/fonts` (SIL OFL). Sentence-case labels, no
   tracked-caps eyebrows.
 - **The LED** (`.led`) is the signature: header wordmark, "Saved", interface status in the
   inspector (up / down / administratively down each look different, per the accuracy

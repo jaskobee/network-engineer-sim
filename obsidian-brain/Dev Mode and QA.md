@@ -4,7 +4,7 @@ tags: [devmode, qa, testing]
 
 # Dev Mode and QA
 
-`src/devMode/` — a developer/QA-only layer, compiled entirely out of production
+`apps/netsim/src/devMode/` — a developer/QA-only layer, compiled entirely out of production
 (`import.meta.env.DEV`-gated, never reachable in a shipped build). Its one job: drive
 the **real** engine faster than manual clicking, never bypass it.
 
@@ -19,7 +19,7 @@ real `Device`/`Topology` objects. Writing `iface.ip = '...'` or
 preset *look* solved without the engine agreeing it's solved, which would hide real
 engine defects from every QA pass run against it. See `.claude/rules/devmode.md`.
 
-## Presets (`src/devMode/presets.js`)
+## Presets (`apps/netsim/src/devMode/presets.js`)
 
 Each preset has metadata in `PRESETS[]` —
 `{ id, label, category: 'working'|'broken', expectedFailure?, description,
@@ -44,7 +44,7 @@ elsewhere in this vault:
 - `admin-laptop-firewall-ui-solved` / `admin-laptop-crosszone-router-ui-solved` /
   `admin-laptop-crosszone-router-ui-broken` — see [[Admin Laptop and Tools]]
 
-(Exact count drifts as new scenarios are added — check `src/devMode/presets.js`
+(Exact count drifts as new scenarios are added — check `apps/netsim/src/devMode/presets.js`
 directly rather than trusting a number here.)
 
 **Builder ctx**: `{ addSandboxDevice, sbTopology, sbEngine, sbPcEngine,
@@ -54,16 +54,16 @@ at the end, so a preset build doesn't render half-applied mid-construction.
 
 ## Smoke tests
 
-`src/devMode/smokeTests.js` — a programmatic twin of `docs/foundation-smoke-test.md`,
+`apps/netsim/src/devMode/smokeTests.js` — a programmatic twin of `docs/netsim/foundation-smoke-test.md`,
 covering the same ground as a fast, scripted pass.
 
 ## Adding a new preset
 
 Register in **both** places (`PRESETS[]` metadata and the `builders` map), and add a
-test in `src/devMode/__tests__/presets.test.js` asserting the expected
+test in `apps/netsim/src/devMode/__tests__/presets.test.js` asserting the expected
 `reachable`/`failureReason` after the build. Use the `/new-preset` skill (see
 [[Working with Claude Code]]). Source real-world scenarios from
-`docs/foundation-smoke-test.md` and the `docs/*-lab.md` files so presets stay in sync
+`docs/netsim/foundation-smoke-test.md` and the `docs/*-lab.md` files so presets stay in sync
 with the documented labs rather than drifting into their own parallel scenario set.
 
 ## Related

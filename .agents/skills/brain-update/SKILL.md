@@ -1,6 +1,6 @@
 ---
 name: brain-update
-description: Refresh the project brain (.Codex/brain/STATUS.md, DECISIONS.md, GLOSSARY.md, LESSONS.md) after substantial work so the next session starts with accurate knowledge. Use at the end of a feature, after a design decision, after a gotcha, or when the user says "remember this for the project".
+description: Refresh the project brain (.Codex/brain/netsim/STATUS.md, DECISIONS.md, GLOSSARY.md, LESSONS.md) after substantial work so the next session starts with accurate knowledge. Use at the end of a feature, after a design decision, after a gotcha, or when the user says "remember this for the project".
 ---
 
 # Brain update
@@ -44,4 +44,4 @@ not the brain. Anything a teammate should know goes in the brain.
 ## 5. Don't
 - Don't write changelogs into the brain — git history is the changelog.
 - Don't record secrets, credentials, or personal data.
-- Don't duplicate `docs/NETWORKING_ACCURACY.md`; link to its section instead.
+- Don't duplicate `docs/netsim/NETWORKING_ACCURACY.md`; link to its section instead.

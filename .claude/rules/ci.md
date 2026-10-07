@@ -10,10 +10,13 @@ paths:
    so forks and keyless runs skip cleanly instead of failing.
 2. **Model ids**: use the current Claude 5 family (`claude-opus-5` / `claude-sonnet-5`)
    — check the `claude-api` skill before changing one.
-3. `ci.yml` must keep running `npm test` (Vitest) and `npx vite build` on every PR.
+3. `ci.yml` must keep running `npm test` (Vitest, every workspace) and `npm run build` (both apps) on every PR.
    Never make the accuracy review a replacement for tests.
-4. `deploy.yml` publishes `dist/` to GitHub Pages; dev mode must remain compiled out
+4. `deploy.yml` publishes `dist/` (NetSim at the root, Cloud Engineer in `dist/cloud/`) to GitHub Pages; dev mode must remain compiled out
    of that build (`import.meta.env.DEV`).
-5. The AI review reads `docs/NETWORKING_ACCURACY.md` as its spec at runtime — if the
+5. The AI review reads `docs/netsim/NETWORKING_ACCURACY.md` as its spec at runtime — if the
    spec moves or is renamed, update the path in the script.
 6. Never commit secrets; scripts read everything from workflow env.
+7. The AI networking review, mission QA and the full audit are **NetSim's** (their path filters and
+   file lists point at `apps/netsim`). Cloud Engineer has no AI review in CI yet; its gate is `/azure-gate`
+   locally. A shared change (`packages/**`) triggers the NetSim review because NetSim imports it.

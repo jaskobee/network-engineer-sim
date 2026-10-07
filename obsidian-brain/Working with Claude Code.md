@@ -14,16 +14,16 @@ them.
 | Layer | Location | Loaded | Purpose |
 |---|---|---|---|
 | Constitution | `CLAUDE.md` (repo root) | every session | identity, hard rules, pointers to everything else |
-| Brain — status/decisions | `.claude/brain/STATUS.md`, `.claude/brain/DECISIONS.md` | every session (via `@`-include in `CLAUDE.md`) | what's done/next; locked design choices and *why* |
-| Brain — reference | `.claude/brain/GLOSSARY.md`, `.claude/brain/LESSONS.md` | on demand | vocabulary, codes, DSL terms; gotchas that already cost time once |
+| Brain — status/decisions | `.claude/brain/netsim/STATUS.md`, `.claude/brain/netsim/DECISIONS.md` | every session (via `@`-include in `CLAUDE.md`) | what's done/next; locked design choices and *why* |
+| Brain — reference | `.claude/brain/netsim/GLOSSARY.md`, `.claude/brain/netsim/LESSONS.md` | on demand | vocabulary, codes, DSL terms; gotchas that already cost time once |
 | Path-scoped rules | `.claude/rules/*.md` | auto-attached when editing a matching path | `engine.md` (models/engine), `missions.md` (data), `devmode.md`, `ui.md`, `ci.md` |
-| Hard spec | `docs/NETWORKING_ACCURACY.md` | referenced whenever networking behavior changes | the 8 standing "accuracy prompts," the actual teaching-correctness contract |
+| Hard spec | `docs/netsim/NETWORKING_ACCURACY.md` | referenced whenever networking behavior changes | the 8 standing "accuracy prompts," the actual teaching-correctness contract |
 | This vault | `obsidian-brain/` | manual, for deep onboarding | prose orientation — see the caveat on [[Home]] |
 
 ## The hard rules (from `CLAUDE.md`, non-negotiable)
 
 1. Networking accuracy outranks convenience — see [[Vision and Product]].
-2. `docs/NETWORKING_ACCURACY.md` is a hard spec for all networking behavior, CLI
+2. `docs/netsim/NETWORKING_ACCURACY.md` is a hard spec for all networking behavior, CLI
    commands, `show` output, hints, and mission validation.
 3. A Layer 2 switch has no per-port IPs, one management SVI, never routes between
    VLANs — see [[Layer 2 Switching and VLANs]].
@@ -32,12 +32,12 @@ them.
 5. Each OS keeps its own idioms; no leakage — see
    [[The Three CLI Engines]].
 6. Dev mode drives the real engine, never bypasses it — see [[Dev Mode and QA]].
-7. JavaScript only, no TypeScript. `src/models/` and `src/engine/` stay free of
+7. JavaScript only, no TypeScript. `src/models/` and `apps/netsim/src/engine/` stay free of
    React/DOM imports — see [[Architecture Overview]].
 
 Files that must never be touched without explicit sign-off:
 `src/models/{CLIEngine,PCCLIEngine,WindowsCLIEngine,Topology,Device,DHCPEngine,
-ipUtils}.js` and `src/data/deviceCatalog.js`.
+ipUtils}.js` and `apps/netsim/src/data/deviceCatalog.js`.
 
 ## Skills (invoked as `/name`, or by Claude proactively when the task matches)
 
@@ -54,7 +54,7 @@ ipUtils}.js` and `src/data/deviceCatalog.js`.
 ## Subagents
 
 - **`accuracy-reviewer`** — read-only, independent review of a diff against
-  `docs/NETWORKING_ACCURACY.md` and CCNA/Network+ ground truth. A local twin of the
+  `docs/netsim/NETWORKING_ACCURACY.md` and CCNA/Network+ ground truth. A local twin of the
   CI accuracy-review script.
 - **`mission-qa`** — plays a mission on paper + runs its test; reports blockers or
   mis-teaching (subtly wrong hints, gates, or subnet math).
@@ -73,7 +73,7 @@ ipUtils}.js` and `src/data/deviceCatalog.js`.
 - **Never commit unless explicitly asked.** Uncommitted work across a session is
   normal and expected, not a sign something's unfinished.
 
-## Recurring gotchas worth internalizing (full list: `.claude/brain/LESSONS.md`)
+## Recurring gotchas worth internalizing (full list: `.claude/brain/netsim/LESSONS.md`)
 
 - `interfaceConfigured` silently checks the wrong port on a multi-port device if
   `ifaceName` is omitted — always pass it explicitly (see

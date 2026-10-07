@@ -19,7 +19,7 @@ Find the dispatch point (`execute()` → tokenizer → per-mode handlers) and th
 similar command; match its structure.
 
 ## 2. Establish ground truth BEFORE writing code
-Write down, from real-device knowledge (and `docs/NETWORKING_ACCURACY.md` where it
+Write down, from real-device knowledge (and `docs/netsim/NETWORKING_ACCURACY.md` where it
 covers the topic):
 - Exact syntax including abbreviations IOS accepts (`sh ip int br`, `conf t`, `int
   gi0/0`) — use `normalizeIfName()` for interface tokens.

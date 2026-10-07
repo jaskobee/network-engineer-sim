@@ -5,7 +5,7 @@ description: Design and implement an Act 2 troubleshooting scenario — a pre-br
 
 # Fault scenario (Act 2 / troubleshooting)
 
-Governing principle (`docs/NETSIM_FAULTS_AND_FEATURES.md` Part 1): **a fault is real
+Governing principle (`docs/netsim/NETSIM_FAULTS_AND_FEATURES.md` Part 1): **a fault is real
 misconfigured state, not a special case in the ping logic.** Apply it by mutating the
 same fields the CLI mutates; the symptom emerges from the accurate engine and is
 visible through `show` commands.
@@ -28,20 +28,20 @@ Pick one a junior engineer actually meets. Write the scenario card:
 Cross-check symptom strings against the table in `NETSIM_FAULTS_AND_FEATURES.md`.
 
 ## 2. Check whether the engine can express it
-- If the `failureReason` already exists (see `.claude/brain/GLOSSARY.md`), skip to §3.
+- If the `failureReason` already exists (see `.claude/brain/netsim/GLOSSARY.md`), skip to §3.
 - If it currently **falls through to `no_route`** (`subnet_mismatch`,
   `gateway_unreachable`, `ip_conflict`, `duplex_mismatch`), implement the code first:
   - In `Topology._bfsReach` / `_findExitInterfaces`, detect the condition from state
     (mask math, ARP-reachability of gateway, duplicate IPs, duplex fields) and return
     the specific reason + `failurePoint`. No fault flags.
   - Map the reason to the correct ping output in each CLI engine's `ping`.
-  - Tests in `src/onprem/__tests__/topology.test.js` (and the CLI test for output).
+  - Tests in `apps/netsim/src/onprem/__tests__/topology.test.js` (and the CLI test for output).
   - Update `GLOSSARY.md` table and `STATUS.md` "Next up" via `/brain-update`.
 
 ## 3. Build the broken state through the engine
 - **Mission/ticket**: a scaffold that runs real CLI commands to build the working
   network, then one more real command (or `Topology.disconnect()`) that introduces the
-  fault. Pattern: `src/data/mission005scaffold.js`, `serviceTickets.js` `fault`.
+  fault. Pattern: `apps/netsim/src/data/mission005scaffold.js`, `serviceTickets.js` `fault`.
 - **Dev preset**: `/new-preset` with `category: 'broken'` and `expectedFailure`.
 
 ## 4. Author the mission (if it's a mission)
@@ -62,4 +62,4 @@ Use `/new-mission`, with these Act 2 differences:
 - Applying the fix commands → reachable, mission objectives flip true.
 
 ## 6. Finish
-`npm test`, `npx vite build`, `/accuracy-gate`, `/brain-update`.
+`npm test`, `npm run build`, `/accuracy-gate`, `/brain-update`.

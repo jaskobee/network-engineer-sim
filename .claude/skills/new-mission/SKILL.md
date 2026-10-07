@@ -9,9 +9,9 @@ Missions are **lessons**. The topology must be something a CCNA-level engineer w
 actually build, and every hint must be a real command.
 
 ## 0. Read first
-- `.claude/brain/GLOSSARY.md` → "Mission DSL" and "Mission metadata fields".
-- `src/data/missionDefinitions/mission_local_shop_1.js` (template) and its test.
-- `src/engine/missionEngine.js` → the `evaluateCondition` switch, to confirm the
+- `.claude/brain/netsim/GLOSSARY.md` → "Mission DSL" and "Mission metadata fields".
+- `apps/netsim/src/data/missionDefinitions/mission_local_shop_1.js` (template) and its test.
+- `apps/netsim/src/engine/missionEngine.js` → the `evaluateCondition` switch, to confirm the
   condition types that exist today. If the mission needs a check that doesn't exist,
   **add a typed condition to the engine (+ test in `engine/__tests__/missionEngine.test.js`)**
   rather than reaching for `custom`.
@@ -25,7 +25,7 @@ actually build, and every hint must be a real command.
   PC-2 directly — proves switch forwarding").
 - Difficulty, reward, `requiredReputation`, `requiredKnowledge`, `estimatedDuration`.
 
-## 2. Create `src/data/missionDefinitions/<mission_id>.js`
+## 2. Create `apps/netsim/src/data/missionDefinitions/<mission_id>.js`
 - Top-of-file comment: purpose, ASCII topology, financial model, follow-ups.
 - Fill every metadata field listed in the glossary. `hardware[]` must match what the
   objectives require the player to buy. `blueprint` + `layout` describe the same
@@ -41,12 +41,12 @@ actually build, and every hint must be a real command.
     / `ip route add default via …` on pc/server).
 
 ## 3. Register
-- `src/data/missionDefinitions/index.js` → import + add to `MISSION_DEFINITIONS`.
-- Client wiring: either a new client in `src/data/clients.js` (`initialMissionIds`) or a
+- `apps/netsim/src/data/missionDefinitions/index.js` → import + add to `MISSION_DEFINITIONS`.
+- Client wiring: either a new client in `apps/netsim/src/data/clients.js` (`initialMissionIds`) or a
   prior mission's `followUpMissionIds`. If the mission establishes a contract, set
   `contractOutcome`.
 
-## 4. Test: `src/data/missionDefinitions/__tests__/<mission_id>.test.js`
+## 4. Test: `apps/netsim/src/data/missionDefinitions/__tests__/<mission_id>.test.js`
 Model on `mission_local_shop_1.test.js`:
 1. `getMissionRuntime(id)` returns the expected required/optional task ids.
 2. Walk the flow against the **real engine** (`new Device(cat('router'))`,
@@ -59,7 +59,7 @@ Model on `mission_local_shop_1.test.js`:
    `checkPing(...).failureReason` for the broken intermediate state.
 
 ## 5. Finish
-- `npm test` and `npx vite build` clean.
+- `npm test` and `npm run build` clean.
 - Play it once via the dev server if a UI-facing field changed (blueprint SVG,
   hints rendering). Prefer `/verify-in-browser`.
 - Run `/accuracy-gate`.

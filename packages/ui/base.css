@@ -1,0 +1,298 @@
+/* @sim/ui — the design system every product shares.
+   Fonts, tokens, base element styles and the primitives the products have in common
+   (.led, .btn, .seg, the app header, .preview-tag, the product switcher). Product-specific
+   styles stay in each app. Change a token here and every product changes with it. */
+
+/* ── Fonts ────────────────────────────────────────────────────────────────────
+   Self-hosted latin subsets, SIL Open Font License 1.1 (see fonts/LICENSE.md).
+   Barlow Semi Condensed: highway-signage lettering — sturdy and compact for dense panels.
+   Atkinson Hyperlegible Mono: built to keep 0/O and 1/l/I apart, which is what IPs,
+   MACs and interface names (Gi0/0.10) need. */
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/barlow-semi-condensed-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/barlow-semi-condensed-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/barlow-semi-condensed-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./fonts/atkinson-hyperlegible-mono-400-700.woff2') format('woff2');
+}
+
+/* ── Tokens ───────────────────────────────────────────────────────────────────
+   One idea runs through the whole UI: colour is signal. Surfaces and text are a
+   quiet cool graphite; the only saturated colours are things a port LED would
+   say — green = up / done, amber = attention or down, red = fault / failure —
+   plus one blue for whatever you can act on. */
+:root {
+  --font-ui: 'Barlow Semi Condensed', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --surface-well: #090c0f;     /* terminals, inset wells */
+  --surface-ground: #10161a;   /* canvas / app background */
+  --surface-panel: #141a1f;    /* header, docks, inspector */
+  --surface-raised: #1a232a;   /* cards, inputs */
+  --surface-hover: #1f2a31;
+  --rule: #202b33;
+  --rule-strong: #2c3b46;
+
+  --ink: #e8eef2;
+  --ink-2: #b4c2cd;
+  --ink-3: #7d9aae;            /* tertiary text — 4.5:1 on --surface-raised */
+
+  --signal: #4da6ff;
+  --signal-strong: #2f6fbd;
+  --signal-deep: #1f3e5b;
+  --signal-wash: #14283a;
+
+  --led-green: #3ee08f;
+  --led-amber: #ffb42e;
+  --led-red: #ff6259;
+  --led-off: #2c3b46;
+
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 10px;
+  --shadow-float: 0 12px 36px rgba(0, 0, 0, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  background: var(--surface-ground);
+  color: var(--ink);
+  height: 100vh;
+  overflow: hidden;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-variant-numeric: inherit;
+}
+
+::selection { background: #2f6fbd88; }
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible) { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── LED ──────────────────────────────────────────────────────────────────────
+   The product's signature. Lit LEDs glow; unlit ones are just a dark bead. */
+.led {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--led-off);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.led.green { background: var(--led-green); box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 8px 1px rgba(62, 224, 143, 0.55); }
+.led.amber { background: var(--led-amber); box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 8px 1px rgba(255, 180, 46, 0.5); }
+.led.red   { background: var(--led-red);   box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 8px 1px rgba(255, 98, 89, 0.5); }
+.led.blue  { background: var(--signal);    box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 8px 1px rgba(77, 166, 255, 0.5); }
+
+.led.breathe { animation: led-breathe 2.2s ease-in-out infinite; }
+
+/* Current-step LED breathes — the one place motion says "this is next". */
+@keyframes led-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 4px 0 rgba(77, 166, 255, 0.35); }
+  50%      { box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 11px 2px rgba(77, 166, 255, 0.7); }
+}
+
+/* ── Shell ────────────────────────────────────────────────────────────────── */
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 48px;
+  padding: 0 14px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--ink);
+  user-select: none;
+}
+.brand-leds { display: flex; gap: 4px; }
+.brand-leds .led { width: 6px; height: 6px; }
+
+.hdr-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 12px 0;
+  background: var(--rule);
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--surface-well);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.seg button {
+  padding: 5px 13px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-3);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.btn:hover:not(:disabled) { background: var(--surface-hover); border-color: #3a4d5b; }
+.btn:disabled { color: var(--ink-3); opacity: 0.6; cursor: not-allowed; }
+.btn.primary { background: var(--signal-strong); border-color: #3f7fcf; color: #fff; }
+.btn.primary:hover:not(:disabled) { background: #3574c4; border-color: #5a95dc; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
+.btn.ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
+.btn.danger { color: var(--led-red); }
+.btn.danger:hover:not(:disabled) { background: #2a1714; border-color: #5a2a26; }
+.btn.icon { width: 32px; height: 32px; padding: 0; }
+.btn[aria-pressed='true'], .btn.on { background: var(--signal-wash); border-color: var(--signal-strong); color: var(--signal); }
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--led-red);
+  border: 2px solid var(--surface-panel);
+}
+
+.save-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+
+.user-chip {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding-left: 12px;
+  border-left: 1px solid var(--rule);
+}
+
+/* A product or feature that is shipped but not finished. */
+.preview-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--led-amber);
+  border: 1px solid #5a4318;
+  border-radius: var(--radius-s);
+  vertical-align: middle;
+}
+
+/* ── Product switcher: the products are separate apps on one site ───────────────── */
+.product-switch { display: inline-flex; padding: 2px; background: var(--surface-well); border: 1px solid var(--rule); border-radius: 8px; }
+.product-switch a, .product-switch span {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px;
+  font-size: 13.5px; font-weight: 600; color: var(--ink-3); text-decoration: none; border-radius: 6px;
+  transition: color 0.12s, background 0.12s;
+}
+.product-switch a:hover { color: var(--ink); background: var(--surface-hover); }
+/* The product you're in: not a link, marked like a pressed segment. */
+.product-switch [aria-current='page'] { color: var(--ink); background: var(--surface-hover); box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.product-switch .preview-tag { margin-left: 0; font-size: 12.5px; line-height: 16px; }

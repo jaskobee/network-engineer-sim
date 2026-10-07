@@ -1,0 +1,133 @@
+# DECISIONS — NetSim, locked design choices
+
+Each entry: **what**, **why**, **date**. If you believe one is wrong, say so to the user
+and get an explicit go-ahead before changing it. Never silently work around one.
+
+## Product
+
+- **Accuracy outranks convenience** (project founding). If a simplification would teach
+  something a learner must unlearn for CCNA / Network+ / a real job, it doesn't ship.
+  Unavoidable simplifications are labelled as such in-game or in a code comment.
+  `docs/netsim/NETWORKING_ACCURACY.md` is the hard spec.
+- **NetSim is one of two products** (owner, 2026-10-07): it teaches on-prem networking; Azure lives in its own
+  product, Cloud Engineer (`apps/cloud`). Repo-wide and shared decisions — the split, shared packages, storage
+  key prefixes, the design system — are in `../PLATFORM.md`; cloud decisions in `../cloud/DECISIONS.md`. NetSim's
+  New game sweeps every `netsim*` key; other products keep their own prefixes.
+- **Stay on the web, no game engine** (see `docs/netsim/ADMIN_LAPTOP_AND_TOOLS.md` §0).
+  The UI is terminals, tables, forms — DOM territory. Install-free is a core advantage
+  over Packet Tracer / GNS3.
+- **Dev mode is a faster way to drive the real engine, never a way around it.**
+  Presets/smoke tests reach state through the same devices, cabling and CLI paths a
+  player uses. A preset that "looks solved" must *be* solved by the engine, or QA hides
+  real bugs. Dev mode is gated (`import.meta.env.DEV`), never reachable in production.
+
+## Networking model
+
+- **The Switch is strictly Layer 2** (Catalyst 2960 model). No per-port IPs, no
+  `ip route`, no `no switchport`. Management via one SVI. It never routes between VLANs.
+  Inter-VLAN routing = router-on-a-stick. A separate "Layer 3 Switch" device type may
+  be added later; the plain switch stays L2. Contract comment lives at the top of
+  `apps/netsim/src/onprem/CLIEngine.js`.
+- **A ping succeeds only if both forward AND return paths forward** (`checkPing` runs
+  the BFS both ways; one-way routing yields `no_return_path`).
+- **Each OS keeps its own idioms**: IOS on router/switch/firewall, iproute2 on
+  pc/server, Windows CMD on the admin laptop. No cross-leakage of syntax or output.
+- **Firewall CLI is ASA-*inspired*, not exact ASA** (`nameif`, `firewall-rule permit
+  from-zone … to-zone … service …`). Chosen for readability; documented as a
+  simplification. Stateful sessions are 4-tuples (no ephemeral source port), no session
+  timeout, `security-level` stored but not enforced.
+- **NAT tracks `inside_local → inside_global` only** (no ports) and skips return-path
+  NAT for internet destinations. Sufficient for reachability; documented simplification.
+- **DHCP is modelled logically (DORA), not as packet-level broadcast through BFS.**
+  Broadcasts don't cross routers; relay via `ip helper-address` honours routing.
+  `lease_expires` is `"Infinite"`; client-id is `"devId:ifaceName"`.
+- **A fault is real misconfigured state, not a branch in ping logic.** Faults mutate the
+  same fields the CLI mutates; symptoms emerge from the accurate engine. (Basis of Act 2
+  and of service tickets.)
+
+## Architecture
+
+- **JavaScript only, no TypeScript** (platform-wide, `../PLATFORM.md`).
+- **The engine is a pure headless core** (`apps/netsim/src/core`, `apps/netsim/src/guest`, `apps/netsim/src/onprem`, `apps/netsim/src/engine`) —
+  zero React/DOM imports, enforced by `apps/netsim/src/core/__tests__/architecture.test.js`. The UI is
+  disposable; the engine is the asset.
+- **Folder boundaries inside the app** (Phase 0, 2026-10-06; roadmap §3.1). `core` imports only
+  `core`; `onprem` never imports `guest`. Both host shells (Linux *and* Windows) live in `guest/`
+  so they could one day serve Cloud Engineer's VMs too — they would move to a package first.
+  *Known coupling:* `guest` → `onprem` for the DHCP client and DNS resolver — listed in the
+  architecture test and to be cut before any reuse, because an Azure NIC gets its address from the
+  platform, not from a player-run DHCP server. Shared, domain-free code (`ipUtils`, `saveFormat`)
+  lives in `@sim/kernel` since the split (2026-10-07).
+- **Failure reasons are a registry** (`apps/netsim/src/core/failureReasons.js`): engine code emits
+  `REASON.*`, never literals; emitted strings never change. Only codes the engine really emits
+  are registered — planned ones join when implemented. (2026-10-06)
+- **Saves gain `schemaVersion: 1` next to the existing `version: 2`, and every device a
+  `domain` (`onprem`).** Missing fields default (old saves load unchanged). *Why not bump
+  `version`:* autosave loading drops any other value, so a bump would silently discard every
+  player's save. Owner's choice, 2026-10-06.
+- **Mutation + tick**: engines mutate `Device`/`Topology` in place, then `refresh()`
+  bumps a tick in `GameContext`. No immutable-state rewrite.
+- **No giant GameManager.** `GameContext` owns topology/engine/CLI plumbing and knows
+  how to start/complete *any* mission. `CareerContext` (wraps *inside* `GameProvider`)
+  owns company/reputation/clients/contracts and persists its own slice.
+- **Two mission registries behind one door.** Legacy `mission_001–005` stay on
+  `MISSION_TASKS` verbatim; new missions are declarative `MissionDefinition`s.
+  `getMissionRuntime(id)` / `findMissionById(id)` are the only lookups callers use.
+- **Missions gate on numeric `requiredReputation`, never on tier names**, so tiers can
+  be renamed/rebalanced without touching mission data.
+- **The admin laptop is a real topology node, and GUI tools share device state with the
+  CLI.** No parallel config store; `show running-config` is the arbiter. No synthesized
+  packets in captures — if the engine can't emit it truthfully, don't display it.
+- **Contract SLA time is real wall-clock** (`Date.now()`), tuned for a 20–60 min
+  session; paused while a job-board mission is active.
+
+- **DNS: servers are configured in a GUI (Packet-Tracer style), routers stay CLI; resolution is
+  strict; Linux uses `resolvectl`; a host holds a list of name servers (primary + secondary).**
+  *Why:* Windows DNS Manager and Packet Tracer both use a GUI for server records; CCNA tests the
+  router CLI; a single name server per host would have to be unlearned. Phase 1 (client resolver, the three
+  shells, host GUI) built 2026-09-20; servers/`ip dns server`/cache are phases 2–3 — see `docs/netsim/DNS_DESIGN.md`.
+  A host's name servers are `dns_servers` (by hand) over `dhcp_dns_servers` (lease); static wins. (2026-09-20)
+- **Long-term-contract tickets are paced, not periodic.** First ticket 5–9 min after a contract
+  starts, then a rolled 10–20 min gap after each fix or expiry, ×2.5 while a job-board mission is
+  active, never closer than 4 min between any two, max 2 open, alerts at issue then +5 / +10 / +20 min
+  and then silence. *Why:* the old fixed 5-min timer spammed cable/IP tickets and emails.
+  Asked for by the owner; the numbers are tunable constants in `engine/ticketScheduler.js` and
+  `engine/alertSchedule.js`. (2026-09-20)
+- **The Career board lists only available jobs; a newly available job is offered** (accept /
+  decline for now / view). Declined jobs stay listed, marked. A new player's starting jobs are
+  recorded silently, not announced. (2026-09-20)
+
+## UI design system (2026-09-20)
+
+- **Colour is signal, two self-hosted typefaces, sentence case** — shared by both products, recorded in
+  `../PLATFORM.md` ("UI design system").
+- **Menus always come over everything else.** z-index scale: floorplan ≤ 50 · job panel 1500 ·
+  terminal / Configure GUI windows 1600 · toasts 2400 · dialogs 2500+ · admin laptop 3000 ·
+  menus (settings, device and background context menus) 5000. *Why:* owner rule; a menu hidden
+  under a window is unusable. New floating UI picks a slot on this scale. (2026-09-20)
+- **Mission progress is drawn as a patch cable** (`.step`): one LED per task, cable lit
+  up to the current step. Difficulty is drawn as signal-strength bars, not stars.
+
+## GUI writes (2026-09-20)
+
+- **Every GUI write goes through the CLI engines — including the inspector's quick IP edit.**
+  A GUI plans real commands (`engine/hostConfig.js`, `engine/interfaceAddress.js`) and runs them
+  via `executeDeviceCommands`; it never assigns device fields. *Why:* the CLI is the arbiter, so
+  the GUI can't reach a state the terminal can't, and every check the CLI makes (overlap,
+  duplicate, network/broadcast address, gateway rules) applies to the GUI too. The user kept the
+  inspector edit as a quick tool and asked for it to use this path. (Confirmed 2026-09-20.)
+- **Accuracy fixes to the engines are pre-authorised.** The earlier "don't touch the engine
+  files" guard was lifted for fixes that bring behaviour closer to real gear / the accuracy
+  spec; each still needs tests (asserting the exact real wording) and an accuracy-gate pass.
+  Anything that changes mission *content* or teaching flow (e.g. hosts booting up) is still
+  the owner's call. (Confirmed 2026-09-20.)
+
+## Tooling
+
+- **Vitest is the test runner**; networking behaviour is locked in by tests. Broken
+  scenarios assert the exact `failureReason`, not just `reachable === false`.
+- **The accuracy gate (`docs/netsim/NETWORKING_ACCURACY.md` Prompt 8) runs before finalizing
+  any networking change** — locally via `/accuracy-gate`, and again in CI via
+  `.github/scripts/ai-review.js`.
+- **The brain lives in `.claude/` and is versioned** (2026-09-11). Only
+  `settings.local.json` is git-ignored.

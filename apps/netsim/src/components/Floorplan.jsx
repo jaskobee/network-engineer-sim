@@ -1,0 +1,1023 @@
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { useGame } from '../state/GameContext.jsx'
+import ContextMenu from './ContextMenu.jsx'
+import { maskToPrefixLen } from '@sim/kernel/ipUtils.js'
+import { DEVICE_ICONS as ICONS } from './DeviceIcons.jsx'
+import { IconDiagram } from './icons.jsx'
+
+const W = 108
+const H = 90
+
+// ICMP timing constants — must stay in sync with GameContext.jsx cleanup timeout
+const PING_TRAVEL_MS = 1200
+const PING_FADE_MS   = 600
+
+function center(placement) {
+  return { x: placement.x + W / 2, y: placement.y + H / 2 }
+}
+
+
+// ── Device hover tooltip ──────────────────────────────────────────────────────
+
+function DeviceTooltip({ device, x, y }) {
+  const STATUS_COLOR = { up: '#3ee08f', down: '#ffb42e', admin_down: '#7d9aae' }
+  const STATUS_LABEL = { up: 'up', down: 'down', admin_down: 'admin down' }
+  const flipLeft = x > window.innerWidth - 280
+  return (
+    <div style={{
+      position: 'fixed', left: flipLeft ? x - 280 : x,
+      top: Math.min(y, window.innerHeight - 220),
+      zIndex: 500, background: 'var(--surface-raised)', border: '1px solid var(--rule-strong)',
+      borderRadius: 8, minWidth: 256, maxWidth: 300,
+      boxShadow: 'var(--shadow-float)', pointerEvents: 'none', userSelect: 'none',
+    }}>
+      <div style={{ padding: '8px 12px 6px', borderBottom: '1px solid var(--rule)' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
+          {device.hostname}
+        </div>
+        <div style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 1 }}>{device.model} · {device.type}</div>
+      </div>
+      <div style={{ padding: '4px 0 6px' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr auto',
+          padding: '3px 12px', fontSize: 13, color: 'var(--ink-3)', fontWeight: 600, marginBottom: 2,
+        }}>
+          <span>Interface</span><span>IP</span><span>Status</span>
+        </div>
+        {device.interfaces.map(iface => (
+          <div key={iface.name} style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr auto',
+            padding: '2px 12px', fontSize: 12, fontFamily: 'var(--font-mono)',
+            background: iface.status === 'up' ? 'var(--surface-hover)' : 'transparent',
+          }}>
+            <span style={{ color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {iface.name.replace('GigabitEthernet', 'Gi').replace('FastEthernet', 'Fa').replace('Ethernet', 'Eth')}
+            </span>
+            <span style={{ color: iface.ip ? 'var(--ink)' : 'var(--ink-3)' }}>
+              {iface.ip ? `${iface.ip}/${maskToPrefixLen(iface.subnet_mask)}` : '—'}
+            </span>
+            <span style={{ color: STATUS_COLOR[iface.status] || '#738ea2', fontSize: 12 }}>
+              {STATUS_LABEL[iface.status] || iface.status}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: '5px 12px 7px', borderTop: '1px solid var(--rule)' }}>
+        <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+          {device.interfaces.filter(i => i.connected_to).length} cable(s) connected
+          {' · '}{device.interfaces.filter(i => i.status === 'up').length} port(s) up
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ── Port picker modal ─────────────────────────────────────────────────────────
+
+function abbreviatePortLabel(name) {
+  return name
+    .replace('GigabitEthernet', 'Gi')
+    .replace('FastEthernet', 'Fa')
+    .replace('Ethernet', 'Eth')
+}
+
+// A device's front panel, rendered as a real port grid rather than a bare
+// dropdown — occupied ports are lit green (matching the "up" convention
+// used everywhere else in the sim) and unclickable; free ports are dark
+// slots the player picks by clicking, lighting up blue once chosen.
+function DevicePortPanel({ device, selectedPort, onSelectPort }) {
+  const Icon = ICONS[device.type] || (() => null)
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <div style={{ transform: 'scale(0.7)', transformOrigin: 'left center' }}><Icon /></div>
+        <div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#c8d4e0', fontFamily: 'var(--font-mono)' }}>{device.hostname}</div>
+          <div style={{ fontSize: 12, color: '#6f8fa5' }}>{device.model}</div>
+        </div>
+      </div>
+      <div style={{
+        background: '#091017', border: '1px solid #24313a', borderRadius: 6,
+        padding: '10px 10px 8px', display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center',
+      }}>
+        {device.interfaces.map(iface => {
+          const occupied = !!iface.connected_to
+          const isSelected = iface.name === selectedPort
+          const portNum = abbreviatePortLabel(iface.name).replace(/^\D+/, '')
+          return (
+            <button
+              key={iface.name}
+              disabled={occupied}
+              onClick={() => onSelectPort(iface.name)}
+              title={occupied ? `${abbreviatePortLabel(iface.name)} — already connected` : abbreviatePortLabel(iface.name)}
+              style={{
+                width: 36, height: 32, borderRadius: 3, padding: 0,
+                cursor: occupied ? 'not-allowed' : 'pointer',
+                background: occupied ? '#0d1e16' : isSelected ? '#162f46' : '#101f2d',
+                border: `2px solid ${occupied ? '#3ee08f' : isSelected ? '#4da6ff' : '#2f3f4b'}`,
+                boxShadow: isSelected ? '0 0 10px #4da6ff60' : 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                transition: 'border-color 0.12s, background 0.12s',
+              }}
+              onMouseEnter={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#4a749a' }}
+              onMouseLeave={e => { if (!occupied && !isSelected) e.currentTarget.style.borderColor = '#2f3f4b' }}
+            >
+              <div style={{
+                width: 13, height: 9, borderRadius: '1px 1px 0 0',
+                background: occupied ? '#3ee08f' : isSelected ? '#4da6ff' : '#24313a',
+              }} />
+              <span style={{
+                fontSize: 10.5, marginTop: 2, fontFamily: 'var(--font-mono)',
+                color: occupied ? '#3ee08f' : isSelected ? '#8ab3d4' : '#768fa6',
+              }}>{portNum}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function PortPicker({ srcDevice, dstDevice, onConnect, onCancel }) {
+  const srcFree = srcDevice.interfaces.filter(i => !i.connected_to)
+  const dstFree = dstDevice.interfaces.filter(i => !i.connected_to)
+  const [srcPort, setSrcPort] = useState(srcFree[0]?.name ?? '')
+  const [dstPort, setDstPort] = useState(dstFree[0]?.name ?? '')
+
+  const noSrc = srcFree.length === 0
+  const noDst = dstFree.length === 0
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 2600,   // a modal picker: above windows and the job panel
+      background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={onCancel}>
+      <div
+        style={{
+          background: 'var(--surface-panel)', border: '1px solid var(--rule-strong)', borderRadius: 14,
+          padding: '22px 26px', minWidth: 340, boxShadow: 'var(--shadow-float)',
+          animation: 'portPickerIn 0.15s ease-out',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ fontSize: 17, color: 'var(--ink)', fontWeight: 700, marginBottom: 16 }}>
+          Connect cable — pick a free port on each device
+        </div>
+
+        {(noSrc || noDst) ? (
+          <>
+            <div style={{ color: '#ff6259', fontSize: 14.5, marginBottom: 16 }}>
+              No free ports on <strong>{noSrc ? srcDevice.hostname : dstDevice.hostname}</strong>.
+            </div>
+            <button
+              style={{
+                padding: '6px 18px', background: '#202b33', color: '#738ea2',
+                border: '1px solid #2a3843', borderRadius: 4, cursor: 'pointer', fontSize: 14.5,
+              }}
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <DevicePortPanel device={srcDevice} selectedPort={srcPort} onSelectPort={setSrcPort} />
+            <div style={{ textAlign: 'center', color: '#2f6fbd', fontSize: 18.5, margin: '6px 0' }}>⇅</div>
+            <DevicePortPanel device={dstDevice} selectedPort={dstPort} onSelectPort={setDstPort} />
+
+            <div style={{ fontSize: 12, color: '#708fa6', marginTop: 10, textAlign: 'center' }}>
+              <span style={{ color: '#3ee08f' }}>■</span> connected &nbsp;
+              <span style={{ color: '#4da6ff' }}>■</span> selected &nbsp;
+              <span style={{ color: '#7290a6' }}>■</span> free
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button
+                style={{
+                  padding: '6px 16px', background: 'transparent', color: '#738fa2',
+                  border: '1px solid #2a3843', borderRadius: 4, cursor: 'pointer', fontSize: 14.5,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#d9e2e8' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#738fa2' }}
+                onClick={onCancel}
+              >
+                Cancel
+              </button>
+              <button
+                style={{
+                  padding: '6px 20px', background: '#2f6fbd', color: '#e8eef2',
+                  border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 14.5, fontWeight: 700,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#3f7fcf' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#2f6fbd' }}
+                onClick={() => onConnect(
+                  srcDevice.id + ':' + srcPort,
+                  dstDevice.id + ':' + dstPort,
+                )}
+              >
+                Connect
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Floorplan tags ────────────────────────────────────────────────────────────
+//
+// Freeform text labels the player can drop anywhere to keep a busy topology
+// organized ("Server01", "DMZ", …) — purely cosmetic, never read by any
+// mission check. Dragged with plain mouse listeners (matching the pattern
+// already used by ActiveJobPanel's title bar / the inspector resize divider)
+// rather than pulling label placement into the dnd-kit wiring App.jsx uses
+// for devices, since these never need to interact with the Inventory drop zone.
+
+function FloorLabel({ label, onMove, onEdit, onDelete }) {
+  const [editing, setEditing] = useState(false)
+  const [draft,   setDraft]   = useState(label.text)
+  const [hovered, setHovered] = useState(false)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (editing) { inputRef.current?.focus(); inputRef.current?.select() }
+  }, [editing])
+
+  function handleDragStart(e) {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    const start = { mx: e.clientX, my: e.clientY, px: label.x, py: label.y }
+    function handleDragMove(ev) {
+      onMove(start.px + ev.clientX - start.mx, start.py + ev.clientY - start.my)
+    }
+    function handleDragEnd() {
+      document.removeEventListener('mousemove', handleDragMove)
+      document.removeEventListener('mouseup', handleDragEnd)
+    }
+    document.addEventListener('mousemove', handleDragMove)
+    document.addEventListener('mouseup', handleDragEnd)
+  }
+
+  function commitEdit() {
+    onEdit(draft.trim() || 'Label')
+    setEditing(false)
+  }
+
+  return (
+    <div
+      style={{ position: 'absolute', left: label.x, top: label.y, zIndex: 8, userSelect: 'none', pointerEvents: 'auto' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={e => e.stopPropagation()}
+      onContextMenu={e => { e.preventDefault(); e.stopPropagation() }}
+    >
+      {editing ? (
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commitEdit()
+            if (e.key === 'Escape') { setDraft(label.text); setEditing(false) }
+          }}
+          style={{
+            background: '#141a1f', color: '#e8eef2', border: '1px solid #4da6ff',
+            borderRadius: 4, padding: '3px 8px', fontSize: 12.5, fontFamily: 'var(--font-mono)',
+            outline: 'none', minWidth: 70,
+          }}
+        />
+      ) : (
+        <div
+          onMouseDown={handleDragStart}
+          onDoubleClick={e => { e.stopPropagation(); setDraft(label.text); setEditing(true) }}
+          title="Drag to move · double-click to rename"
+          style={{
+            position: 'relative', display: 'inline-block',
+            background: '#171f24', border: '1px dashed #3a4e5d', borderRadius: 4,
+            padding: `3px ${hovered ? 22 : 10}px 3px 10px`,
+            fontSize: 12.5, fontFamily: 'var(--font-mono)', color: '#c0cfdc',
+            cursor: 'grab', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
+            transition: 'padding 0.1s',
+          }}
+        >
+          {label.text}
+          {hovered && (
+            <button
+              onMouseDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onDelete() }}
+              title="Remove label"
+              style={{
+                position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)',
+                width: 15, height: 15, lineHeight: '13px', padding: 0,
+                background: 'transparent', color: '#b97c7c', border: '1px solid #422c2a',
+                borderRadius: 3, fontSize: 13, cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ff6259'; e.currentTarget.style.borderColor = '#ff6259' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#b97c7c'; e.currentTarget.style.borderColor = '#422c2a' }}
+            >×</button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Small right-click menu on empty floorplan background — the one way to
+// create a new tag, so it appears exactly where the player clicked rather
+// than at some fixed default the player then has to drag into place.
+function BackgroundContextMenu({ x, y, onAddLabel }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', left: x, top: y, zIndex: 5000,   // menus always come over everything else
+        background: '#1f2a31', border: '1px solid #2f6fbd', borderRadius: 4,
+        minWidth: 160, boxShadow: '0 6px 20px rgba(0,0,0,0.6)', overflow: 'hidden', userSelect: 'none',
+      }}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+    >
+      <div
+        onClick={onAddLabel}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', fontSize: 14.5, color: '#3ee08f', cursor: 'pointer' }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#0d1e16' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+      >
+        <span style={{ fontSize: 14 }}>🏷</span> Add Label Here
+      </div>
+    </div>
+  )
+}
+
+// ── Per-device draggable node ─────────────────────────────────────────────────
+
+function DeviceNode({ device, placement, isSelected, onSelect, onCtxMenu, onHover, onLeave, wireMode, onWireConnect }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: device.id,
+    data: { type: 'placed', deviceId: device.id },
+    disabled: !!wireMode,
+  })
+
+  const Icon      = ICONS[device.type] || (() => null)
+  const isPowered = !!device.powered
+  const hasUp     = device.interfaces.some(i => i.status === 'up')
+  const isWireSrc = wireMode?.srcDeviceId === device.id
+  const isIsp     = device.type === 'isp'
+
+  const borderColor = isIsp       ? (isWireSrc ? '#f0d264' : isSelected ? '#00e5ff' : '#26bfd6')
+    : isWireSrc      ? '#f0d264'
+    : !isPowered     ? '#192229'
+    : isSelected     ? '#4da6ff'
+    : hasUp          ? '#234e39'
+    : '#202b33'
+
+  const style = {
+    position: 'absolute',
+    left: placement.x + (transform?.x ?? 0),
+    top:  placement.y + (transform?.y ?? 0),
+    width: W, height: H,
+    opacity: isDragging ? 0.4 : isPowered ? 1 : 0.55,
+    cursor: wireMode
+      ? (isWireSrc ? 'not-allowed' : 'crosshair')
+      : isDragging ? 'grabbing' : 'grab',
+    zIndex: isSelected ? 10 : 5,
+    userSelect: 'none',
+    touchAction: 'none',
+    pointerEvents: 'auto',
+  }
+
+  function handleClick(e) {
+    e.stopPropagation()
+    if (wireMode && !isWireSrc) { onWireConnect(device.id); return }
+    if (!wireMode) onSelect()
+  }
+
+  function handleCtxMenu(e) {
+    e.preventDefault(); e.stopPropagation()
+    if (!wireMode) onCtxMenu(e)
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...(wireMode ? {} : { ...listeners, ...attributes })}
+      onClick={handleClick}
+      onContextMenu={handleCtxMenu}
+      onMouseEnter={e => onHover(e.clientX, e.clientY)}
+      onMouseLeave={onLeave}
+    >
+      <div style={{
+        width: '100%', height: '100%',
+        background: isWireSrc ? '#1c1a08' : isSelected ? '#162f46' : '#141a1f',
+        border: `2px solid ${borderColor}`,
+        borderRadius: 6,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: 2,
+        boxShadow: isWireSrc
+          ? '0 0 12px #f0d26440'
+          : isSelected ? '0 0 10px #4da6ff40' : 'none',
+        padding: '4px 0',
+      }}>
+        <div style={{ opacity: isPowered ? 1 : 0.4 }}>
+          <Icon />
+        </div>
+        <div style={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', color: isPowered ? '#d9e2e8' : '#7091a7', marginTop: 2 }}>
+          {device.hostname}
+        </div>
+        {isIsp ? (
+          <div style={{ fontSize: 13, color: '#26bfd6', fontWeight: 600, marginTop: 2 }}>
+            Internet
+          </div>
+        ) : !isPowered ? (
+          <div title="Right-click the device and choose Power On" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-3)', fontWeight: 600, marginTop: 1 }}>
+            <i className="led" style={{ width: 6, height: 6 }} /> Powered off
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 3, marginTop: 1 }}>
+            {device.interfaces.slice(0, 8).map(iface => (
+              <div
+                key={iface.name}
+                title={`${iface.name}: ${iface.status}${iface.ip ? ' ' + iface.ip : ''}`}
+                style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: iface.status === 'up' ? '#3ee08f'
+                    : iface.status === 'admin_down' ? '#3a4855' : '#ffb42e',
+                }}
+              />
+            ))}
+            {device.interfaces.length > 8 && (
+              <span style={{ fontSize: 12, color: '#738ea2', lineHeight: '6px' }}>+{device.interfaces.length - 8}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Cable + ping layers ───────────────────────────────────────────────────────
+
+// Cable health states:
+//   up         — both ends up: solid blue
+//   down       — connected but link not established (run no shutdown / ip link set up): amber dashed
+//   admin_down — at least one end is administratively shut: near-invisible grey dashed
+function _cableState(iface, remoteIface) {
+  if (iface.status === 'up' && remoteIface?.status === 'up') return 'up'
+  if (iface.status === 'admin_down' || remoteIface?.status === 'admin_down') return 'admin_down'
+  return 'down'
+}
+
+function CableLayer({ devices, placements }) {
+  const seen = new Set()
+  const cables = []
+  for (const dev of devices) {
+    if (!placements[dev.id]) continue
+    for (const iface of dev.interfaces) {
+      if (!iface.connected_to) continue
+      const key = [dev.id + ':' + iface.name, iface.connected_to].sort().join('|')
+      if (seen.has(key)) continue
+      seen.add(key)
+      const remoteDevId  = iface.connected_to.slice(0, iface.connected_to.indexOf(':'))
+      const remoteIfName = iface.connected_to.slice(iface.connected_to.indexOf(':') + 1)
+      const remoteDev    = devices.find(d => d.id === remoteDevId)
+      if (!remoteDev || !placements[remoteDevId]) continue
+      const remoteIface = remoteDev.getInterface(remoteIfName)
+      const state = _cableState(iface, remoteIface)
+      const { x: x1, y: y1 } = center(placements[dev.id])
+      const { x: x2, y: y2 } = center(placements[remoteDevId])
+      cables.push({ key, x1, y1, x2, y2, state })
+    }
+  }
+  return (
+    <>
+      {cables.map(c => (
+        <line
+          key={c.key} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2}
+          stroke={c.state === 'up' ? '#2f6fbd' : c.state === 'down' ? '#c05800' : '#161e24'}
+          strokeWidth={c.state === 'up' ? 2.5 : 2}
+          strokeDasharray={c.state === 'up' ? undefined : '6 3'}
+          strokeOpacity={c.state === 'admin_down' ? 0.45 : 1}
+          strokeLinecap="round"
+        />
+      ))}
+    </>
+  )
+}
+
+function PingLayer({ pingAnimations, placements }) {
+  return pingAnimations.flatMap(ping => {
+    const waypoints = (ping.pathDevIds || [])
+      .map(devId => placements[devId])
+      .filter(Boolean)
+      .map(p => center(p))
+    if (waypoints.length < 2) return []
+    const fwd = <PingDot key={`${ping.id}-fwd`} waypoints={waypoints} success={ping.success} startTime={ping.id} isReply={false} />
+    if (!ping.success) return [fwd]
+    // Success is the payoff beat: a current sweeps the wires and each device lights up as
+    // the packet reaches it (PingCelebration), the request dot rides on top, and the ICMP
+    // Echo Reply departs the destination the moment the request arrives (PING_TRAVEL_MS).
+    const fx  = <PingCelebration key={`${ping.id}-fx`} waypoints={waypoints} />
+    const rev = <PingDot key={`${ping.id}-ret`} waypoints={[...waypoints].reverse()} success={true} startTime={ping.id + PING_TRAVEL_MS} isReply={true} />
+    return [fx, fwd, rev]
+  })
+}
+
+// The "network comes alive" moment, drawn only for a ping the engine actually forwarded.
+// A bright current draws itself along the real path over PING_TRAVEL_MS (so it keeps pace
+// with the request dot), and each device on the path fires an expanding ring the instant
+// the current reaches it. Pure CSS animations (see index.css) keyed off mount — no RAF,
+// and the whole group is removed with the ping after ~3.3s.
+function PingCelebration({ waypoints }) {
+  const pts  = waypoints.map(p => `${p.x},${p.y}`).join(' ')
+  const segs = Math.max(1, waypoints.length - 1)
+  return (
+    <g className="ping-fx">
+      {/* Two stacked strokes: a soft wide glow under a thin bright core, both drawn on
+          together via stroke-dashoffset over the packet's travel time. */}
+      <polyline className="ping-fx-current glow" points={pts} pathLength="1" />
+      <polyline className="ping-fx-current core" points={pts} pathLength="1" />
+      {waypoints.map((p, i) => (
+        <circle
+          key={i}
+          className="ping-fx-node"
+          cx={p.x} cy={p.y} r="8"
+          style={{ animationDelay: `${(i / segs) * PING_TRAVEL_MS}ms` }}
+        />
+      ))}
+    </g>
+  )
+}
+
+// Geometry of a multi-hop path, measured once so the packet can travel it by ARC LENGTH
+// (constant speed) instead of spending an equal slice of time on each segment — a long
+// hop and a short hop then move at the same visual pace, the way a real packet would.
+function pathGeometry(waypoints) {
+  const segs = []
+  let total = 0
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i], b = waypoints[i + 1]
+    const len = Math.hypot(b.x - a.x, b.y - a.y)
+    segs.push({ a, b, len, acc: total })
+    total += len
+  }
+  return { segs, total: total || 1 }
+}
+
+// The point that lies `dist` pixels along the path from its start (clamped to the ends).
+function pointAtDistance(geo, dist) {
+  const d = Math.max(0, Math.min(geo.total, dist))
+  let seg = geo.segs[0]
+  for (const s of geo.segs) { if (d <= s.acc + s.len) { seg = s; break } seg = s }
+  const t = seg.len ? (d - seg.acc) / seg.len : 0
+  return { x: seg.a.x + (seg.b.x - seg.a.x) * t, y: seg.a.y + (seg.b.y - seg.a.y) * t }
+}
+
+const TAIL_PX   = 44   // length of the comet trail behind the head
+const TAIL_DOTS = 6
+
+function PingDot({ waypoints, success, startTime, isReply }) {
+  // Measure the path once (not every animation frame); re-measures only if a device moves.
+  const geo = useMemo(() => pathGeometry(waypoints), [waypoints])
+  const [frame, setFrame] = useState({ dist: 0, opacity: 1, on: false })
+  const rafRef = useRef()
+
+  useEffect(() => {
+    const TOTAL_MS = PING_TRAVEL_MS + PING_FADE_MS
+
+    function step() {
+      const elapsed = performance.now() - startTime
+      // startTime may be in the future — the return packet waits for the request to arrive.
+      if (elapsed < 0) { rafRef.current = requestAnimationFrame(step); return }
+
+      const tTravel = Math.min(elapsed / PING_TRAVEL_MS, 1)
+      // smoothstep over the whole path: eases away from the source and settles at the
+      // destination with no jerk, while staying constant-speed in the middle.
+      const eased   = tTravel * tTravel * (3 - 2 * tTravel)
+      const dist    = eased * geo.total
+      const opacity = tTravel >= 1
+        ? Math.max(0, 1 - (elapsed - PING_TRAVEL_MS) / PING_FADE_MS)
+        : 1
+
+      setFrame({ dist, opacity, on: true })
+      if (elapsed < TOTAL_MS) rafRef.current = requestAnimationFrame(step)
+    }
+
+    rafRef.current = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [startTime, geo])
+
+  if (!frame.on) return null
+  // Echo Request: green. Echo Reply: cyan — visually distinct so the return path is obvious.
+  const color = !success ? '#ff6259' : isReply ? '#66d4ea' : '#3ee08f'
+  const head  = pointAtDistance(geo, frame.dist)
+  // A comet trail: a handful of samples strung out behind the head, riding the same line
+  // and fading toward the back — reads as motion/flow rather than a dot teleporting.
+  const tail = Array.from({ length: TAIL_DOTS }, (_, k) => {
+    const f = (k + 1) / (TAIL_DOTS + 1)
+    return { p: pointAtDistance(geo, frame.dist - f * TAIL_PX), o: 1 - f }
+  })
+  return (
+    <g opacity={frame.opacity}>
+      {tail.map((t, i) => (
+        <circle key={i} cx={t.p.x} cy={t.p.y} r={2 + 3 * t.o} fill={color} opacity={0.45 * t.o} />
+      ))}
+      <circle cx={head.x} cy={head.y} r={10}  fill={color} opacity={0.22} />
+      <circle cx={head.x} cy={head.y} r={5.5} fill={color} />
+      <circle cx={head.x} cy={head.y} r={2.2} fill="#ffffff" opacity={0.9} />
+    </g>
+  )
+}
+
+// ── Wire-mode overlay (live dashed line + pulsing rings) ──────────────────────
+
+function WireLayer({ wireMode, placements, mousePos, wireHoverDeviceId }) {
+  if (!wireMode) return null
+  const srcP = placements[wireMode.srcDeviceId]
+  if (!srcP) return null
+  const { x: sx, y: sy } = center(srcP)
+  const dstP = wireHoverDeviceId ? placements[wireHoverDeviceId] : null
+  const { x: ex, y: ey } = dstP ? center(dstP) : mousePos
+  return (
+    <>
+      {/* Pulsing ring on source */}
+      <circle cx={sx} cy={sy} r="52" fill="none" stroke="#f0d264" strokeWidth="2">
+        <animate attributeName="r" values="44;58;44" dur="1.2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1.2s" repeatCount="indefinite"/>
+      </circle>
+      {/* Pulsing ring on hover target */}
+      {dstP && (
+        <circle cx={ex} cy={ey} r="52" fill="none" stroke="#3ee08f" strokeWidth="2">
+          <animate attributeName="r" values="44;58;44" dur="1.2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1.2s" repeatCount="indefinite"/>
+        </circle>
+      )}
+      {/* Live dashed wire */}
+      <line
+        x1={sx} y1={sy} x2={ex} y2={ey}
+        stroke="#4da6ff" strokeWidth="2" strokeDasharray="8 5"
+        strokeLinecap="round" opacity="0.8"
+      />
+    </>
+  )
+}
+
+// ── Main Floorplan ────────────────────────────────────────────────────────────
+
+export default function Floorplan() {
+  const {
+    devices, placements, selectedDeviceId, setSelectedDeviceId,
+    pingAnimations, wireMode, setWireMode, connectInterfaces, getDevice,
+    powerAllDevices,
+    adminLaptopOpen, setAdminLaptopOpen, laptopDevice,
+    labels, addLabel, moveLabel, updateLabelText, removeLabel,
+    panOffset, setPanOffset,
+    mode, activeMissionId, activeTicket,
+  } = useGame()
+
+  const [ctxMenu,          setCtxMenu]          = useState(null)
+  const [bgCtxMenu,        setBgCtxMenu]        = useState(null) // { x, y } screen coords
+  const [hovered,          setHovered]          = useState(null) // { device, clientX, clientY }
+  const [wireHoverDevId,   setWireHoverDevId]   = useState(null)
+  const [portPicker,       setPortPicker]       = useState(null) // { srcDeviceId, dstDeviceId }
+  const [mousePos,         setMousePos]         = useState({ x: 0, y: 0 })
+  const [isPanning,        setIsPanning]        = useState(false)
+  const floorplanRef = useRef(null)
+  // Distinguishes "just released a pan-drag" from "a genuine click on empty
+  // background" — mouseup fires before click, so this survives just long
+  // enough for handleBackgroundClick to see it and skip deselecting.
+  const justPannedRef = useRef(false)
+
+  // Close either context menu on any mousedown outside it (bubbling phase).
+  // Using a document listener instead of a z-index overlay means underlying elements
+  // (including the xterm textarea) receive their pointerdown first and stay focusable.
+  useEffect(() => {
+    if (!ctxMenu && !bgCtxMenu) return
+    function onMouseDown() { setCtxMenu(null); setBgCtxMenu(null) }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [ctxMenu, bgCtxMenu])
+
+  const placed = devices.filter(d => placements[d.id])
+  const { isOver, setNodeRef } = useDroppable({ id: 'floorplan' })
+
+  // Combine droppable ref + local ref
+  function setRefs(el) {
+    floorplanRef.current = el
+    setNodeRef(el)
+  }
+
+  // Escape cancels wire mode
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') { setWireMode(null); setPortPicker(null); setBgCtxMenu(null) }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [setWireMode])
+
+  function handleMouseMove(e) {
+    if (!wireMode || !floorplanRef.current) return
+    const rect = floorplanRef.current.getBoundingClientRect()
+    // Convert viewport-relative pixels to world coordinates — WireLayer draws
+    // this alongside device centers, which are already in world space.
+    setMousePos({ x: e.clientX - rect.left - panOffset.x, y: e.clientY - rect.top - panOffset.y })
+  }
+
+  function handleBackgroundClick() {
+    if (justPannedRef.current) { justPannedRef.current = false; return }
+    setSelectedDeviceId(null)
+    setBgCtxMenu(null)
+    if (wireMode) { setWireMode(null); return }
+    setCtxMenu(null)
+  }
+
+  // Right-clicking a device stops propagation (see DeviceNode.handleCtxMenu),
+  // so this only ever fires for genuine empty-background right-clicks.
+  function handleBackgroundContextMenu(e) {
+    e.preventDefault()
+    if (wireMode || !floorplanRef.current) return
+    const rect = floorplanRef.current.getBoundingClientRect()
+    setBgCtxMenu({
+      x: e.clientX, y: e.clientY,
+      floorX: e.clientX - rect.left - panOffset.x, floorY: e.clientY - rect.top - panOffset.y,
+    })
+  }
+
+  // Click-drag anywhere on empty background pans the (endless) canvas —
+  // same feel as Figma's space-drag pan, minus the modifier key since there's
+  // no competing "marquee select" gesture here to disambiguate from.
+  function handleBackgroundMouseDown(e) {
+    // Guards against dnd-kit's own drag listeners on a device (which don't
+    // necessarily stop propagation) also bubbling up into this handler —
+    // only a mousedown on the empty background itself (not a device, not a
+    // label) should ever start a pan.
+    if (e.target !== e.currentTarget) return
+    if (wireMode || e.button !== 0) return
+    const start = { mx: e.clientX, my: e.clientY, px: panOffset.x, py: panOffset.y, moved: false }
+    setIsPanning(true)
+    function onMove(ev) {
+      const dx = ev.clientX - start.mx, dy = ev.clientY - start.my
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) start.moved = true
+      setPanOffset({ x: start.px + dx, y: start.py + dy })
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      setIsPanning(false)
+      if (start.moved) justPannedRef.current = true
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  function handleAddLabelHere() {
+    if (!bgCtxMenu) return
+    addLabel(bgCtxMenu.floorX, bgCtxMenu.floorY, 'Label')
+    setBgCtxMenu(null)
+  }
+
+  function attemptWireConnect(dstDeviceId) {
+    if (!wireMode) return
+    const srcDev = getDevice(wireMode.srcDeviceId)
+    const dstDev = getDevice(dstDeviceId)
+    if (!srcDev || !dstDev) { setWireMode(null); return }
+    const srcFree = srcDev.interfaces.filter(i => !i.connected_to)
+    const dstFree = dstDev.interfaces.filter(i => !i.connected_to)
+    setWireMode(null)
+    if (srcFree.length === 1 && dstFree.length === 1) {
+      connectInterfaces(srcDev.id + ':' + srcFree[0].name, dstDev.id + ':' + dstFree[0].name)
+    } else {
+      setPortPicker({ srcDeviceId: srcDev.id, dstDeviceId: dstDev.id })
+    }
+  }
+
+  function handlePortPickerConnect(ifaceId1, ifaceId2) {
+    connectInterfaces(ifaceId1, ifaceId2)
+    setPortPicker(null)
+  }
+
+  function handleHover(device, clientX, clientY) {
+    setHovered({ device, clientX, clientY })
+    if (wireMode && device.id !== wireMode.srcDeviceId) setWireHoverDevId(device.id)
+  }
+
+  function handleLeave() {
+    setHovered(null)
+    setWireHoverDevId(null)
+  }
+
+  return (
+    <div
+      ref={setRefs}
+      style={{
+        position: 'relative', flex: 1, overflow: 'hidden',
+        background: '#101519',
+        backgroundImage: 'radial-gradient(circle, #1a2329 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+        // The grid pans in lockstep with content so an endless canvas actually
+        // reads as one continuous plane sliding under a fixed viewport,
+        // rather than content moving over a static backdrop.
+        backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
+        outline: isOver ? '2px solid #2f6fbd' : 'none',
+        outlineOffset: -2,
+        cursor: wireMode ? 'crosshair' : isPanning ? 'grabbing' : 'grab',
+      }}
+      onClick={handleBackgroundClick}
+      onContextMenu={handleBackgroundContextMenu}
+      onMouseMove={handleMouseMove}
+      onMouseDown={handleBackgroundMouseDown}
+    >
+      {/* World-space content — one shared transform pans everything inside
+          together. Every coordinate below (device placements, cable/wire/ping
+          SVG points, label positions) stays exactly as it always was; only
+          the viewport's mapping from world to screen changes here.
+          pointerEvents:none on this wrapper is required, not decorative: it's
+          an inset:0 box covering the whole viewport, so without it every
+          "empty background" click/mousedown would hit this div instead of
+          bubbling to the container's pan/deselect handlers. Its interactive
+          children (DeviceNode, FloorLabel) opt back in with pointerEvents:auto. */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+      }}>
+        {/* Cable layer */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1, overflow: 'visible' }}>
+          <CableLayer devices={placed} placements={placements} />
+        </svg>
+
+        {/* Device nodes */}
+        {placed.map(device => (
+          <DeviceNode
+            key={device.id}
+            device={device}
+            placement={placements[device.id]}
+            isSelected={device.id === selectedDeviceId}
+            onSelect={() => setSelectedDeviceId(device.id)}
+            onCtxMenu={e => setCtxMenu({ x: e.clientX, y: e.clientY, deviceId: device.id })}
+            onHover={(cx, cy) => handleHover(device, cx, cy)}
+            onLeave={handleLeave}
+            wireMode={wireMode}
+            onWireConnect={attemptWireConnect}
+          />
+        ))}
+
+        {/* Floorplan tags */}
+        {!wireMode && Object.values(labels).map(label => (
+          <FloorLabel
+            key={label.id}
+            label={label}
+            onMove={(x, y) => moveLabel(label.id, x, y)}
+            onEdit={text => updateLabelText(label.id, text)}
+            onDelete={() => removeLabel(label.id)}
+          />
+        ))}
+
+        {/* Wire mode overlay */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 15, overflow: 'visible' }}>
+          <WireLayer
+            wireMode={wireMode}
+            placements={placements}
+            mousePos={mousePos}
+            wireHoverDeviceId={wireHoverDevId}
+          />
+        </svg>
+
+        {/* Ping animation layer */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 20, overflow: 'visible' }}>
+          <PingLayer pingAnimations={pingAnimations} placements={placements} />
+        </svg>
+      </div>
+
+      {placed.length === 0 && !wireMode && (() => {
+        // Say what to do next for where the player actually is, rather than one line for everyone.
+        const copy = mode === 'sandbox'
+          ? ['Your canvas is empty', 'Add a device from the palette on the left.']
+          : (activeMissionId || activeTicket)
+            ? ['Your map is empty', 'Buy the gear for this job in the Shop, then drag it from Inventory or press Place.']
+            : ['Your map is empty', 'Open Career on the right and accept a job. Then buy the gear in the Shop.']
+        return (
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%,-50%)', maxWidth: 340,
+            textAlign: 'center', pointerEvents: 'none',
+          }}>
+            <div style={{ color: 'var(--ink-3)', display: 'flex', justifyContent: 'center', marginBottom: 12 }}><IconDiagram size={40} /></div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6 }}>{copy[0]}</div>
+            <div style={{ fontSize: 16, color: 'var(--ink-3)', lineHeight: 1.45 }}>{copy[1]}</div>
+          </div>
+        )
+      })()}
+
+      {/* Power All On button — shown when any placed non-ISP device is offline */}
+      {placed.some(d => !d.powered && d.type !== 'isp') && !wireMode && (
+        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 50 }}>
+          <button
+            style={{
+              padding: '5px 12px', fontSize: 14, fontWeight: 600,
+              background: 'var(--surface-raised)', color: 'var(--ink)',
+              border: '1px solid var(--rule-strong)', borderRadius: 6, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-raised)' }}
+            onClick={e => { e.stopPropagation(); powerAllDevices() }}
+          >
+            Power All On
+          </button>
+        </div>
+      )}
+
+      {/* Wire mode hint banner */}
+      {wireMode && (
+        <div style={{
+          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--surface-panel)', border: '1px solid var(--signal-strong)', borderRadius: 8,
+          padding: '7px 16px', fontSize: 15, color: 'var(--ink)',
+          pointerEvents: 'none', zIndex: 50,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+        }}>
+          Click a device to connect — <span style={{ color: '#738ea2' }}>Esc to cancel</span>
+        </div>
+      )}
+
+      {/* Context menu */}
+      {ctxMenu && (
+        <ContextMenu x={ctxMenu.x} y={ctxMenu.y} deviceId={ctxMenu.deviceId} onClose={() => setCtxMenu(null)} />
+      )}
+
+      {/* Background context menu — "Add Label Here" */}
+      {bgCtxMenu && (
+        <BackgroundContextMenu x={bgCtxMenu.x} y={bgCtxMenu.y} onAddLabel={handleAddLabelHere} />
+      )}
+
+      {/* Hover tooltip */}
+      {hovered && !ctxMenu && (
+        <DeviceTooltip device={hovered.device} x={hovered.clientX + 16} y={hovered.clientY - 40} />
+      )}
+
+      {/* Port picker modal */}
+      {portPicker && (
+        <PortPicker
+          srcDevice={getDevice(portPicker.srcDeviceId)}
+          dstDevice={getDevice(portPicker.dstDeviceId)}
+          onConnect={handlePortPickerConnect}
+          onCancel={() => setPortPicker(null)}
+        />
+      )}
+
+      {/* Admin Laptop quick-access FAB */}
+      {laptopDevice && (
+        <div style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 50 }}>
+          <button
+            onClick={e => { e.stopPropagation(); setAdminLaptopOpen(o => !o) }}
+            title={adminLaptopOpen ? 'Close Admin Laptop' : 'Open Admin Laptop'}
+            style={{
+              width: 58, height: 58,
+              background: adminLaptopOpen ? '#122435' : '#0a131b',
+              border: `2px solid ${adminLaptopOpen ? '#4da6ff' : laptopDevice.powered ? '#344754' : '#1f2a31'}`,
+              borderRadius: 12,
+              cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+              boxShadow: adminLaptopOpen
+                ? '0 0 18px #4da6ff30, 0 4px 16px #00000060'
+                : '0 4px 12px #00000050',
+              transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
+              padding: 0,
+            }}
+            onMouseEnter={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = '#3a76aa'; e.currentTarget.style.background = '#0e1a26' } }}
+            onMouseLeave={e => { if (!adminLaptopOpen) { e.currentTarget.style.borderColor = laptopDevice.powered ? '#344754' : '#1f2a31'; e.currentTarget.style.background = '#0a131b' } }}
+          >
+            <svg viewBox="0 0 54 42" width="32" height="25" style={{ opacity: adminLaptopOpen ? 1 : laptopDevice.powered ? 0.9 : 0.45 }}>
+              <rect x="4" y="3" width="46" height="28" rx="2.5" fill="#11273c" stroke={adminLaptopOpen ? '#4da6ff' : '#8ab3d4'} strokeWidth="1.4"/>
+              <rect x="7" y="6" width="40" height="22" rx="1.5" fill="#08131e"/>
+              <rect x="10" y="10" width="24" height="1.5" rx="0.5" fill={adminLaptopOpen ? '#4da6ff' : '#4da6ff'} opacity="0.7"/>
+              <rect x="10" y="14" width="18" height="1.5" rx="0.5" fill="#66d4ea" opacity="0.5"/>
+              <circle cx="39" cy="16" r="5" fill="#1e364c" stroke={adminLaptopOpen ? '#4da6ff' : '#4da6ff'} strokeWidth="0.8"/>
+              <text x="39" y="19" textAnchor="middle" fontSize="6" fill={adminLaptopOpen ? '#4da6ff' : '#4da6ff'}>★</text>
+              <path d="M2 31 Q2 38 6 38 L48 38 Q52 38 52 31 Z" fill="#11273c" stroke="#8ab3d4" strokeWidth="1.2"/>
+              <rect x="19" y="33" width="16" height="3" rx="1" fill="#161e24" stroke="#4da6ff" strokeWidth="0.5" opacity="0.6"/>
+            </svg>
+            <span style={{
+              fontSize: 13, fontWeight: 600,
+              color: adminLaptopOpen ? '#4da6ff' : laptopDevice.powered ? '#8ea6b6' : '#7d9aae',
+            }}>
+              Laptop
+            </span>
+            {/* Power/config status dot */}
+            <div style={{
+              position: 'absolute', top: 6, right: 6,
+              width: 7, height: 7, borderRadius: '50%',
+              background: !laptopDevice.powered ? '#30414d'
+                : laptopDevice.interfaces.some(i => i.ip) ? '#3ee08f'
+                : '#ffb42e',
+            }} title={!laptopDevice.powered ? 'Offline' : laptopDevice.interfaces.some(i => i.ip) ? 'Configured' : 'Not configured'} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}

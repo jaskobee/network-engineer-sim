@@ -5,7 +5,7 @@ tags: [networking, l2, switching, vlan]
 # Layer 2 Switching and VLANs
 
 The single highest-priority correctness rule in the whole project (see
-`docs/NETWORKING_ACCURACY.md` Prompt 1). Modeled on a Cisco Catalyst 2960: a **strictly
+`docs/netsim/NETWORKING_ACCURACY.md` Prompt 1). Modeled on a Cisco Catalyst 2960: a **strictly
 Layer 2** access switch.
 
 ## The contract (verbatim from the top of `src/models/CLIEngine.js`)
@@ -50,7 +50,7 @@ open question.
 
 ## Where this lives in code
 
-- Device type: `switch` in `src/data/deviceCatalog.js` — Catalyst 2960, 8 ports,
+- Device type: `switch` in `apps/netsim/src/data/deviceCatalog.js` — Catalyst 2960, 8 ports,
   `FastEthernet0/1`–`0/8` (1-indexed, no `Fa0/0` — a real 2960 quirk).
 - Enforcement: `src/models/CLIEngine.js` (command dispatch — rejects `ip address` /
   `no switchport` / `ip route` on switch physical ports) and `src/models/Topology.js`

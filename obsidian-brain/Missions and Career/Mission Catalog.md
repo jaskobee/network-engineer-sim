@@ -8,7 +8,7 @@ Everything a player can currently do, mission by mission. See
 [[Mission DSL]] for the underlying system and [[Career Layer]] for how the
 client-based missions fit into the persistent business layer.
 
-## The legacy five (`src/data/missions.js` + `src/data/missionTasks.js`)
+## The legacy five (`apps/netsim/src/data/missions.js` + `apps/netsim/src/data/missionTasks.js`)
 
 One linear track, gated by `prerequisite`, no persistent client entity, hardware
 always refunded on completion (`financialModel` doesn't exist on these — they behave
@@ -27,7 +27,7 @@ without a firewall, all VLANs route freely through the router. `mission_005` is 
 payoff: it doesn't just add a firewall, it re-teaches the player that a "DMZ" isn't
 real until something actually enforces the boundary.
 
-## The declarative client track (`src/data/missionDefinitions/`)
+## The declarative client track (`apps/netsim/src/data/missionDefinitions/`)
 
 Distinct from the legacy five: these missions belong to a **persistent `Client`**
 entity (see [[Career Layer]]) whose topology survives between jobs — hardware bought
@@ -51,7 +51,7 @@ in job 1 is still standing, still working, in job 2.
 Small, recurring point-fault jobs on an *already-contracted* client's *existing*
 gear — see [[Career Layer]] §Service Tickets for the full SLA/reputation mechanics.
 Two exist today for `client_local_shop`
-(`src/data/serviceTickets.js`):
+(`apps/netsim/src/data/serviceTickets.js`):
 
 - **`ticket_loose_cable_pc2`** — PC-2's cable is really disconnected
   (`Topology.disconnect()`, not a flag) at issuance; fixed by reconnecting it.

@@ -1,0 +1,7 @@
+{
+  "name": "@sim/kernel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared, domain-free building blocks for every simulator: IPv4 math and the save-format envelope. Imports nothing."
+}

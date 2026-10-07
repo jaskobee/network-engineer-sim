@@ -4,7 +4,7 @@ tags: [missions, dsl, engine]
 
 # Mission DSL
 
-`src/engine/missionEngine.js` is the declarative interpreter every mission since the
+`apps/netsim/src/engine/missionEngine.js` is the declarative interpreter every mission since the
 original five has been authored against — the replacement for hand-written
 `checkNNN()`/`diagnoseNNN()` functions. It never touches `CLIEngine`/`PCCLIEngine`/
 `WindowsCLIEngine`/`Topology`/`Device` state directly; it only **reads** what's
@@ -14,9 +14,9 @@ check functions did.
 ## Two registries, one door
 
 `mission_001`–`mission_005` are frozen on hand-written `MISSION_TASKS` entries in
-`src/data/missionTasks.js` — **never** add new hand-written check functions there.
+`apps/netsim/src/data/missionTasks.js` — **never** add new hand-written check functions there.
 Every mission since is a declarative `MissionDefinition` object in
-`src/data/missionDefinitions/`. Every caller in the codebase uses the same two entry
+`apps/netsim/src/data/missionDefinitions/`. Every caller in the codebase uses the same two entry
 points regardless of which kind a mission actually is:
 
 - `getMissionRuntime(missionId)` → `{ tasks, optionalTasks, checkFn, diagnoseFn }`
@@ -71,7 +71,7 @@ the router's LAN interface is cabled to the *switch*, not the PC, so a naive
 adjacency lookup for a `cabled { roleA: router, roleB: pc }` condition would silently
 return `false` forever. **Always pass `ifaceName` explicitly** whenever a role's
 device has more than one candidate interface (e.g. a router with both a LAN and a WAN
-port) — this is documented in `.claude/brain/LESSONS.md` as a real, previously-hit
+port) — this is documented in `.claude/brain/netsim/LESSONS.md` as a real, previously-hit
 bug, not a hypothetical.
 
 ## Auto-generated hints for declarative missions

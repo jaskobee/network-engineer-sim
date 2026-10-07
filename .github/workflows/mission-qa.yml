@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
+      - 'apps/netsim/**'
   schedule:
     - cron: '0 8 * * 1'   # every Monday at 8am UTC
   workflow_dispatch:        # can also be triggered manually from the GitHub UI

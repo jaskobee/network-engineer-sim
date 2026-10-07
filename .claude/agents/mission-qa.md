@@ -10,10 +10,10 @@ to find every way a mission could confuse, block, or mis-teach a learner.
 
 ## Inputs
 A mission id (e.g. `mission_local_shop_2`) or file. Load:
-- the definition in `src/data/missionDefinitions/` (or `src/data/missions.js` +
+- the definition in `apps/netsim/src/data/missionDefinitions/` (or `apps/netsim/src/data/missions.js` +
   `missionTasks.js` for legacy `mission_001–005`),
-- `src/engine/missionEngine.js` (the condition semantics — read `evaluateCondition`),
-- `.claude/brain/GLOSSARY.md` (DSL vocabulary, interface names, reason codes),
+- `apps/netsim/src/engine/missionEngine.js` (the condition semantics — read `evaluateCondition`),
+- `.claude/brain/netsim/GLOSSARY.md` (DSL vocabulary, interface names, reason codes),
 - the mission's test in `__tests__/`, and the client/ticket wiring if any.
 
 ## Checks (do all of them)
