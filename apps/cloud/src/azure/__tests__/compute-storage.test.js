@@ -73,13 +73,18 @@ describe('CS-L7/L8 — managed disks', () => {
     const r = must(op.createVirtualMachine(d.state, vm({ networkInterfaceIds: [nicId], dataDiskIds: [d.id] })))
     expect(r.state.resources[d.id].properties.managedBy).toBe(r.id)
   })
-  // Azure's per-type maximum sizes are not in the verified spec (L7 lists types only), so the
-  // simulator's own cap is refused as not_modelled, never as an Azure rule (gate 2026-10-07).
-  it('sizes above the simulator\'s cap are not modelled; a size is a whole number ≥ 1', () => {
-    expectRefused(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSD', sizeGiB: 32768 }), OUTCOME.NOT_MODELLED, null)
-    expect(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSDv2', sizeGiB: 32768 }).ok).toBe(true)
-    expectRefused(op.createDisk(state, { ...at(), name: 'tiny', diskType: 'PremiumSSD', sizeGiB: 0 }), OUTCOME.INVALID_VALUE, null)
-    expectRefused(op.createVirtualMachine(state, vm({ networkInterfaceIds: [nicId], osDisk: { diskType: 'PremiumSSD', sizeGiB: 40000 } })), OUTCOME.NOT_MODELLED, null)
+  it('L10: each type has its size range — 32,767 GiB for Premium/Standard, 64 TiB for Ultra and Premium SSD v2', () => {
+    expectRefused(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSD', sizeGiB: 32768 }), OUTCOME.INVALID_VALUE, 'L10')
+    expect(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSD', sizeGiB: 32767 }).ok).toBe(true)
+    expect(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSDv2', sizeGiB: 65536 }).ok).toBe(true)
+    expectRefused(op.createDisk(state, { ...at(), name: 'big', diskType: 'PremiumSSDv2', sizeGiB: 65537 }), OUTCOME.INVALID_VALUE, 'L10')
+    expectRefused(op.createVirtualMachine(state, vm({ networkInterfaceIds: [nicId], osDisk: { diskType: 'PremiumSSD', sizeGiB: 40000 } })), OUTCOME.INVALID_VALUE, 'L10')
+  })
+  it('L10: Ultra Disks start at 4 GiB; every size is a whole number of GiB', () => {
+    expectRefused(op.createDisk(state, { ...at(), name: 'u', diskType: 'UltraDisk', sizeGiB: 2 }), OUTCOME.INVALID_VALUE, 'L10')
+    expect(op.createDisk(state, { ...at(), name: 'u', diskType: 'UltraDisk', sizeGiB: 4 }).ok).toBe(true)
+    expectRefused(op.createDisk(state, { ...at(), name: 'tiny', diskType: 'PremiumSSD', sizeGiB: 0 }), OUTCOME.INVALID_VALUE, 'L10')
+    expectRefused(op.createDisk(state, { ...at(), name: 'half', diskType: 'StandardSSD', sizeGiB: 1.5 }), OUTCOME.INVALID_VALUE, 'L10')
   })
 })
 

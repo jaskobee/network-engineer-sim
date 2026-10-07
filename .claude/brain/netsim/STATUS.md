@@ -5,7 +5,7 @@ Repo-wide facts (both products, shared packages, build/deploy) are in `../PLATFO
 
 ## Health
 - NetSim lives in `apps/netsim`. `npm test` (root) → NetSim's project: **789 tests / 37 files** (the whole
-  repo: 992 / 49). `npm run build` → clean apart from the expected xterm chunk-size warning.
+  repo: 993 / 49). `npm run build` → clean apart from the expected xterm chunk-size warning.
 - Dev server: `npm run dev` (port 5173, `/network-engineer-sim/`).
 
 ## Shipped and stable

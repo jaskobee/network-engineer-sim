@@ -148,9 +148,21 @@ copy it, don't "fix" it): `AllowVNetInBound`, `AllowAzureLoadBalancerInBound`,
 `DenyAllInbound`, `AllowVnetOutBound`, `AllowInternetOutBound`, `DenyAllOutBound`.
 Note that `DenyAllInbound` differs from this file's earlier `DenyAllInBound` — re-check in
 the portal / `az network nsg rule list --include-default` before shipping the string.
+**Resolved 2026-10-07** (owner instruction 2026-10-07: "follow the official Azure way, make it as realistic as we can"): the sim uses the **resource names the API
+returns** — `AllowVnetInBound`, `AllowAzureLoadBalancerInBound`, `DenyAllInBound`, `AllowVnetOutBound`,
+`AllowInternetOutBound`, `DenyAllOutBound` (`…/defaultSecurityRules/AllowVnetInBound`,
+`…/defaultSecurityRules/DenyAllInBound` in the Get-AzNetworkSecurityGroup example output,
+https://learn.microsoft.com/en-us/powershell/module/az.network/get-aznetworksecuritygroup). The overview
+page's headings `AllowVNetInBound` / `DenyAllInbound` are display spellings. — **SOURCED** (owner to flip)
 Custom rules: "You can't create two security rules with the same priority and direction."
 Rule name: up to 80 characters, starts with a word character, ends with a word character
 or `_`, may contain word characters, `.`, `-`, `_`.
+*Conflict with table K (resolved 2026-10-07):* the NAMES page row for `networkSecurityGroups /
+securityRules` says "Start with alphanumeric". The NSG overview says "It must begin with a word
+character, and it must end with a word character or with `_`", and that is also the wording of the
+network resource provider's own `InvalidResourceName` error ("It must begin with a word character, and it
+must end with a word character or with '_'"). What the platform enforces wins: the sim follows this rule
+(a leading `_` is accepted). — **SOURCED** (owner to flip)
 
 **C3 — Translation order:** inbound NSG rules evaluate *after* public→private
 translation; outbound rules evaluate *before* private→public translation.
@@ -462,6 +474,9 @@ a fictional "already taken" list (labelled as simulated) so the lesson exists of
 *Caution:* the NAMES page also lists a `virtualMachines | resource group | 2-64 |
 Alphanumerics` row — that row belongs to **Microsoft.NetworkCloud**, not Compute. Don't use it.
 
+*Caution:* for NSG security rule names the table's "Start with alphanumeric" is stricter than what the
+network resource provider enforces — see C2 (resolved 2026-10-07).
+
 ## L. Compute — VM, NIC, managed disks
 
 **L1 — A VM always has at least one NIC.** "A VM must always have at least one NIC
@@ -506,6 +521,14 @@ SSD / Standard SSD / Standard HDD for the OS disk. *Source:* DISKS — **VERIFIE
 **L8 — Managed disk redundancy.** Managed disks support LRS and ZRS (ZRS with limitations);
 Ultra Disks LRS only. *Source:* RED (supported services table), DISKS — **VERIFIED**
 
+**L10 — Managed disk sizes.** "Max disk size": Ultra Disk 65,536 GiB, Premium SSD v2 65,536 GiB,
+Premium SSD 32,767 GiB, Standard SSD 32,767 GiB, Standard HDD 32,767 GiB. "Ultra Disk sizes range from 4 GiB
+up to 64 TiB, in 1 GiB increments." "Premium SSD v2 capacities range from 1 GiB to 64 TiB, in 1-GiB
+increments." Billing: "Azure maps the provisioned size (rounded up) to the nearest offered disk size" (e.g. a
+200-GiB Standard SSD is billed as E15, 256 GiB) — not modelled yet. *Sim:* sizes are whole GiB within the
+type's range; outside it is refused (rule L10). Added on owner instruction 2026-10-07: "follow the official Azure way, make it as realistic as we can".
+*Source:* DISKS (https://learn.microsoft.com/en-us/azure/virtual-machines/disks-types) — **SOURCED** (owner to flip)
+
 **L9 — Default outbound access** (ties to B1/B2): a VM without a public IP has a
 non-configurable default outbound IP *only where default outbound access still applies*;
 it's disabled by a public IP on the VM, a Standard load balancer backend pool, or a NAT
@@ -542,6 +565,12 @@ perimeter**. CLI: `--default-action Allow|Deny`; `--public-network-access Disabl
 endpoint."). "Network rules have no effect unless you set the `--default-action` parameter
 to `Deny`." Requests from a subnet not allowed by a VNet rule "receive a 403 error".
 *Source:* SADEF, SANET — **VERIFIED** (complements F5; exact client error text still TO-VERIFY)
+*Portal flow (SADEF, read 2026-10-07):* Storage account → **Networking** → **Manage** → "To allow traffic from
+all networks, select **Enable**, and then select **Enabled from all networks**" / "… select **Enable**, and then
+select **Enabled from selected networks**" / "To block traffic from all networks, select **Disable**" / "… select
+**Secured by perimeter**" → **Save**. The sim's forms ask in that order (Enable / Disable / Secured by perimeter,
+then the scope); the resulting state reads `Disabled` (`--public-network-access Disabled`). Secured by perimeter
+is refused as not modelled.
 
 **M5 — VNet rules need a service endpoint** on the subnet (`Microsoft.Storage` same-region,
 or `Microsoft.Storage.Global` any region; only one of the two per subnet); up to 400 VNet

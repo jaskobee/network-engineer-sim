@@ -83,11 +83,13 @@ describe('N-C — network security groups', () => {
     expectRefused(op.createNetworkSecurityGroup(s, { ...at(), name: 'nsg', securityRules: [rule({ source: 'Storage' })] }), OUTCOME.NOT_MODELLED, null)
     expect(op.createNetworkSecurityGroup(s, { ...at(), name: 'nsg', securityRules: [rule({ source: 'Internet', destinationPorts: '80,443,8000-8080' })] }).ok).toBe(true)
   })
-  it('C2: the six default rules, with the names exactly as Microsoft prints them', () => {
+  // Names as the API returns them (Get-AzNetworkSecurityGroup output), not the overview page's
+  // headings "AllowVNetInBound" / "DenyAllInbound" (owner: follow the official Azure way, 2026-10-07).
+  it('C2: the six default rules, with the resource names Azure gives them', () => {
     expect(DEFAULT_SECURITY_RULES.map(r => `${r.direction} ${r.priority} ${r.name} ${r.access}`)).toEqual([
-      'Inbound 65000 AllowVNetInBound Allow',
+      'Inbound 65000 AllowVnetInBound Allow',
       'Inbound 65001 AllowAzureLoadBalancerInBound Allow',
-      'Inbound 65500 DenyAllInbound Deny',
+      'Inbound 65500 DenyAllInBound Deny',
       'Outbound 65000 AllowVnetOutBound Allow',
       'Outbound 65001 AllowInternetOutBound Allow',
       'Outbound 65500 DenyAllOutBound Deny',

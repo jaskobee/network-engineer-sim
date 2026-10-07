@@ -3,15 +3,16 @@
  */
 
 /**
- * L7 — managed disk types; Ultra Disk and Premium SSD v2 can't be OS disks. `maxGiB` is the largest
- * size this simulator offers — not a verified Azure limit (L7 doesn't list sizes); bigger is `not_modelled`.
+ * L7 — managed disk types; Ultra Disk and Premium SSD v2 can't be OS disks.
+ * L10 — sizes from "Select a disk type": max disk size 65,536 GiB (Ultra Disk, Premium SSD v2) and
+ * 32,767 GiB (Premium SSD, Standard SSD, Standard HDD); Ultra Disk sizes start at 4 GiB.
  */
 export const DISK_TYPES = Object.freeze({
-  UltraDisk:    Object.freeze({ displayName: 'Ultra Disk',     osCapable: false, maxGiB: 65536 }),
-  PremiumSSDv2: Object.freeze({ displayName: 'Premium SSD v2', osCapable: false, maxGiB: 65536 }),
-  PremiumSSD:   Object.freeze({ displayName: 'Premium SSD',    osCapable: true,  maxGiB: 32767 }),
-  StandardSSD:  Object.freeze({ displayName: 'Standard SSD',   osCapable: true,  maxGiB: 32767 }),
-  StandardHDD:  Object.freeze({ displayName: 'Standard HDD',   osCapable: true,  maxGiB: 32767 }),
+  UltraDisk:    Object.freeze({ displayName: 'Ultra Disk',     osCapable: false, minGiB: 4, maxGiB: 65536 }),
+  PremiumSSDv2: Object.freeze({ displayName: 'Premium SSD v2', osCapable: false, minGiB: 1, maxGiB: 65536 }),
+  PremiumSSD:   Object.freeze({ displayName: 'Premium SSD',    osCapable: true,  minGiB: 1, maxGiB: 32767 }),
+  StandardSSD:  Object.freeze({ displayName: 'Standard SSD',   osCapable: true,  minGiB: 1, maxGiB: 32767 }),
+  StandardHDD:  Object.freeze({ displayName: 'Standard HDD',   osCapable: true,  minGiB: 1, maxGiB: 32767 }),
 })
 
 /**

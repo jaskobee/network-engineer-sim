@@ -13,7 +13,7 @@ import { regionDisplayName } from '../azure/regions.js'
 import { DISK_TYPES, STORAGE_KINDS, SECURITY_RULE_PROTOCOLS } from '../azure/catalog.js'
 import { AzureItem } from './AzureIcon.jsx'
 import { Field, Facts, Form, Select, DangerButton } from './formParts.jsx'
-import { STORAGE_ACCESS } from './NetworkForms.jsx'
+import { STORAGE_ACCESS, StorageAccessFields } from './NetworkForms.jsx'
 
 const nameOf = (cloud, id) => (id && cloud.resources[id]?.name) || '—'
 
@@ -261,9 +261,7 @@ function StorageAccountDetails({ cloud, r, run, select }) {
       <Form title="Networking" submit="Save" onSubmit={() => run(op.updateStorageAccount, {
         id: r.id, publicNetworkAccess: STORAGE_ACCESS[access].publicNetworkAccess, defaultAction: STORAGE_ACCESS[access].defaultAction,
       })}>
-        <Field label="Public network access" hint="Disabled means traffic can only arrive through a private endpoint.">
-          <Select value={access} onChange={setAccess} options={Object.entries(STORAGE_ACCESS).map(([k, a]) => [k, a.label])} />
-        </Field>
+        <StorageAccessFields value={access} onChange={setAccess} />
       </Form>
       <DangerButton label="Delete storage account" confirm={`Delete ${r.name}?`} onConfirm={() => run(op.deleteResource, { id: r.id }, () => select(null))} />
     </>

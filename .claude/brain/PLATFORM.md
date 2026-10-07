@@ -14,8 +14,8 @@ own build, URL, saves, missions, docs, brain. Architecture and reasoning:
 `docs/platform/PLATFORM_ARCHITECTURE.md`.
 
 ## Health
-- `npm test` (root) → **992 tests / 49 files**, one Vitest project per workspace plus `repo`:
-  netsim 789 · cloud 117 · kernel 73 · ui 4 · repo boundaries 9.
+- `npm test` (root) → **993 tests / 49 files**, one Vitest project per workspace plus `repo`:
+  netsim 789 · cloud 118 · kernel 73 · ui 4 · repo boundaries 9.
 - `npm run build` → NetSim into `dist/`, then Cloud Engineer into `dist/cloud/`. Only the xterm
   chunk-size warning (NetSim) is expected.
 - Dev: `npm run dev` / `npm run dev:netsim` (port 5173), `npm run dev:cloud` (port 5180,

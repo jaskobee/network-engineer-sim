@@ -42,7 +42,7 @@ export const appStorageMission = {
       hint: 'Zone failure → zone-redundant in the primary (ZRS-based). Region failure with reads from the secondary → geo with read access.',
       check: t => account(t)?.properties.redundancy === 'RA-GZRS' },
     { id: 'public-access', text: 'Public network access is disabled.',
-      hint: 'Open the account → Networking → Public network access: Disabled.',
+      hint: 'Open the account → Networking (Manage) → Public network access: Disable → Save.',
       check: t => account(t)?.properties.publicNetworkAccess === 'Disabled' },
   ],
   learn: ['K2', 'M1', 'M2', 'M4'],

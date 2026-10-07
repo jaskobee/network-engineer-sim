@@ -428,14 +428,11 @@ export function createNetworkInterface(state, args) {
 
 // ── Managed disks and virtual machines (§L) ────────────────────────────────
 
-/**
- * A disk size is a whole number of GiB. Azure's maximum per disk type is not in the verified
- * spec (L7 lists the types only), so sizes above the simulator's own cap (catalog maxGiB) are
- * refused as not modelled — never presented as an Azure limit.
- */
+/** L10: a disk size is a whole number of GiB within the type's range (catalog DISK_TYPES). */
 function checkDiskSize(kind, sizeGiB) {
-  if (!Number.isInteger(sizeGiB) || sizeGiB < 1) return refuse(OUTCOME.INVALID_VALUE, null, 'A disk size is a whole number of GiB, at least 1.')
-  if (sizeGiB > kind.maxGiB) return notModelled(`${kind.displayName} disks larger than ${kind.maxGiB.toLocaleString('en-US')} GiB`)
+  const range = `${kind.minGiB.toLocaleString('en-US')}–${kind.maxGiB.toLocaleString('en-US')} GiB`
+  if (!Number.isInteger(sizeGiB) || sizeGiB < kind.minGiB || sizeGiB > kind.maxGiB)
+    return refuse(OUTCOME.INVALID_VALUE, 'L10', `${kind.displayName} disks are ${range}, in whole GiB.`)
   return null
 }
 

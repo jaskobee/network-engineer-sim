@@ -5,7 +5,7 @@ Repo-wide facts are in `../PLATFORM.md`._
 
 ## Health
 - App: `apps/cloud` (working title **Cloud Engineer**, shipped as "Preview"). Azure only.
-- `npm test` (root) → the cloud project: **117 tests / 8 files** (`apps/cloud/src/azure/__tests__`, incl. missions).
+- `npm test` (root) → the cloud project: **118 tests / 8 files** (`apps/cloud/src/azure/__tests__`, incl. missions).
 - `npm run dev:cloud` → port 5180, `http://localhost:5180/network-engineer-sim/cloud/`.
 - Not on `main` yet: everything below sits on branch `phase-0-kernel-extraction`.
 
@@ -41,8 +41,8 @@ Repo-wide facts are in `../PLATFORM.md`._
 missions played through the UI in the browser.
 
 ## Next up
-1. **Owner decisions from the gate** (`docs/cloud/PHASE_1A_CLOUD_SECTION.md` §6a): the spec's K-vs-C2 contradiction on
-   NSG rule names, the `DenyAllInbound` casing re-check, the "Disable(d)" portal label, sourcing disk size limits.
+1. **Owner: flip the 2026-10-07 entries to VERIFIED** if they agree — spec C2 (API rule names, rule-name conflict),
+   L10 (disk sizes), M4 portal flow. They were implemented on the owner's instruction and are marked SOURCED.
 2. **Phase 1b:** RBAC (fictional users and groups), Azure Policy (effects still to choose — suggested Deny, Audit,
    Modify, Disabled), locks.
 3. **Phase 2:** NSG/route evaluation as a flow engine (reason codes, Network Watcher-style tools), private
@@ -53,4 +53,4 @@ missions played through the UI in the browser.
   VNet FAQ DHCP contradiction (A7).
 - Plan §6a gaps, e.g. the public IP / NSG same-region rule.
 - The VM wizard has no administrator-account step (username, password / SSH key); the form says so.
-- Disk sizes above the simulator's cap are `not_modelled` (Azure's per-type maximums aren't in the spec yet).
+- Disk billing tiers (a 200 GiB Standard SSD billed as E15) aren't shown yet; sizes themselves follow L10.

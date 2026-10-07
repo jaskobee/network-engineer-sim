@@ -30,7 +30,7 @@ const BY_RULE = {
   I5: 'managementGroups', I6: 'limits', I8: 'naming',
   J2: 'resourceManager', J3: 'resourceManager', J8: 'limits', J9: 'move',
   K: 'naming', K1: 'naming', K2: 'storage',
-  L1: 'nic', L2: 'nic', L3: 'nic', L5: 'nic', L7: 'disks', L8: 'redundancy',
+  L1: 'nic', L2: 'nic', L3: 'nic', L5: 'nic', L7: 'disks', L8: 'redundancy', L10: 'disks',
   M1: 'storage', M2: 'redundancy', M4: 'storageNetwork', M6: 'storage',
   N1: 'publicIp', N2: 'publicIp', N3: 'publicIp', N4: 'publicIp', N5: 'publicIp',
 }

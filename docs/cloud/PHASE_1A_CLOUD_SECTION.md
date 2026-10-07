@@ -140,7 +140,14 @@ inventing an Azure rule:
 - whether resource-group and other resource names are compared case-insensitively
   (uniqueness checks compare exactly for now).
 
-Found by the step-7 accuracy gate (2026-10-07):
+Found by the step-7 accuracy gate (2026-10-07) — **all four resolved the same day** on the owner's instruction
+"follow the official Azure way" (spec C2, K note, L10, M4; marked SOURCED for the owner to flip):
+1. disk sizes → new rule L10 from the disk types page (Ultra 4 GiB–64 TiB, Premium SSD v2 to 64 TiB, others to
+   32,767 GiB); 2. NSG rule names → the platform's own rule (begin with a word character); 3. default rule names →
+   the API names `AllowVnetInBound` / `DenyAllInBound`; 4. storage access → the portal's Manage flow (Enable → scope,
+   Disable, Secured by perimeter).
+
+Original findings:
 - **Managed disk maximum sizes** aren't in the spec (L7 lists the types only). Sizes above the simulator's own cap
   (`catalog.DISK_TYPES[].maxGiB`) are now refused as `not_modelled` instead of citing L7.
 - **NSG security-rule names — the spec contradicts itself.** Table K says `/securityRules` follow the VNet rule (start

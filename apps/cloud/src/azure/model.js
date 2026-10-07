@@ -52,15 +52,15 @@ export function createCloudState({ tenantId = newGuid() } = {}) {
 }
 
 /**
- * C2: the default rules Azure creates in every NSG. Names copied exactly as the NSG
- * overview page prints them — including Microsoft's inconsistent capitalisation
- * (DenyAllInbound vs DenyAllOutBound). Re-check against `az network nsg rule list
- * --include-default` before showing them as CLI output (AZURE_ACCURACY C2 note).
+ * C2 — the six default rules Azure creates in every NSG. Names are the resource names the API
+ * returns (`defaultSecurityRules/<name>`, Get-AzNetworkSecurityGroup example output), which is what
+ * the portal and az show: AllowVnetInBound and DenyAllInBound — the overview page's headings spell
+ * those two "AllowVNetInBound" / "DenyAllInbound". Address/port columns follow the overview's table.
  */
 export const DEFAULT_SECURITY_RULES = Object.freeze([
-  { name: 'AllowVNetInBound',              priority: 65000, direction: 'Inbound',  access: 'Allow', protocol: 'Any', source: 'VirtualNetwork',    sourcePorts: '0-65535', destination: 'VirtualNetwork', destinationPorts: '0-65535' },
+  { name: 'AllowVnetInBound',              priority: 65000, direction: 'Inbound',  access: 'Allow', protocol: 'Any', source: 'VirtualNetwork',    sourcePorts: '0-65535', destination: 'VirtualNetwork', destinationPorts: '0-65535' },
   { name: 'AllowAzureLoadBalancerInBound', priority: 65001, direction: 'Inbound',  access: 'Allow', protocol: 'Any', source: 'AzureLoadBalancer', sourcePorts: '0-65535', destination: '0.0.0.0/0',      destinationPorts: '0-65535' },
-  { name: 'DenyAllInbound',                priority: 65500, direction: 'Inbound',  access: 'Deny',  protocol: 'Any', source: '0.0.0.0/0',         sourcePorts: '0-65535', destination: '0.0.0.0/0',      destinationPorts: '0-65535' },
+  { name: 'DenyAllInBound',                priority: 65500, direction: 'Inbound',  access: 'Deny',  protocol: 'Any', source: '0.0.0.0/0',         sourcePorts: '0-65535', destination: '0.0.0.0/0',      destinationPorts: '0-65535' },
   { name: 'AllowVnetOutBound',             priority: 65000, direction: 'Outbound', access: 'Allow', protocol: 'Any', source: 'VirtualNetwork',    sourcePorts: '0-65535', destination: 'VirtualNetwork', destinationPorts: '0-65535' },
   { name: 'AllowInternetOutBound',         priority: 65001, direction: 'Outbound', access: 'Allow', protocol: 'Any', source: '0.0.0.0/0',         sourcePorts: '0-65535', destination: 'Internet',       destinationPorts: '0-65535' },
   { name: 'DenyAllOutBound',               priority: 65500, direction: 'Outbound', access: 'Deny',  protocol: 'Any', source: '0.0.0.0/0',         sourcePorts: '0-65535', destination: '0.0.0.0/0',      destinationPorts: '0-65535' },

@@ -24,11 +24,33 @@ export const CREATE_KINDS = [
   [TYPES.STORAGE_ACCOUNT, 'Storage account'],
 ]
 
-// Portal "Networking" choices for a storage account (M4) → the two settings behind them.
+// Storage account → Networking → Manage (M4): Enable (then all networks or selected networks), Disable,
+// or Secured by perimeter — and the two API settings behind each choice. `label` is the resulting state.
 export const STORAGE_ACCESS = {
-  all:      { label: 'Enabled from all networks', publicNetworkAccess: 'Enabled', defaultAction: 'Allow' },
-  selected: { label: 'Enabled from selected networks', publicNetworkAccess: 'Enabled', defaultAction: 'Deny' },
-  disabled: { label: 'Disabled', publicNetworkAccess: 'Disabled', defaultAction: 'Allow' },
+  all:       { choice: 'enable',    label: 'Enabled from all networks', publicNetworkAccess: 'Enabled', defaultAction: 'Allow' },
+  selected:  { choice: 'enable',    label: 'Enabled from selected networks', publicNetworkAccess: 'Enabled', defaultAction: 'Deny' },
+  disabled:  { choice: 'disable',   label: 'Disabled', publicNetworkAccess: 'Disabled', defaultAction: 'Allow' },
+  perimeter: { choice: 'perimeter', label: 'Secured by perimeter', publicNetworkAccess: 'SecuredByPerimeter', defaultAction: 'Allow' },
+}
+
+/** The portal's two-step public network access choice; `value` is a STORAGE_ACCESS key. */
+export function StorageAccessFields({ value, onChange }) {
+  const choice = STORAGE_ACCESS[value].choice
+  return (
+    <>
+      <Field label="Public network access" hint="By default, storage accounts accept connections from clients on any network.">
+        <Select value={choice} onChange={c => onChange(c === 'enable' ? 'all' : c === 'disable' ? 'disabled' : 'perimeter')}
+          options={[['enable', 'Enable'], ['disable', 'Disable'], ['perimeter', 'Secured by perimeter']]} />
+      </Field>
+      {choice === 'enable' && (
+        <Field label="Allow traffic from" hint="Selected networks: only the virtual networks, IP ranges and resource instances you add.">
+          <Select value={value} onChange={onChange}
+            options={[['all', 'Enabled from all networks'], ['selected', 'Enabled from selected networks']]} />
+        </Field>
+      )}
+      {choice === 'disable' && <p className="mv-note">Traffic will be allowed only through a private endpoint, which you create separately.</p>}
+    </>
+  )
 }
 
 const inSub = (cloud, subscriptionId, type) => resourcesOfType(cloud, type).filter(r => r.subscriptionId === subscriptionId)
@@ -314,9 +336,7 @@ function StorageAccountForm({ cloud, subscriptionId, submit }) {
           onChange={k => { setKind(k); if (!STORAGE_KINDS[k].redundancy.includes(red)) setRed(STORAGE_KINDS[k].redundancy[0]) }} />
       </Field>
       <Field label="Redundancy"><Select value={red} onChange={setRed} options={options.map(o => [o, o])} /></Field>
-      <Field label="Public network access" hint="New accounts accept connections from any network unless you restrict them.">
-        <Select value={access} onChange={setAccess} options={Object.entries(STORAGE_ACCESS).map(([k, a]) => [k, a.label])} />
-      </Field>
+      <StorageAccessFields value={access} onChange={setAccess} />
     </Form>
   )
 }

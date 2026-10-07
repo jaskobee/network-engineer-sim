@@ -13,6 +13,11 @@ decisions (the split, shared packages, design system) are in `../PLATFORM.md`.
   rules are implemented; a rule marked TO-VERIFY or SOURCED is never implemented — stop and flag. A case the spec
   doesn't cover is refused as `not_modelled`, never guessed. Only the owner flips a rule SOURCED → VERIFIED.
 - **Never connect to real Azure or handle real credentials** (2026-10-05).
+- **When Microsoft's pages disagree, follow what Azure itself does** (owner, 2026-10-07: "follow the official Azure way,
+  make it as realistic as we can"). Precedence: what the platform enforces or returns (API resource names, resource
+  provider error text, portal flow on Learn) over a summary table. Examples: default NSG rule names `AllowVnetInBound` /
+  `DenyAllInBound` (API), NSG rule names may start with `_` (network RP error), storage access asked as Manage →
+  Enable / Disable / Secured by perimeter (portal steps). Such entries are recorded in the spec with their sources.
 - **First release = core landing zone + governance** (owner, 2026-10-06): management groups, subscriptions, RGs,
   VNet/NSG, VM, storage (Phase 1a), then RBAC, Azure Policy, locks (Phase 1b). Players build on a visual canvas with
   portal-style forms first; `az` CLI later, on the same operations.
